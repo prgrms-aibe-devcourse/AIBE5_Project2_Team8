@@ -35,3 +35,30 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# ==========================================
+# 🚨 아래부터 Knoc 프로젝트를 위한 추가 설정입니다.
+# ==========================================
+
+### MacOS / Windows OS Files ###
+# 각 운영체제에서 자동으로 생성하는 숨김 파일들을 차단합니다.
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Logs ###
+# 실행 중 쌓이는 로그 파일들이 깃허브에 올라가는 것을 막습니다.
+*.log
+logs/
+
+### Security & Environments (설정 파일 보안 ⭐) ###
+# DB 비밀번호, GitHub 토큰 등이 포함된 파일이 깃허브에 노출되지 않도록 강력히 차단합니다.
+application.yml
+application.properties
+application-*.yml
+application-*.properties
+.env
