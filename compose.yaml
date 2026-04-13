@@ -1,10 +1,22 @@
+version: '3.8'
+
 services:
   mysql:
-    image: 'mysql:latest'
-    environment:
-      - 'MYSQL_DATABASE=mydatabase'
-      - 'MYSQL_PASSWORD=secret'
-      - 'MYSQL_ROOT_PASSWORD=verysecret'
-      - 'MYSQL_USER=myuser'
+    image: mysql:8.0
+    container_name: knoc-mysql
     ports:
-      - '3306'
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: knoc
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: knoc_user
+      MYSQL_PASSWORD: knoc_password
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
