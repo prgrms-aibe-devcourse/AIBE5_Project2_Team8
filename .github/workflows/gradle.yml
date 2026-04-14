@@ -1,0 +1,38 @@
+name: Knoc CI/CD Pipeline
+
+# 1. 언제 이 스크립트를 실행할 것인가? (Triggers)
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+# 2. 어떤 작업을 할 것인가? (Jobs)
+jobs:
+  build:
+    # 깃허브가 제공하는 최신 우분투(리눅스) 환경에서 실행
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: 깃허브 저장소에서 최신 코드를 내려받습니다.
+    - name: 📥 코드 체크아웃 (Checkout Repository)
+      uses: actions/checkout@v4
+
+    # Step 2: 자바 17 버전을 설치하고 세팅합니다.
+    - name: ☕ JDK 17 세팅 (Set up JDK 17)
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'corretto' # AWS에서 만든 안정적인 Java 배포판
+        cache: 'gradle' # ⚡ 핵심: 매번 다운로드하지 않도록 라이브러리를 캐싱하여 속도를 높입니다.
+
+    # Step 3: 리눅스 환경에서 gradlew 실행 파일을 사용할 수 있도록 권한을 줍니다.
+    - name: 🔑 gradlew 실행 권한 부여 (Grant execute permission)
+      run: chmod +x ./gradlew
+
+    # Step 4: 대망의 빌드 및 테스트 실행!
+    - name: 🛠️ 프로젝트 빌드 및 테스트 (Build with Gradle)
+      run: ./gradlew build
+      # application-test.properties를 사용하도록 강제 지정 (안전장치)
+      env:
+        SPRING_PROFILES_ACTIVE: test
