@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knoc. 완벽한 사수를 만나는 가장 가벼운 노크</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #121212; /* 딥 다크 배경 */
+            color: #ffffff;
+            font-family: 'Pretendard', sans-serif; /* Pretendard 폰트 사용 권장 */
+        }
+
+        /* 🚨 노란빛을 완전히 빼고, 파란빛을 더한 청량한 하늘색 민트 (#00CFE8)로 변경! */
+        .text-mint { color: #00CFE8 !important; } /* 포인트 텍스트 */
+        .bg-mint { background-color: #00CFE8 !important; color: #121212; } /* 포인트 배경 */
+
+        /* 민트색 포인트 버튼 스타일 (회원가입, 검색 버튼) */
+        .btn-mint {
+            background-color: #00CFE8 !important;
+            color: #121212 !important;
+            font-weight: bold;
+            border: none;
+        }
+
+        /* 마우스 올렸을 때 살짝 어두워지는 하늘색 민트색 */
+        .btn-mint:hover {
+            background-color: #00A6BA !important;
+            color: #121212 !important;
+        }
+
+        /* 다크 모드 카드 및 배지 스타일 */
+        .card-dark { background-color: #1e1e1e; border: 1px solid #333; }
+        .badge-dark { background-color: #2a2a2a; border: 1px solid #444; color: #aaa; }
+
+        /* 검색창 포커스 시 테두리 민트색 효과 */
+        .form-control.bg-dark:focus {
+            background-color: #2a2a2a;
+            border-color: #00CFE8;
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(0, 207, 232, 0.25);
+        }
+    </style>
+</head>
+<body>
+<th:block th:replace="~{fragments/header :: headerFragment}"></th:block>
+
+<main layout:fragment="content" class="container-fluid p-0">
+</main>
+
+<th:block th:replace="~{fragments/footer :: footerFragment}"></th:block>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<th:block layout:fragment="script"></th:block>
+</body>
+</html>
