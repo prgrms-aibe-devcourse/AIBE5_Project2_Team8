@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <header th:fragment="headerFragment">
     <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(18, 18, 18, 0.9);">
         <div class="container">
@@ -16,17 +17,28 @@
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link text-white" th:href="@{/my/mentoring}">멘토링 내역</a>
-                    </li>
-
-                    <li class="nav-item">
                         <a class="nav-link text-white" th:href="@{/senior/apply}">시니어 지원하기</a>
                     </li>
                 </ul>
-                <div class="d-flex align-items-center gap-3">
-                    <a th:href="@{/auth/login}" class="text-decoration-none text-white">로그인</a>
 
+                <!-- 비로그인 상태 -->
+                <div class="d-flex align-items-center gap-3" sec:authorize="!isAuthenticated()">
+                    <a th:href="@{/auth/login}" class="text-decoration-none text-white">로그인</a>
                     <a th:href="@{/auth/signup}" class="btn btn-mint rounded-pill px-4">회원가입</a>
+                </div>
+
+                <!-- 로그인 상태 -->
+                <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
+                    <span class="badge rounded-pill px-3 py-2"
+                          style="background-color: #20c997; font-size: 0.8rem;"
+                          sec:authorize="hasAuthority('SENIOR')">시니어</span>
+                    <span class="badge rounded-pill px-3 py-2 bg-secondary"
+                          style="font-size: 0.8rem;"
+                          sec:authorize="hasAuthority('USER')">주니어</span>
+                    <a th:href="@{/my/mentoring}" class="text-decoration-none text-white">내 멘토링</a>
+                    <form th:action="@{/auth/logout}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-outline-light rounded-pill px-4">로그아웃</button>
+                    </form>
                 </div>
             </div>
         </div>
