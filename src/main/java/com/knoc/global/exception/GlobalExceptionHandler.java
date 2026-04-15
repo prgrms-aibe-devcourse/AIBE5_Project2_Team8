@@ -5,7 +5,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +14,7 @@ import java.util.Map;
 // - 특정 비즈니스 상황(예: 잔액 부족, 중복 가입 등)에서 우리가 직접 throw한 예외를 처리합니다.
 // - 상세한 에러 메시지를 Model에 담아 뷰(HTML)에 전달할 수 있다는 장점이 있습니다.
 
-@ControllerAdvice
+@ControllerAdvice // // 모든 컨트롤러에서 발생하는 예외를 감시하겠다고 선언
 public class GlobalExceptionHandler {
 
     // 프로젝트에서 정의한 BusinessException이 발생했을 때 호출됨
@@ -25,18 +24,17 @@ public class GlobalExceptionHandler {
 
         // 1. API(AJAX) 요청일 경우 (Accept 헤더에 application/json이 포함된 경우)
         if (accept != null && accept.contains("application/json")) {
+            // [AJAX 응답] 브라우저 콘솔이나 자바스크립트에 에러 정보를 JSON으로 전달
             ErrorCode errorCode = e.getErrorCode();
-
             Map<String, Object> body = new HashMap<>();
             body.put("message", errorCode.getMessage());
             body.put("status", errorCode.getStatus());
 
-            return ResponseEntity
-                    .status(errorCode.getStatus())
-                    .body(body);
+            return ResponseEntity.status(errorCode.getStatus()).body(body);
         }
 
         // 2. 일반 페이지 요청인 경우
+        // [일반 페이지 응답] 브라우저 화면 자체를 에러 페이지(HTML)로 이동시킴
         model.addAttribute("message", e.getMessage());
         int status = e.getErrorCode().getStatus();
         model.addAttribute("status", status);
