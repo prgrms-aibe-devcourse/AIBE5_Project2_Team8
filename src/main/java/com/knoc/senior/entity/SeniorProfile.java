@@ -69,4 +69,20 @@ public class SeniorProfile extends BaseEntity {
         this.avgRating = BigDecimal.ZERO;
         this.totalReviewCount = 0;
     }
+
+    //==연관관계 편의 매서드==
+    public void addSkill(SeniorSkill skill) {
+        this.skills.add(skill);
+        //무한 루프 방지
+        if (skill.getSeniorProfile() != this) {
+            skill.assignSeniorProfile(this);
+        }
+    }
+
+    public void addCareer(SeniorCareer career) {
+        this.careers.add(career);
+        if (career.getSeniorProfile() != this) {
+            career.assignSeniorProfile(this);
+        }
+    }
 }
