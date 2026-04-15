@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+
+<th:block layout:fragment="content">
+
+    <style>
+        .btn-gradient {
+            background: linear-gradient(90deg, #00CFE8, #0080FF);
+            color: #fff;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(90deg, #00A6BA, #0060CC);
+            color: #fff;
+        }
+        .feature-icon-box {
+            width: 52px;
+            height: 52px;
+            background-color: rgba(0, 207, 232, 0.12);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.4rem;
+        }
+        .cta-card {
+            background-color: #1a1f2e;
+            border: 1px solid #2a2f40;
+            border-radius: 16px;
+        }
+    </style>
+
+    <!-- 히어로 섹션 -->
+    <section class="container text-center py-5 mt-5">
+        <span class="badge rounded-pill px-3 py-2 mb-4 d-inline-flex align-items-center gap-2 fw-semibold"
+              style="background-color: #1a1f2e; border: 1px solid #2a2f40; color: #ccc;">
+            🏆 상위 1% 멘토의 자격
+        </span>
+
+        <h1 class="display-5 fw-bold mb-3">
+            당신의 경험이<br>
+            <span class="text-mint">누군가의 성장이 됩니다.</span>
+        </h1>
+
+        <p class="text-secondary mb-5">
+            Knoc의 시니어가 되어 편한 시간에 지식을 나누고,<br>부가 수익과 함께 멘토로서의 평판을 쌓아보세요.
+        </p>
+
+        <!-- 특징 카드 3개 -->
+        <div class="row justify-content-center g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card card-dark rounded-4 p-4 h-100 text-center">
+                    <div class="feature-icon-box">📈</div>
+                    <p class="fw-bold mb-2 text-white">자유로운 시간과 수익</p>
+                    <p class="text-secondary mb-0">원하는 시간에, 원하는 만큼만 리뷰를 진행하며 가치 있는 부가 수익을 창출하세요.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-dark rounded-4 p-4 h-100 text-center">
+                    <div class="feature-icon-box">🛡️</div>
+                    <p class="fw-bold mb-2 text-white">검증된 신뢰의 네트워킹</p>
+                    <p class="text-secondary mb-0">철저한 기업 이메일 인증을 통해 현업 시니어들과 우수한 주니어들이 모인 커뮤니티입니다.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-dark rounded-4 p-4 h-100 text-center">
+                    <div class="feature-icon-box">✅</div>
+                    <p class="fw-bold mb-2 text-white">성장을 돕는 보람</p>
+                    <p class="text-secondary mb-0">나의 아키텍처 고민과 노하우가 다음 세대 개발자들의 큰 자양분이 됩니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA 섹션 -->
+        <div class="cta-card p-5 mx-auto" style="max-width: 640px;">
+            <p class="text-secondary small mb-3">현직자 인증하고 시니어 지원하기</p>
+            <div class="d-grid mb-3">
+                <a th:href="@{/senior/profile-setup}"
+                   class="btn btn-gradient btn-lg rounded-3 py-3 d-flex align-items-center justify-content-center gap-2">
+                    시니어 지원하기 <span>›</span>
+                </a>
+            </div>
+            <p class="text-secondary mb-0">
+                지원하기 전 먼저 <a th:href="@{/auth/login}" class="text-mint text-decoration-none fw-semibold">로그인</a>을 해주세요.
+            </p>
+        </div>
+    </section>
+
+</th:block>
+</html>
