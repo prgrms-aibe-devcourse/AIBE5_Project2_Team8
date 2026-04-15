@@ -1,307 +1,69 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - 페이지를 찾을 수 없음 | Knoc</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --bg-primary: #0d1117;
-            --bg-card: #161b22;
-            --bg-card-inner: #1c2128;
-            --border: rgba(48, 54, 61, 0.8);
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --text-muted: #6e7681;
-            --accent: #00c8c8;
-            --accent-dim: rgba(0, 200, 200, 0.10);
-            --accent-border: rgba(0, 200, 200, 0.3);
-            --btn-ghost-border: rgba(139, 148, 158, 0.3);
-            --btn-ghost-hover: rgba(139, 148, 158, 0.08);
-        }
-
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 1.5rem;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(0,200,200,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,200,200,0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .container {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 560px;
-            text-align: center;
-        }
-
-        .logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 3rem;
-            text-decoration: none;
-        }
-
-        .logo-mark {
-            width: 36px;
-            height: 36px;
-            background: var(--accent);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 15px;
-            color: #0d1117;
-            letter-spacing: -0.5px;
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.5px;
-        }
-
-        .error-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2.5rem 2rem;
-        }
-
-        /* Big 404 display */
-        .error-display {
-            margin-bottom: 1.5rem;
-        }
-
-        .error-number {
-            font-size: 88px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -4px;
-            background: linear-gradient(135deg, var(--accent) 0%, rgba(0,200,200,0.4) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .icon-under {
-            margin-top: 0.5rem;
-            font-size: 28px;
-            color: var(--text-muted);
-        }
-
-        .error-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            line-height: 1.3;
-            margin-bottom: 1rem;
-        }
-
-        .error-desc {
-            font-size: 15px;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* Quick links */
-        .quick-links {
-            margin-top: 1.5rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .quick-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0.75rem 1rem;
-            background: var(--bg-card-inner);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 500;
-            transition: border-color 0.15s, color 0.15s;
-            text-align: left;
-        }
-
-        .quick-link:hover {
-            border-color: var(--accent-border);
-            color: var(--text-primary);
-        }
-
-        .quick-link i {
-            font-size: 16px;
-            color: var(--accent);
-            flex-shrink: 0;
-        }
-
-        .server-message {
-            margin-top: 1.25rem;
-            padding: 0.875rem 1rem;
-            background: var(--bg-card-inner);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 8px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            text-align: left;
-            line-height: 1.6;
-        }
-
-        .server-message .msg-label {
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .divider {
-            height: 1px;
-            background: var(--border);
-            margin: 2rem 0;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0.65rem 1.4rem;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            transition: opacity 0.15s, background 0.15s;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #0d1117;
-        }
-
-        .btn-primary:hover { opacity: 0.88; }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--btn-ghost-border);
-        }
-
-        .btn-ghost:hover {
-            background: var(--btn-ghost-hover);
-            color: var(--text-primary);
-        }
-
-        @media (max-width: 480px) {
-            .error-number { font-size: 64px; }
-            .quick-links { grid-template-columns: 1fr; }
-            .btn-group { flex-direction: column; }
-            .btn { justify-content: center; }
-        }
-    </style>
+    <title>404 - 페이지를 찾을 수 없음</title>
+    <th:block layout:fragment="head-extra">
+        <th:block th:replace="~{fragments/error_page_head :: errorPageHead}"></th:block>
+    </th:block>
 </head>
-<body>
-
-<div class="container">
-
-    <a href="/" class="logo">
-        <div class="logo-mark">K</div>
-        <span class="logo-text">Knoc.</span>
-    </a>
-
-    <div class="error-card">
-
-        <div class="error-display">
-            <div class="error-number">404</div>
-            <div class="icon-under">
-                <i class="bi bi-map"></i>
+<div layout:fragment="content">
+    <section class="container py-5 my-lg-4">
+        <div class="error-shell px-3">
+            <div class="card card-dark rounded-4 border-secondary text-center p-4 p-md-5">
+                <div class="error-number-404 mb-2">404</div>
+                <div class="text-secondary mb-4"><i class="bi bi-map" aria-hidden="true"></i></div>
+                <h1 class="h4 fw-bold text-white mb-3">페이지를 찾을 수 없어요</h1>
+                <p class="text-secondary mb-0">
+                    주소가 잘못되었거나, 이미 사라진 페이지예요.<br>
+                    URL을 다시 확인하거나 아래 링크를 이용해 보세요.
+                </p>
+                <div class="row g-2 mt-4 text-start small">
+                    <div class="col-sm-6">
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-secondary bg-dark bg-opacity-50 border border-secondary rounded-3 p-3 h-100"
+                           th:href="@{/seniors}">
+                            <i class="bi bi-people text-mint" aria-hidden="true"></i>
+                            <span>시니어 매칭</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-secondary bg-dark bg-opacity-50 border border-secondary rounded-3 p-3 h-100"
+                           th:href="@{/my/mentoring}">
+                            <i class="bi bi-chat-quote text-mint" aria-hidden="true"></i>
+                            <span>멘토링 내역</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-secondary bg-dark bg-opacity-50 border border-secondary rounded-3 p-3 h-100"
+                           th:href="@{/senior/apply}">
+                            <i class="bi bi-person-badge text-mint" aria-hidden="true"></i>
+                            <span>시니어 지원하기</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-secondary bg-dark bg-opacity-50 border border-secondary rounded-3 p-3 h-100"
+                           th:href="@{/auth/login}">
+                            <i class="bi bi-box-arrow-in-right text-mint" aria-hidden="true"></i>
+                            <span>로그인</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="alert alert-dark border border-secondary border-start border-3 text-start small mt-3 mb-0"
+                     style="border-left-color: #00CFE8 !important;"
+                     th:if="${message != null and !#strings.isEmpty(message)}">
+                    <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size: 0.7rem; letter-spacing: 0.08em;">상세 메시지</div>
+                    <span class="text-secondary" th:text="${message}"></span>
+                </div>
+                <hr class="border-secondary my-4">
+                <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                    <a class="btn btn-mint rounded-3 px-4" th:href="@{/}">
+                        <i class="bi bi-house-fill me-1" aria-hidden="true"></i>메인으로 돌아가기
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary error-ghost-btn rounded-3 px-4" onclick="history.back()">
+                        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>이전 페이지로
+                    </button>
+                </div>
             </div>
         </div>
-
-        <h1 class="error-title">페이지를 찾을 수 없어요</h1>
-        <p class="error-desc">
-            주소가 잘못되었거나, 이미 사라진 페이지예요.<br>
-            URL을 다시 확인하거나 아래 링크를 이용해 보세요.
-        </p>
-
-        <!-- Quick navigation links -->
-        <div class="quick-links">
-            <a href="/senior-matching" class="quick-link">
-                <i class="bi bi-people"></i>
-                시니어 매칭
-            </a>
-            <a href="/mentoring-reviews" class="quick-link">
-                <i class="bi bi-chat-quote"></i>
-                멘토링 후기
-            </a>
-            <a href="/senior-apply" class="quick-link">
-                <i class="bi bi-person-badge"></i>
-                시니어 지원하기
-            </a>
-            <a href="/login" class="quick-link">
-                <i class="bi bi-box-arrow-in-right"></i>
-                로그인
-            </a>
-        </div>
-
-        <!-- Thymeleaf: server message (optional) -->
-        <div class="server-message" th:if="${message != null and !#strings.isEmpty(message)}">
-            <div class="msg-label">상세 메시지</div>
-            <span th:text="${message}"></span>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="btn-group">
-            <a href="/" class="btn btn-primary">
-                <i class="bi bi-house-fill" style="font-size:14px;"></i>
-                메인으로 돌아가기
-            </a>
-            <button onclick="history.back()" class="btn btn-ghost">
-                <i class="bi bi-arrow-left" style="font-size:14px;"></i>
-                이전 페이지로
-            </button>
-        </div>
-
-    </div>
-
+    </section>
 </div>
-
-</body>
 </html>

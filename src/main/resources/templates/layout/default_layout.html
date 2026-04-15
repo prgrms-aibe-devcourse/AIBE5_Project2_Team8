@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Knoc. 완벽한 사수를 만나는 가장 가벼운 노크</title>
+    <title layout:title-pattern="$CONTENT_TITLE">Knoc.</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -44,6 +44,7 @@
             box-shadow: 0 0 0 0.25rem rgba(0, 207, 232, 0.25);
         }
     </style>
+    <th:block layout:fragment="head-extra"></th:block>
 </head>
 <body>
 <th:block th:replace="~{fragments/header :: headerFragment}"></th:block>
