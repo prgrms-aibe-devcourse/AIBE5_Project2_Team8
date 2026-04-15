@@ -1,6 +1,5 @@
-package com.knoc.member.repository;
+package com.knoc.member;
 
-import com.knoc.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
