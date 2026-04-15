@@ -13,6 +13,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+// 서비스 이용자(Junior)가 서비스를 받은 후 남기는 평가와 코멘트를 저장한다.
+// 핵심 역할: 서비스 만족도(rating)와 상세 후기(comment)를 저장하고, 이를 통해 전문가(SeniorProfile)의 평판을 관리.
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
