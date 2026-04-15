@@ -85,4 +85,23 @@ public class SeniorProfile extends BaseEntity {
             career.assignSeniorProfile(this);
         }
     }
+
+    //==프로필 수정==
+    public void update(String company, String position, int careerYears,
+                       String introduction, String linkedinUrl, int pricePerReview) {
+        this.company = company;
+        this.position = position;
+        this.careerYears = careerYears;
+        this.introduction = introduction;
+        this.linkedinUrl = linkedinUrl;
+        this.pricePerReview = pricePerReview;
+    }
+
+    public void clearSkills() {
+        this.skills.clear();
+    }
+
+    public void clearCareers() {
+        this.careers.clear();
+    }
 }
