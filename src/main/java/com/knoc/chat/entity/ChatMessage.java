@@ -37,15 +37,20 @@ public class ChatMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    // 이 메시지가 참조하는 외부 데이터의 PK (주문 ID 등)
+    @Column(name = "reference_id")
+    private Long referenceId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public ChatMessage(ChatRoom chatRoom, Member sender, MessageType messageType, String content) {
+    public ChatMessage(ChatRoom chatRoom, Member sender, MessageType messageType, String content, Long referenceId) {
         this.chatRoom = chatRoom;
         this.sender = sender;
         this.messageType = messageType != null ? messageType : MessageType.USER;
         this.content = content;
+        this.referenceId = referenceId;
     }
 }
