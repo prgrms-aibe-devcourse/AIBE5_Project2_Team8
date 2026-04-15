@@ -19,6 +19,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
 
     private final MemberService memberService;
+
+    @GetMapping("/login")
+    public String loginForm() {
+        return "auth/login";
+    }
+
     @GetMapping("/signup")
     public String signUpForm(Model model) {
         model.addAttribute("signupDto", new SignUpDto());
