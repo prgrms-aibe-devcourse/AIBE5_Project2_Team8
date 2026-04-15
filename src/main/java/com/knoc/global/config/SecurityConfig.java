@@ -40,6 +40,13 @@ public class SecurityConfig {
                         .key("knoc-secret-key")  // 쿠키를 암호화할 임의의 문자열
                         .rememberMeParameter("remember-me")   // html 체크박스의 name 속성
                         .tokenValiditySeconds(60 * 60 * 24 * 7)   //토큰 유지 시간(7일)
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/auth/logout")          // POST 요청을 받을 URL
+                        .logoutSuccessUrl("/")              // 로그아웃 성공 후 이동
+                        .invalidateHttpSession(true)        // 세션 무효화
+                        .deleteCookies("JSESSIONID", "remember-me")  // 쿠키 삭제
+                        .permitAll()
                 );
 
         return http.build();
