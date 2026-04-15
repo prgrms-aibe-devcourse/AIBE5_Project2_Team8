@@ -30,7 +30,7 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
         Member junior = memberRepository.findById(dto.getJuniorId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        Member senior = memberRepository.findById(seniorId)
+        Member senior = memberRepository.findById(seniorId) // 시큐리티에서 넘겨받은 현재 사용자
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 요청한 사람이 실제 해당 채팅방의 시니어가 맞는지 검증
@@ -39,9 +39,9 @@ public class OrderService {
         }
 
         // 2. 주문 번호 생성
-        String orderNumber = "ORD-" + UUID.randomUUID().toString();
+        String orderNumber = "ORD-" + UUID.randomUUID();
 
-        // 3. 저장
+        // 3. Order 객체 생성
         Order order = Order.builder()
                 .orderNumber(orderNumber)
                 .chatRoom(chatRoom)
@@ -50,6 +50,7 @@ public class OrderService {
                 .amount(dto.getAmount())
                 .build();
 
+        // 4. DB 저장하고, 저장된 엔티티를 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
         return OrderResponse.from(orderRepository.save(order));
     }
 }
