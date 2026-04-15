@@ -50,4 +50,8 @@ public class EmailVerification {
         this.isVerified = false;
         this.expiredAt = expiredAt;
     }
+
+    public void verify() {
+        this.isVerified = true;
+    }
 }
