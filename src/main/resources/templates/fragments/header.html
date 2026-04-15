@@ -13,7 +13,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item">
-                        <a class="nav-link text-white" th:href="@{/seniors}">시니어 매칭</a>
+                        <a class="nav-link text-white" th:href="@{/}">시니어 매칭</a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-white" th:href="@{/reviews}">멘토링 후기</a>
                     </li>
 
                     <li class="nav-item">
@@ -29,13 +33,19 @@
 
                 <!-- 로그인 상태 -->
                 <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
+                    <!-- 내 멘토링 -->
+                    <a th:href="@{/my/mentoring}" class="text-decoration-none text-white">내 멘토링</a>
+
+                    <!-- 역할 배지 -->
                     <span class="badge rounded-pill px-3 py-2"
                           style="background-color: #20c997; font-size: 0.8rem;"
                           sec:authorize="hasAuthority('SENIOR')">시니어</span>
                     <span class="badge rounded-pill px-3 py-2 bg-secondary"
                           style="font-size: 0.8rem;"
                           sec:authorize="hasAuthority('USER')">주니어</span>
-                    <a th:href="@{/my/mentoring}" class="text-decoration-none text-white">내 멘토링</a>
+
+
+                    <!-- 로그아웃 -->
                     <form th:action="@{/auth/logout}" method="post" class="m-0">
                         <button type="submit" class="btn btn-outline-light rounded-pill px-4">로그아웃</button>
                     </form>
