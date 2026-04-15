@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 min-h-screen font-sans antialiased">
+<div class="flex flex-col items-center justify-center py-16 px-4 min-h-screen">
+    <div class="w-full max-w-md bg-[#111827] border border-slate-800 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden">
+        <div class="text-center mb-10 border-b border-slate-800/50 pb-6">
+            <h1 class="text-3xl font-black text-white mb-2">로그인</h1>
+            <p class="text-slate-400 font-medium text-sm">Knoc에 오신 것을 환영합니다.</p>
+        </div>
+
+        <div th:if="${param.error}" class="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-sm text-center font-bold">
+            이메일 또는 비밀번호가 올바르지 않습니다.
+        </div>
+
+        <form th:action="@{/auth/login}" method="post" class="space-y-6" novalidate>
+            <div class="space-y-2">
+                <label for="username" class="text-sm font-bold text-slate-300">이메일</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500">
+                            <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                        </svg>
+                    </div>
+                    <input
+                            type="email"
+                            id="username"
+                            name="username"
+                            required
+                            class="block w-full pl-12 pr-4 py-3.5 bg-[#0B0F19] border border-slate-700 text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all shadow-inner"
+                            placeholder="hello@example.com"
+                    />
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-2">
+                <div class="flex justify-between items-center">
+                    <label for="password" class="text-sm font-bold text-slate-300">비밀번호</label>
+                    <a href="#" class="text-xs text-slate-500 hover:text-cyan-400 transition-colors">비밀번호를 잊으셨나요?</a>
+                </div>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            class="block w-full pl-12 pr-4 py-3.5 bg-[#0B0F19] border border-slate-700 text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all shadow-inner"
+                            placeholder="••••••••"
+                    />
+                </div>
+            </div>
+
+            <div class="flex items-center pt-2">
+                <input type="checkbox" id="remember-me" name="remember-me" class="w-4 h-4 text-cyan-500 bg-[#0B0F19] border-slate-700 rounded focus:ring-cyan-500 focus:ring-2">
+                <label for="remember-me" class="ml-2 text-sm font-medium text-slate-400">로그인 상태 유지</label>
+            </div>
+
+            <button
+                    type="submit"
+                    class="w-full bg-cyan-500 hover:bg-cyan-400 text-cyan-950 font-black py-4 rounded-xl mt-12 flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all"
+            >
+                로그인
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    <polyline points="10 17 15 12 10 7"></polyline>
+                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+            </button>
+        </form>
+
+        <div class="mt-10 text-center text-sm font-medium text-slate-500 border-t border-slate-800/50 pt-6">
+            아직 계정이 없으신가요?
+            <a th:href="@{/auth/signup}" class="text-cyan-400 font-bold hover:text-cyan-300 ml-1 inline-flex items-center gap-1 transition-colors">
+                회원가입
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="m12 5 7 7-7 7"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
