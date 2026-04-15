@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+
+<div layout:fragment="content">
+
+    <section class="container text-center py-5 mt-5">
+        <h5 class="text-mint fw-bold mb-3">상위 1% 개발자의 노하우를 내 것으로</h5>
+        <h1 class="display-5 fw-bold mb-4">성장을 이끌어줄 현업 시니어 개발자를<br>만나보세요.</h1>
+        <p class="text-secondary mb-5">네카라쿠배 등 최정상 IT 기업의 시니어 개발자들과 함께하는 1:1 코드리뷰 & 멘토링.<br>안전한 에스크로 결제와 통합 워크스페이스로 오직 성장에만 집중하세요.</p>
+
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-6">
+                <div class="input-group input-group-lg">
+                    <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="기술 스택, 회사명, 시니어 이름으로 검색">
+                    <button class="btn btn-mint px-4" type="button">검색</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <span class="text-secondary me-2">🔥 인기 기술스택</span>
+            <span class="badge badge-dark rounded-pill py-2 px-3">React</span>
+            <span class="badge badge-dark rounded-pill py-2 px-3">Spring</span>
+            <span class="badge badge-dark rounded-pill py-2 px-3">Java</span>
+            <span class="badge badge-dark rounded-pill py-2 px-3">Next.js</span>
+            <span class="badge badge-dark rounded-pill py-2 px-3">AWS</span>
+        </div>
+    </section>
+
+    <section class="container py-5 mt-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h3 class="fw-bold">당신에게 딱 맞는 시니어 멘토</h3>
+                <p class="text-secondary mb-0">총 6명의 검증된 멘토가 대기 중입니다.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-dark h-100 text-white p-3 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <h5 class="fw-bold mb-0">정백엔드</h5>
+                            <span class="text-warning">⭐ 5 <span class="text-secondary fs-6">(312 리뷰)</span></span>
+                        </div>
+                        <p class="text-secondary small mb-3">B사 · 12년차 시니어</p>
+
+                        <div class="mb-3">
+                            <span class="badge bg-secondary">Spring Boot</span>
+                            <span class="badge bg-secondary">JPA</span>
+                            <span class="badge bg-secondary">MySQL</span>
+                        </div>
+
+                        <p class="text-light small mt-3" style="min-height: 60px;">"객체지향과 도메인 주도 설계(DDD) 기반의 서버 개발을 지향합니다. 핵심 비즈니스 로직을 단단하게 다져보세요."</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-5">₩ 55,000</span>
+                        <button class="btn btn-outline-light rounded-pill btn-sm px-3">멘토링 신청</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-dark h-100 text-white p-3 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <h5 class="fw-bold mb-0">김시니어</h5>
+                            <span class="text-warning">⭐ 4.9 <span class="text-secondary fs-6">(128 리뷰)</span></span>
+                        </div>
+                        <p class="text-secondary small mb-3">N사 · 8년차 시니어</p>
+                        <div class="mb-3">
+                            <span class="badge bg-secondary">React</span>
+                            <span class="badge bg-secondary">TypeScript</span>
+                        </div>
+                        <p class="text-light small mt-3" style="min-height: 60px;">"현업 8년차 풀스택 개발자입니다. 클린 코드와 아키텍처 관점에서 깊이 있는 리뷰를 제공합니다."</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-5">₩ 50,000</span>
+                        <button class="btn btn-outline-light rounded-pill btn-sm px-3">멘토링 신청</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+</html>
