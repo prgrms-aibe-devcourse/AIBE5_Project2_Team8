@@ -1,6 +1,8 @@
 package com.knoc.order.service;
 
 import com.knoc.chat.entity.ChatRoom;
+import com.knoc.chat.entity.MessageType;
+import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
@@ -42,6 +44,9 @@ class OrderServiceTest {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private ChatMessageRepository chatMessageRepository;
+
     @Test
     @DisplayName("결제 요청 성공: 정상적인 데이터가 입력되면 주문이 PENDING 상태로 생성된다.")
     void createOrderRequest_Success() {
@@ -65,8 +70,13 @@ class OrderServiceTest {
         given(memberRepository.findById(juniorId)).willReturn(Optional.of(junior));
         given(memberRepository.findById(seniorId)).willReturn(Optional.of(senior));
 
-        // Stubbing: 데이터 저장 로직 모의 처리 (입력받은 주문 엔티티를 그대로 반환)
-        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
+        // Stubbing: 데이터 저장 로직 모의 처리
+        // willAnswer를 사용하여 저장 시도된 Order 객체를 ID값만 임의로 채워 반환 (referenceId 확인용)
+        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> {
+            // 실제 DB 저장이 아니므로 Reflection 등을 쓰지 않고 객체 그대로 반환
+            // (Service에서 savedOrder.getId()를 쓰므로 이 테스트 환경에서는 null이 반환되어도 로직은 수행됨)
+            return invocation.getArgument(0);
+        });
 
         // when
         OrderResponse response = orderService.createOrderRequest(request, seniorId);
@@ -77,8 +87,13 @@ class OrderServiceTest {
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
         assertThat(response.getOrderNumber()).startsWith("ORD-");
 
-        // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 최종 확인
+        // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 확인
         verify(orderRepository, times(1)).save(any(Order.class));
+        // Verify: 결제 요청 시스템 메시지 내용 검증
+        verify(chatMessageRepository, times(1)).save(argThat(message ->
+                message.getMessageType() ==  MessageType.ORDER_REQUEST && // 타입 확인
+                message.getContent().contains("50,000") && // 금액 포함 확인
+                message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
     }
 
     @Test
@@ -106,8 +121,9 @@ class OrderServiceTest {
                 .isInstanceOf(BusinessException.class) // BusinessException이 터져야 함
                 .hasMessage(ErrorCode.NOT_SENIOR_IN_ROOM.getMessage()); // 메시지도 일치해야 함
 
-        // Verify: 권한 에러가 발생했으므로, DB 저장 메서드(save)가 '절대 호출되지 않았는지' 최종 확인
+        // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
         verify(orderRepository, never()).save(any());
+        verify(chatMessageRepository, never()).save(any());
     }
 
     @Test
@@ -121,5 +137,9 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.CHATROOM_NOT_FOUND.getMessage());
+
+        // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
+        verify(orderRepository, never()).save(any());
+        verify(chatMessageRepository, never()).save(any());
     }
 }
