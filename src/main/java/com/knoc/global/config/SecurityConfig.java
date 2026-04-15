@@ -23,18 +23,25 @@ public class SecurityConfig {
                 // url 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         // auth로 시작하는 모든 url 인증 없이 접근 허용
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/**", "/error/**").permitAll()
                         // 그외 나머지 경로는 인증을 해야만 접근 허용
                         .anyRequest().authenticated()
                 )
 
-                // 커스텀 폼 로그인 설정
+                // 로그인 폼 설정 업데이트
                 .formLogin(form -> form
-                        .loginPage("/auth/login")
+                        .loginPage("/auth/login")   // GET: login.html 파일을 보여줌
+                        .loginProcessingUrl("/auth/login")   // POST: 화면에서 폼을 제출하면 Spring Security가 가로채서 로그인 처리
+                        .defaultSuccessUrl("/")   // 로그인 성공 시 메인 화면으로
+                        .failureUrl("/auth/login?error=true")   // 로그인 실페 시 파라미터 달고 다시 로그인 화면으로
                         .permitAll()
+                )
+                .rememberMe(remember -> remember
+                        .key("knoc-secret-key")  // 쿠키를 암호화할 임의의 문자열
+                        .rememberMeParameter("remember-me")   // html 체크박스의 name 속성
+                        .tokenValiditySeconds(60 * 60 * 24 * 7)   //토큰 유지 시간(7일)
                 );
 
-        // 나머지는 추후 추가할 예정
         return http.build();
 
     }
