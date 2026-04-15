@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+
+<div layout:fragment="content" class="container py-5 d-flex justify-content-center">
+    <div style="max-width: 800px; width: 100%;">
+
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-2">시니어 프로필 상세 설정</h2>
+            <p class="text-secondary">멘티들에게 신뢰를 줄 수 있는 전문성을 입력해주세요.</p>
+        </div>
+
+        <form th:action="@{''}" method="post" th:object="${profileDto}">
+
+            <div class="card card-dark rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-4"><span class="text-mint me-2">🎓</span>기본 전문성</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-secondary small">현재 소속</label>
+                        <input type="text" th:field="*{company}" class="form-control bg-dark text-white border-secondary" placeholder="ex) 네이버" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-secondary small">대표 직무</label>
+                        <input type="text" th:field="*{position}" class="form-control bg-dark text-white border-secondary" placeholder="ex) 백엔드 개발자" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-secondary small">총 연차</label>
+                        <input type="number" th:field="*{careerYears}" class="form-control bg-dark text-white border-secondary" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-secondary small">리뷰 단가 (원)</label>
+                        <input type="number" th:field="*{pricePerReview}" class="form-control bg-dark text-white border-secondary" required>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label text-secondary small">LinkedIn / GitHub URL</label>
+                    <input type="url" th:field="*{linkedinUrl}" class="form-control bg-dark text-white border-secondary" placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="card card-dark rounded-4 p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><span class="text-mint me-2">🛠</span>기술 스택</h5>
+                    <button type="button" class="btn btn-sm btn-outline-mint" onclick="addSkill()">+ 추가</button>
+                </div>
+                <div id="skill-container" class="d-flex flex-wrap gap-2">
+
+                    <th:block th:if="*{skills == null or skills.isEmpty()}">
+                        <div class="input-group mb-2" style="width: 200px;">
+                            <input type="text" name="skills[0]" class="form-control bg-dark text-white border-secondary p-2" placeholder="Java">
+                            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    </th:block>
+
+                    <th:block th:if="*{skills != null and !skills.isEmpty()}">
+                        <div class="input-group mb-2" style="width: 200px;" th:each="skill, stat : *{skills}">
+                            <input type="text" th:name="|skills[${stat.index}]|" th:value="${skill}" class="form-control bg-dark text-white border-secondary p-2">
+                            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+
+            <div class="card card-dark rounded-4 p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><span class="text-mint me-2">💼</span>상세 경력</h5>
+                    <button type="button" class="btn btn-sm btn-outline-mint" onclick="addCareer()">+ 경력 추가</button>
+                </div>
+                <div id="career-container">
+
+                    <th:block th:if="*{careers == null or careers.isEmpty()}">
+                        <div class="career-item border border-secondary rounded-3 p-3 mb-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">회사명</label>
+                                    <input type="text" name="careers[0].companyName" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">직무</label>
+                                    <input type="text" name="careers[0].position" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">입사일</label>
+                                    <input type="date" name="careers[0].startDate" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">퇴사일 (재직 중일 시 비움)</label>
+                                    <input type="date" name="careers[0].endDate" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                            </div>
+                        </div>
+                    </th:block>
+
+                    <th:block th:if="*{careers != null and !careers.isEmpty()}">
+                        <div class="career-item border border-secondary rounded-3 p-3 mb-3" th:each="career, stat : *{careers}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-mint small" th:text="|경력 ${stat.count}|">경력</span>
+                                <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">회사명</label>
+                                    <input type="text" th:name="|careers[${stat.index}].companyName|" th:value="${career.companyName}" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">직무</label>
+                                    <input type="text" th:name="|careers[${stat.index}].position|" th:value="${career.position}" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">입사일</label>
+                                    <input type="date" th:name="|careers[${stat.index}].startDate|" th:value="${career.startDate}" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-secondary">퇴사일</label>
+                                    <input type="date" th:name="|careers[${stat.index}].endDate|" th:value="${career.endDate}" class="form-control bg-dark text-white border-secondary">
+                                </div>
+                            </div>
+                        </div>
+                    </th:block>
+
+                </div>
+            </div>
+
+            <div class="card card-dark rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-4"><span class="text-mint me-2">📝</span>상세 소개</h5>
+                <textarea th:field="*{introduction}" class="form-control bg-dark text-white border-secondary" rows="6" placeholder="자신의 강점을 자유롭게 기술해주세요."></textarea>
+            </div>
+
+            <div class="d-grid mt-5">
+                <button type="submit" class="btn btn-mint py-3 fs-5 rounded-3"
+                        th:text="${profileDto.company == null ? '시니어 프로필 등록 완료' : '프로필 수정 완료'}">
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        // 🚨 핵심: 타임리프를 이용해 기존 데이터 개수를 자바스크립트에 전달! (수정 시 인덱스 꼬임 방지)
+        let skillIndex = /*[[${profileDto.skills != null ? profileDto.skills.size() : 1}]]*/ 1;
+        let careerIndex = /*[[${profileDto.careers != null ? profileDto.careers.size() : 1}]]*/ 1;
+
+        function addSkill() {
+            const container = document.getElementById('skill-container');
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.style.width = '200px';
+            div.innerHTML = `
+                <input type="text" name="skills[${skillIndex}]" class="form-control bg-dark text-white border-secondary p-2" placeholder="Skill">
+                <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(div);
+            skillIndex++;
+        }
+
+        function addCareer() {
+            const container = document.getElementById('career-container');
+            const div = document.createElement('div');
+            div.className = 'career-item border border-secondary rounded-3 p-3 mb-3';
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-mint small">추가 경력</span>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-secondary">회사명</label>
+                        <input type="text" name="careers[${careerIndex}].companyName" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-secondary">직무</label>
+                        <input type="text" name="careers[${careerIndex}].position" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-secondary">입사일</label>
+                        <input type="date" name="careers[${careerIndex}].startDate" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-secondary">퇴사일</label>
+                        <input type="date" name="careers[${careerIndex}].endDate" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            careerIndex++;
+        }
+    </script>
+</th:block>
+</html>
