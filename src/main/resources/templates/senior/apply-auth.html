@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+
+<th:block layout:fragment="content">
+
+    <style>
+        .btn-gradient {
+            background: linear-gradient(90deg, #00CFE8, #0080FF);
+            color: #fff;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(90deg, #00A6BA, #0060CC);
+            color: #fff;
+        }
+        .auth-card {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 16px;
+        }
+        .form-control {
+            background-color: #1e2435 !important;
+            border: 1px solid #2a2f40 !important;
+            color: #fff !important;
+            border-radius: 8px;
+        }
+        .form-control::placeholder { color: #555; }
+        .form-control:focus {
+            border-color: #00CFE8 !important;
+            box-shadow: 0 0 0 0.2rem rgba(0,207,232,0.15) !important;
+        }
+        .step-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: rgba(0,207,232,0.15);
+            border: 1px solid #00CFE8;
+            color: #00CFE8;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-badge.done {
+            background-color: #00CFE8;
+            color: #121212;
+        }
+    </style>
+
+    <section class="container py-5 mt-4" style="max-width: 560px;">
+
+        <!-- 페이지 헤더 -->
+        <div class="text-center mb-5">
+            <span class="badge rounded-pill px-3 py-2 mb-4 d-inline-flex align-items-center gap-2 fw-semibold"
+                  style="background-color: #1a1f2e; border: 1px solid #2a2f40; color: #ccc;">
+                🛡 현직자 인증
+            </span>
+            <h2 class="fw-bold mb-3 text-white">기업 이메일 인증</h2>
+            <p class="text-secondary">
+                시니어 멘토로 활동하기 위해<br>현재 재직 중인 회사의 이메일 인증이 필요합니다.
+            </p>
+        </div>
+
+        <!-- 인증 카드 -->
+        <div class="auth-card p-4 p-md-5">
+
+            <!-- STEP 1: 이메일 입력 -->
+            <div class="mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="step-badge" id="step1Badge">1</span>
+                    <span class="fw-semibold text-white">기업 이메일 입력</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    재직 중인 회사의 이메일을 입력해주세요. (예: name@company.com)
+                </p>
+                <div class="input-group">
+                    <span class="input-group-text"
+                          style="background-color: #1e2435; border-color: #2a2f40; color: #555;">🏢</span>
+                    <input type="email"
+                           id="companyEmail"
+                           class="form-control"
+                           placeholder="name@company.com">
+                    <button class="btn btn-mint px-3 fw-semibold"
+                            type="button"
+                            id="sendCodeBtn"
+                            onclick="sendVerificationCode()">
+                        인증번호 발송
+                    </button>
+                </div>
+                <div id="sendResult" class="mt-2 small" style="display: none;"></div>
+            </div>
+
+            <hr style="border-color: #2a2f40;">
+
+            <!-- STEP 2: 인증번호 확인 -->
+            <div class="mb-5" id="verifySection" style="opacity: 0.4; pointer-events: none;">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="step-badge" id="step2Badge">2</span>
+                    <span class="fw-semibold text-white">인증번호 확인</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    이메일로 발송된 6자리 코드를 5분 내로 입력해주세요.
+                </p>
+                <div class="input-group">
+                    <input type="text"
+                           id="verificationCode"
+                           class="form-control"
+                           placeholder="인증번호 6자리 입력"
+                           maxlength="6">
+                    <button class="btn btn-outline-secondary px-3"
+                            type="button"
+                            id="confirmCodeBtn"
+                            onclick="confirmVerificationCode()">
+                        확인
+                    </button>
+                </div>
+                <div id="verifyResult" class="mt-2 small" style="display: none;"></div>
+            </div>
+
+            <!-- 인증 완료 메시지 (인증 성공 후 표시) -->
+            <div id="verifiedBadge" class="alert rounded-3 mb-4"
+                 style="display: none; background-color: rgba(0,207,232,0.1); border: 1px solid #00CFE8;">
+                <span class="text-mint fw-semibold">✔ 이메일 인증이 완료되었습니다.</span>
+            </div>
+
+            <!-- 다음 단계 버튼 -->
+            <div class="d-grid">
+                <a id="nextBtn"
+                   th:href="@{/senior/profile/setup}"
+                   class="btn btn-gradient btn-lg rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                   style="pointer-events: none; opacity: 0.4;">
+                    프로필 상세 설정으로 이동 <span>›</span>
+                </a>
+            </div>
+
+            <p class="text-secondary text-center small mt-3 mb-0">
+                인증 완료 후 다음 단계로 진행할 수 있습니다.
+            </p>
+
+        </div>
+    </section>
+
+</th:block>
+
+<th:block layout:fragment="script">
+    <script>
+        // AUTH-02-3에서 구현 예정: 이메일 인증 코드 발송
+        function sendVerificationCode() {
+            const email = document.getElementById('companyEmail').value;
+            if (!email) { alert('기업 이메일을 입력해주세요.'); return; }
+
+            // TODO: fetch POST /senior/verify/send
+
+            // 임시 UI 처리 (AJAX 구현 전 확인용)
+            const verifySection = document.getElementById('verifySection');
+            verifySection.style.opacity = '1';
+            verifySection.style.pointerEvents = 'auto';
+
+            const result = document.getElementById('sendResult');
+            result.style.display = 'block';
+            result.className = 'mt-2 small text-mint';
+            result.textContent = '✔ 인증 코드가 발송되었습니다. 이메일을 확인해주세요.';
+
+            document.getElementById('sendCodeBtn').textContent = '재발송';
+            document.getElementById('step1Badge').classList.add('done');
+        }
+
+        // AUTH-02-4에서 구현 예정: 인증 코드 검증
+        function confirmVerificationCode() {
+            const code = document.getElementById('verificationCode').value;
+            if (!code || code.length !== 6) { alert('6자리 코드를 입력해주세요.'); return; }
+
+            // TODO: fetch POST /senior/verify/confirm
+
+            // 임시 UI 처리 (AJAX 구현 전 확인용)
+            const result = document.getElementById('verifyResult');
+            result.style.display = 'block';
+            result.className = 'mt-2 small text-mint';
+            result.textContent = '✔ 인증이 완료되었습니다.';
+
+            document.getElementById('step2Badge').classList.add('done');
+            document.getElementById('verifiedBadge').style.display = 'block';
+
+            // 다음 버튼 활성화
+            const nextBtn = document.getElementById('nextBtn');
+            nextBtn.style.pointerEvents = 'auto';
+            nextBtn.style.opacity = '1';
+
+            document.getElementById('confirmCodeBtn').disabled = true;
+        }
+    </script>
+</th:block>
+
+</html>
