@@ -106,7 +106,7 @@ class OrderServiceTest {
 
         // Verify(락): 서비스가 사용하는 lockKey(pay: + orderNumber)로 GET_LOCK이 호출됐는지 (timeout 초는 값만 검증)
         verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
-        // Verify(락): 예외 없이 끝나도 finally에서 RELEASE_LOCK이 반드시 한 번 호출되는지
+        // Verify(락): 예외 없이 끝나도 락 해제가 반드시 1회 시도되는지
         verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
 
@@ -147,7 +147,7 @@ class OrderServiceTest {
         verify(chatRoomRepository, never()).findById(anyLong());
         verify(memberRepository, never()).findById(anyLong());
 
-        // Verify(락): 멱등 응답이어도 임계영역 진입 전에 GET_LOCK → finally에서 RELEASE_LOCK 순서는 동일
+        // Verify(락): 멱등 응답이어도 GET_LOCK 후 락 해제가 1회 시도되는지
         verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
         verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
@@ -183,7 +183,7 @@ class OrderServiceTest {
         verify(orderRepository, never()).save(any());
         verify(chatMessageRepository, never()).save(any());
 
-        // Verify(락): 예외가 나도 finally에서 락은 풀려야 하므로 GET_LOCK / RELEASE_LOCK 둘 다 1회
+        // Verify(락): 예외가 나도 락 해제는 반드시 시도되어야 하므로 GET_LOCK / RELEASE_LOCK 둘 다 1회
         verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
         verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
@@ -206,7 +206,7 @@ class OrderServiceTest {
         verify(orderRepository, never()).save(any());
         verify(chatMessageRepository, never()).save(any());
 
-        // Verify(락): 위와 동일 — 예외 발생 후에도 finally에서 RELEASE_LOCK이 호출되는지 보장
+        // Verify(락): 위와 동일 — 예외 발생 후에도 락 해제가 시도되는지 보장
         verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
         verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
