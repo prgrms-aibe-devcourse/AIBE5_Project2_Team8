@@ -28,6 +28,11 @@ public class SeniorApplyController {
         return "senior/apply";
     }
 
+    @GetMapping("/apply/auth")
+    public String auth() {
+        return "senior/apply-auth";
+    }
+
     @GetMapping("/profile/setup")
     public String profileSetup() {
         return "senior/profile_setup";
