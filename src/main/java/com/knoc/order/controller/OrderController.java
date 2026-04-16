@@ -16,12 +16,14 @@ public class OrderController {
 
     @PostMapping("/request")
     @PreAuthorize("hasRole('SENIOR')") // 시니어만 결제 요청 가능
-    public ResponseEntity<OrderResponse> requestOrder(@RequestBody OrderRequest dto) {
+    public ResponseEntity<OrderResponse> requestOrder(
+            @RequestBody OrderRequest dto,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
         // 1. 현재 로그인한 시니어 ID를 가져온다.
         Long seniorId = 1L; // 테스트용 id
 
         // 2. 서비스를 호출하여 주문을 생성하고 응답 DTO를 받는다.
-        OrderResponse orderResponse = orderService.createOrderRequest(dto, seniorId);
+        OrderResponse orderResponse = orderService.createOrderRequest(dto, seniorId, idempotencyKey);
 
         // 3. 생성된 주문 정보(JSON 데이터로 변환됨)와 함께 200 OK 응답을 브라우저로 보낸다.
         return ResponseEntity.ok(orderResponse);
