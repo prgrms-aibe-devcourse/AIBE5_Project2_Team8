@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +28,7 @@ public class SeniorApplyController {
         return "senior/apply";
     }
 
-    @GetMapping("/profile-setup")
+    @GetMapping("/profile/setup")
     public String profileSetup() {
         return "senior/profile_setup";
     }
@@ -47,4 +48,22 @@ public class SeniorApplyController {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
         return member.getId();
     }
+
+    @GetMapping("/profile/update")
+    public String profileUpdate(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        Long memberId = getMemberId(userDetails);
+        model.addAttribute("profile", seniorProfileService.getProfile(memberId));
+        return "senior/profile_update";
+    }
+
+    @PostMapping("/profile/update")
+    public String updateProfile(@AuthenticationPrincipal UserDetails userDetails,
+                                @ModelAttribute SeniorProfileRequestDto dto,
+                                RedirectAttributes redirectAttributes) {
+        Long memberId = getMemberId(userDetails);
+        seniorProfileService.updateProfile(memberId, dto);
+        redirectAttributes.addFlashAttribute("successMessage", "시니어 프로필이 수정되었습니다.");
+        return "redirect:/senior/profile-update";
+    }
+
 }
