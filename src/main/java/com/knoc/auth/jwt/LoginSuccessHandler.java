@@ -27,13 +27,23 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
                 .map(GrantedAuthority::getAuthority)
                 .findFirst().orElse("ROLE_" + MemberRole.USER.name());
 
-        String token = jwtTokenProvider.createAccessToken(email, role);
+        // 쿠키 2개 생성
+        String accessToken = jwtTokenProvider.createAccessToken(email, role);
+        String refreshToken = jwtTokenProvider.createRefreshToken(email);
 
-        Cookie cookie = new Cookie("accessToken", token);
-        cookie.setPath("/");  // 모든 페이지에서 사용
-        cookie.setHttpOnly(true);  // 자바스크립트 공격 방지
-        cookie.setMaxAge(60 * 30);
-        response.addCookie(cookie);
+        // access token
+        Cookie accessCookie = new Cookie("accessToken", accessToken);
+        accessCookie.setPath("/");  // 모든 페이지에서 사용
+        accessCookie.setHttpOnly(true);  // 자바스크립트 공격 방지
+        accessCookie.setMaxAge(60 * 30);
+        response.addCookie(accessCookie);
+
+        // refresh token
+        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+        refreshCookie.setPath("/");
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setMaxAge(60 * 60 * 24 * 7);
+        response.addCookie(refreshCookie);
 
         response.sendRedirect("/");  // 로그인 성공하여 메인화면으로
 
