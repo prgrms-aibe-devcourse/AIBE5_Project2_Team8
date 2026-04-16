@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/auth/logout")          // POST 요청을 받을 URL
                         .logoutSuccessUrl("/")              // 로그아웃 성공 후 이동
-                        .deleteCookies("accessToken")  // 쿠키 삭제
+                        .deleteCookies("accessToken", "refreshToken")  // 쿠키 삭제
                         .permitAll()
                 );
 
