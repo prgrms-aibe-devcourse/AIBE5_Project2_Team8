@@ -36,7 +36,7 @@ public class MysqlNamedLockRepository {
      * - (핵심) 락을 잡은 커넥션과 다른 커넥션에서 RELEASE_LOCK을 호출하면 락이 풀리지 않는다.
      * - 일반적으로 비즈니스 로직에서는 finally 블록에서 호출해 예외가 나도 락이 풀리게 한다.
      */
-    public void releaseLock(String key) {
-        jdbcTemplate.queryForObject("SELECT RELEASE_LOCK(?)", Integer.class, key);
+    public Integer releaseLock(String key) {
+        return jdbcTemplate.queryForObject("SELECT RELEASE_LOCK(?)", Integer.class, key); // 해제 결과(1/0)를 반환
     }
 }
