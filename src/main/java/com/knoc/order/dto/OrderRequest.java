@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 시니어가 '결제 요청 보내기' 버튼을 누를 때 서버로 전달될 데이터
+// 시니어가 '결제 요청 보내기' 버튼을 누를 때 서버로 전달될 데이터 (OrderController에서 받음)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderRequest {

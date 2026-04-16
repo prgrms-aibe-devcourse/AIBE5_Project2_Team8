@@ -91,7 +91,7 @@ class OrderServiceTest {
         verify(orderRepository, times(1)).save(any(Order.class));
         // Verify: 결제 요청 시스템 메시지 내용 검증
         verify(chatMessageRepository, times(1)).save(argThat(message ->
-                message.getMessageType() ==  MessageType.ORDER_REQUEST && // 타입 확인
+                message.getMessageType() ==  MessageType.PAYMENT_REQUESTED && // 타입 확인
                 message.getContent().contains("50,000") && // 금액 포함 확인
                 message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
     }

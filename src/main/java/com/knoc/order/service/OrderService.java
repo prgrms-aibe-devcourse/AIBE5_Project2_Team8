@@ -61,7 +61,7 @@ public class OrderService {
         String formattedAmount = String.format("%,d", dto.getAmount());
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(chatRoom)
-                .messageType(MessageType.ORDER_REQUEST)
+                .messageType(MessageType.PAYMENT_REQUESTED)
                 .content("시니어님이 " + formattedAmount + "원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다.")
                 .referenceId(savedOrder.getId()) // 주문 ID 연결
                 .sender(null) // 시스템 메시지이므로 발신자는 null 또는 별도의 시스템 계정
