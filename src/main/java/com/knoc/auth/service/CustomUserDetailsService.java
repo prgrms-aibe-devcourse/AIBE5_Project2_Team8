@@ -22,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return User.builder()
                 .username(member.getEmail())
                 .password(member.getPassword())
-                .authorities(member.getRole().name())
+                .roles(member.getRole().name()) // authorities -> roles로 변경(Spring Security 표준에 맞추기 위함)
                 .build();
 
     }
