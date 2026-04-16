@@ -135,17 +135,16 @@
         <div class="text-center mb-5">
             <span class="badge rounded-pill px-3 py-2 mb-4 d-inline-flex align-items-center gap-2 fw-semibold"
                   style="background-color: #1a1f2e; border: 1px solid #2a2f40; color: #ccc;">
-                ⊙ 시니어 멘토 지원 완료까지 한 걸음
+                ✏ 시니어 프로필 수정
             </span>
-            <h2 class="fw-bold mb-3 text-white">시니어 프로필 상세 설정</h2>
-            <p class="text-secondary">멘티들에게 신뢰를 줄 수 있는 당신의 전문성을 어필해주세요.</p>
+            <h2 class="fw-bold mb-3 text-white">시니어 프로필 수정</h2>
+            <p class="text-secondary">기존 정보를 수정하고 저장해주세요.</p>
         </div>
 
         <!-- 폼 카드 -->
         <div class="form-card p-4 p-md-5">
 
-            <!-- 프로필 폼 -->
-            <form th:action="@{/senior/profile/create}" method="post" id="profileForm">
+            <form th:action="@{/senior/profile/update}" method="post" id="profileForm">
 
                 <!-- 전문성 정보 -->
                 <div class="mb-5">
@@ -158,17 +157,18 @@
                                    name="company"
                                    class="form-control"
                                    placeholder="네이버 / 카카오 등"
+                                   th:value="${profile.company}"
                                    required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">연차</label>
                             <select name="careerYears" class="form-select" required>
-                                <option value="" disabled selected></option>
-                                <option value="0">1년 미만</option>
-                                <option value="1">1 - 3년</option>
-                                <option value="3">3 - 5년</option>
-                                <option value="5">5 - 10년</option>
-                                <option value="10">10년 이상</option>
+                                <option value="" disabled>선택</option>
+                                <option value="0"  th:selected="${profile.careerYears == 0}">1년 미만</option>
+                                <option value="1"  th:selected="${profile.careerYears == 1}">1 - 3년</option>
+                                <option value="3"  th:selected="${profile.careerYears == 3}">3 - 5년</option>
+                                <option value="5"  th:selected="${profile.careerYears == 5}">5 - 10년</option>
+                                <option value="10" th:selected="${profile.careerYears == 10}">10년 이상</option>
                             </select>
                         </div>
                     </div>
@@ -178,19 +178,20 @@
                         <input type="url"
                                name="linkedinUrl"
                                class="form-control"
-                               placeholder="https://linkedin.com/in/username">
+                               placeholder="https://linkedin.com/in/username"
+                               th:value="${profile.linkedinUrl}">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">* 직군/직무</label>
                         <select name="position" class="form-select" required>
-                            <option value="" disabled selected></option>
-                            <option value="백엔드 개발자">백엔드 개발자</option>
-                            <option value="프론트엔드 개발자">프론트엔드 개발자</option>
-                            <option value="풀스택 개발자">풀스택 개발자</option>
-                            <option value="DevOps / 인프라">DevOps / 인프라</option>
-                            <option value="데이터 엔지니어">데이터 엔지니어</option>
-                            <option value="AI / ML 엔지니어">AI / ML 엔지니어</option>
+                            <option value="" disabled>선택</option>
+                            <option value="백엔드 개발자"    th:selected="${profile.position == '백엔드 개발자'}">백엔드 개발자</option>
+                            <option value="프론트엔드 개발자" th:selected="${profile.position == '프론트엔드 개발자'}">프론트엔드 개발자</option>
+                            <option value="풀스택 개발자"    th:selected="${profile.position == '풀스택 개발자'}">풀스택 개발자</option>
+                            <option value="DevOps / 인프라"  th:selected="${profile.position == 'DevOps / 인프라'}">DevOps / 인프라</option>
+                            <option value="데이터 엔지니어"  th:selected="${profile.position == '데이터 엔지니어'}">데이터 엔지니어</option>
+                            <option value="AI / ML 엔지니어" th:selected="${profile.position == 'AI / ML 엔지니어'}">AI / ML 엔지니어</option>
                         </select>
                     </div>
 
@@ -203,7 +204,6 @@
                                    placeholder="추가 입력 후 엔터"
                                    onkeydown="addTag(event)">
                         </div>
-                        <!-- JS로 동적 생성되는 hidden inputs -->
                         <div id="skillHiddenInputs"></div>
                     </div>
                 </div>
@@ -228,7 +228,7 @@
                                name="pricePerReview"
                                class="form-control fw-bold text-mint"
                                id="priceInput"
-                               value="50000"
+                               th:value="${profile.pricePerReview}"
                                min="0"
                                style="font-size: 1.1rem;"
                                required>
@@ -242,9 +242,9 @@
 
                 <!-- 상세 소개 (모달 연동) -->
                 <div class="mb-4">
-                    <input type="hidden" name="introduction" id="introHidden">
+                    <input type="hidden" name="introduction" id="introHidden" th:value="${profile.introduction}">
                     <button type="button" class="btn-detail" data-bs-toggle="modal" data-bs-target="#introModal">
-                        상세소개 작성하기
+                        상세소개 수정하기
                     </button>
                 </div>
 
@@ -252,13 +252,9 @@
                 <div class="d-grid mb-3">
                     <button type="submit"
                             class="btn btn-gradient btn-lg rounded-3 py-3 d-flex align-items-center justify-content-center gap-2">
-                        시니어 프로필 설정 완료 <span>›</span>
+                        프로필 수정 완료 <span>›</span>
                     </button>
                 </div>
-
-                <p class="text-secondary text-center small mb-0">
-                    가입함으로써 Knoc의 이용약관 및 개인정보처리방침에 동의하게 됩니다.
-                </p>
 
             </form>
         </div>
@@ -272,7 +268,7 @@
                 <div class="text-center mb-4">
                     <span class="badge rounded-pill px-3 py-2 mb-3 d-inline-flex align-items-center gap-2 fw-semibold"
                           style="background-color: #1e2435; border: 1px solid #2a2f40; color: #ccc;">
-                        ⊙ 거의 다 왔어요!
+                        ✏ 상세 소개 수정
                     </span>
                     <h4 class="fw-bold text-white mb-2">상세 소개</h4>
                     <p class="text-secondary small mb-0">자신의 강점, 자격증, 기타 스킬 등을 자유롭게 어필해 보세요.</p>
@@ -299,7 +295,7 @@
                             class="btn w-100 py-3 rounded-3"
                             style="background-color: #1e2435; border: 1px solid #2a2f40; color: #aaa;"
                             data-bs-dismiss="modal">
-                        나중에 작성하기
+                        취소
                     </button>
                 </div>
 
@@ -310,7 +306,12 @@
 </th:block>
 
 <th:block layout:fragment="script">
-    <script>
+    <script th:inline="javascript">
+        // ── 서버 데이터 주입 ────────────────────────────────
+        const existingSkills = /*[[${profile.skills}]]*/ [];
+        const existingCareers = /*[[${profile.careers}]]*/ [];
+        const existingIntro   = /*[[${profile.introduction}]]*/ '';
+
         // ── 글자 수 카운트 ──────────────────────────────────
         function updateCharCount() {
             const len = document.getElementById('introText').value.length;
@@ -330,18 +331,21 @@
             const input = document.getElementById('skillTagInput');
             const value = input.value.trim();
             if (!value) return;
+            renderTag(value);
+            input.value = '';
+        }
 
+        function renderTag(value) {
             const area = document.getElementById('skillTagArea');
+            const input = document.getElementById('skillTagInput');
             const tag = document.createElement('span');
             tag.className = 'tag-item';
             tag.dataset.value = value;
             tag.innerHTML = `${value} <span class="remove-tag" onclick="this.parentElement.remove(); syncSkillHiddens()">✕</span>`;
             area.insertBefore(tag, input);
-            input.value = '';
             syncSkillHiddens();
         }
 
-        // 태그 → hidden inputs 동기화
         function syncSkillHiddens() {
             const container = document.getElementById('skillHiddenInputs');
             container.innerHTML = '';
@@ -357,7 +361,7 @@
         // ── 경력 추가 ────────────────────────────────────────
         let careerIndex = 0;
 
-        function addCareerBlock() {
+        function addCareerBlock(data = {}) {
             const i = careerIndex++;
             const block = document.createElement('div');
             block.className = 'career-block';
@@ -370,21 +374,25 @@
                 <div class="row g-3 mb-3">
                     <div class="col-md-7">
                         <label class="form-label">회사명</label>
-                        <input type="text" name="careers[${i}].companyName" class="form-control" placeholder="회사명" required>
+                        <input type="text" name="careers[${i}].companyName" class="form-control"
+                               placeholder="회사명" value="${data.companyName || ''}" required>
                     </div>
                     <div class="col-md-5">
                         <label class="form-label">직무</label>
-                        <input type="text" name="careers[${i}].position" class="form-control" placeholder="백엔드 개발자" required>
+                        <input type="text" name="careers[${i}].position" class="form-control"
+                               placeholder="백엔드 개발자" value="${data.position || ''}" required>
                     </div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">입사일</label>
-                        <input type="date" name="careers[${i}].startDate" class="form-control" required>
+                        <input type="date" name="careers[${i}].startDate" class="form-control"
+                               value="${data.startDate || ''}" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">퇴사일 <span style="color:#555;">(재직 중이면 비워두세요)</span></label>
-                        <input type="date" name="careers[${i}].endDate" class="form-control">
+                        <input type="date" name="careers[${i}].endDate" class="form-control"
+                               value="${data.endDate || ''}">
                     </div>
                 </div>
             `;
@@ -396,6 +404,25 @@
             if (el) el.remove();
         }
 
+        // ── 페이지 로드 시 기존 데이터 렌더링 ────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            // 기술 스택 태그 렌더링
+            existingSkills.forEach(skill => renderTag(skill));
+
+            // 경력 블록 렌더링
+            existingCareers.forEach(career => addCareerBlock({
+                companyName: career.companyName,
+                position:    career.position,
+                startDate:   career.startDate,
+                endDate:     career.endDate || ''
+            }));
+
+            // 상세 소개 렌더링
+            if (existingIntro) {
+                document.getElementById('introText').value = existingIntro;
+                updateCharCount();
+            }
+        });
     </script>
 </th:block>
 
