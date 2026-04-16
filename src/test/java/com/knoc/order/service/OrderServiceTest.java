@@ -6,6 +6,7 @@ import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
+import com.knoc.global.lock.MysqlNamedLockRepository;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.order.dto.OrderRequest;
@@ -47,6 +48,15 @@ class OrderServiceTest {
     @Mock
     private ChatMessageRepository chatMessageRepository;
 
+    @Mock
+    private MysqlNamedLockRepository namedLockRepository;
+
+    // 락 획득 성공 + 기존 주문 없음: 서비스가 생성 분기까지 들어가도록 공통 스텁
+    private void stubLockSuccessAndNoExistingOrder(String idempotencyKey) {
+        given(namedLockRepository.getLock(anyString(), anyInt())).willReturn(true);
+        given(orderRepository.findByOrderNumber("ORD-" + idempotencyKey)).willReturn(Optional.empty());
+    }
+
     @Test
     @DisplayName("결제 요청 성공: 정상적인 데이터가 입력되면 주문이 PENDING 상태로 생성된다.")
     void createOrderRequest_Success() {
@@ -55,6 +65,7 @@ class OrderServiceTest {
         Long juniorId = 2L;
         Long chatRoomId = 10L;
         OrderRequest request = new OrderRequest(chatRoomId, juniorId, 50000);
+        String idempotencyKey = "test-idempotency-key";
 
         // 테스트에 필요한 도메인 객체들도 Mock으로 생성
         Member senior = mock(Member.class);
@@ -71,15 +82,13 @@ class OrderServiceTest {
         given(memberRepository.findById(seniorId)).willReturn(Optional.of(senior));
 
         // Stubbing: 데이터 저장 로직 모의 처리
-        // willAnswer를 사용하여 저장 시도된 Order 객체를 ID값만 임의로 채워 반환 (referenceId 확인용)
-        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> {
-            // 실제 DB 저장이 아니므로 Reflection 등을 쓰지 않고 객체 그대로 반환
-            // (Service에서 savedOrder.getId()를 쓰므로 이 테스트 환경에서는 null이 반환되어도 로직은 수행됨)
-            return invocation.getArgument(0);
-        });
+        // willAnswer를 사용하여 저장 시도된 Order 객체를 그대로 반환 (DB 의존성 제거)
+        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        stubLockSuccessAndNoExistingOrder(idempotencyKey);
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, seniorId);
+        OrderResponse response = orderService.createOrderRequest(request, seniorId, idempotencyKey);
 
         // then
         assertThat(response).isNotNull();
@@ -87,13 +96,60 @@ class OrderServiceTest {
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
         assertThat(response.getOrderNumber()).startsWith("ORD-");
 
-        // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 확인
+        // Verify: 주문이 실제로 한 번만 저장되었는지
         verify(orderRepository, times(1)).save(any(Order.class));
-        // Verify: 결제 요청 시스템 메시지 내용 검증
+        // Verify: 결제 요청 시스템 메시지가 한 번만 저장되었고, 타입·문구가 기대와 맞는지
         verify(chatMessageRepository, times(1)).save(argThat(message ->
-                message.getMessageType() ==  MessageType.PAYMENT_REQUESTED && // 타입 확인
-                message.getContent().contains("50,000") && // 금액 포함 확인
-                message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
+                message.getMessageType() == MessageType.PAYMENT_REQUESTED && // 타입 확인
+                        message.getContent().contains("50,000") && // 금액 포함 확인
+                        message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
+
+        // Verify(락): 서비스가 사용하는 lockKey(pay: + orderNumber)로 GET_LOCK이 호출됐는지 (timeout 초는 값만 검증)
+        verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
+        // Verify(락): 예외 없이 끝나도 finally에서 RELEASE_LOCK이 반드시 한 번 호출되는지
+        verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
+    }
+
+    @Test
+    @DisplayName("멱등 요청: 동일 orderNumber가 이미 존재하면 새로 저장하지 않고 기존 주문을 반환한다.")
+    void createOrderRequest_Idempotent_ReturnExistingOrder() {
+        // given
+        Long seniorId = 1L;
+        Long chatRoomId = 10L;
+        String idempotencyKey = "test-idempotency-key";
+        OrderRequest request = new OrderRequest(chatRoomId, 2L, 50000);
+
+        // orderRepository.findByOrderNumber() 단계에서 바로 반환되므로, 아래 엔티티 조회들은 호출되지 않아야 한다.
+        Order existingOrder = mock(Order.class);
+        ChatRoom existingChatRoom = mock(ChatRoom.class);
+
+        given(existingOrder.getOrderNumber()).willReturn("ORD-" + idempotencyKey);
+        given(existingOrder.getChatRoom()).willReturn(existingChatRoom);
+        given(existingChatRoom.getId()).willReturn(chatRoomId);
+        given(existingOrder.getAmount()).willReturn(50000);
+        given(existingOrder.getStatus()).willReturn(OrderStatus.PENDING);
+
+        given(namedLockRepository.getLock(anyString(), anyInt())).willReturn(true);
+        given(orderRepository.findByOrderNumber("ORD-" + idempotencyKey)).willReturn(Optional.of(existingOrder));
+
+        // when
+        OrderResponse response = orderService.createOrderRequest(request, seniorId, idempotencyKey);
+
+        // then
+        assertThat(response.getOrderNumber()).isEqualTo("ORD-" + idempotencyKey);
+        assertThat(response.getChatRoomId()).isEqualTo(chatRoomId);
+        assertThat(response.getAmount()).isEqualTo(50000);
+        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+
+        // Verify: 멱등 경로에서는 주문/채팅 메시지 저장과 추가 조회가 일어나면 안 됨
+        verify(orderRepository, never()).save(any());
+        verify(chatMessageRepository, never()).save(any());
+        verify(chatRoomRepository, never()).findById(anyLong());
+        verify(memberRepository, never()).findById(anyLong());
+
+        // Verify(락): 멱등 응답이어도 임계영역 진입 전에 GET_LOCK → finally에서 RELEASE_LOCK 순서는 동일
+        verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
+        verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
 
     @Test
@@ -103,6 +159,7 @@ class OrderServiceTest {
         Long actualSeniorId = 1L;
         Long hackerId = 99L; // 실제 방 주인(1L)과 다른 요청자 ID
         Long chatRoomId = 10L;
+        String idempotencyKey = "test-idempotency-key";
         OrderRequest request = new OrderRequest(chatRoomId, 2L, 50000);
 
         ChatRoom chatRoom = mock(ChatRoom.class);
@@ -115,31 +172,42 @@ class OrderServiceTest {
         // Stubbing: Repository 조회 시나리오 설정
         given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
         given(memberRepository.findById(anyLong())).willReturn(Optional.of(mock(Member.class)));
+        stubLockSuccessAndNoExistingOrder(idempotencyKey);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId, idempotencyKey))
                 .isInstanceOf(BusinessException.class) // BusinessException이 터져야 함
                 .hasMessage(ErrorCode.NOT_SENIOR_IN_ROOM.getMessage()); // 메시지도 일치해야 함
 
-        // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
+        // Verify: 비즈니스 예외로 중단됐을 때도 주문/시스템 메시지는 저장되지 않아야 함
         verify(orderRepository, never()).save(any());
         verify(chatMessageRepository, never()).save(any());
+
+        // Verify(락): 예외가 나도 finally에서 락은 풀려야 하므로 GET_LOCK / RELEASE_LOCK 둘 다 1회
+        verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
+        verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
 
     @Test
     @DisplayName("결제 요청 실패: 존재하지 않는 채팅방 ID로 요청하면 404 예외가 발생한다.")
     void createOrderRequest_Fail_NotFoundChatRoom() {
         // given
+        String idempotencyKey = "test-idempotency-key";
         given(chatRoomRepository.findById(anyLong())).willReturn(Optional.empty());
+        stubLockSuccessAndNoExistingOrder(idempotencyKey);
         OrderRequest request = new OrderRequest(1L, 2L, 10000);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, idempotencyKey))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.CHATROOM_NOT_FOUND.getMessage());
 
-        // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
+        // Verify: 채팅방 없음으로 중단될 때도 주문/시스템 메시지는 저장되지 않아야 함
         verify(orderRepository, never()).save(any());
         verify(chatMessageRepository, never()).save(any());
+
+        // Verify(락): 위와 동일 — 예외 발생 후에도 finally에서 RELEASE_LOCK이 호출되는지 보장
+        verify(namedLockRepository, times(1)).getLock(eq("pay:ORD-" + idempotencyKey), anyInt());
+        verify(namedLockRepository, times(1)).releaseLock(eq("pay:ORD-" + idempotencyKey));
     }
 }
