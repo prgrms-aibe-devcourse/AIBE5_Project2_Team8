@@ -4,6 +4,7 @@ import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import com.knoc.senior.dto.SeniorProfileResponseDto;
+import com.knoc.senior.dto.SeniorSearchCondition;
 import com.knoc.senior.entity.SeniorCareer;
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.entity.SeniorSkill;
@@ -195,5 +196,212 @@ class SeniorProfileServiceTest {
         assertThatThrownBy(() -> seniorProfileService.updateProfile(nonExistentMemberId, dto))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("시니어 프로필이 존재하지 않습니다.");
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  searchProfiles 테스트
+    // ═══════════════════════════════════════════════════════
+
+    /** setUp()의 프로필 외에 추가 프로필을 하나 더 생성하는 헬퍼 */
+    private void createExtraProfile(String email, String nickname, String company,
+                                    String position, int careerYears, int price,
+                                    List<String> skills) {
+        Member member = Member.builder()
+                .email(email)
+                .password("password!")
+                .nickname(nickname)
+                .build();
+        memberRepository.save(member);
+
+        SeniorProfile profile = SeniorProfile.builder()
+                .member(member)
+                .company(company)
+                .position(position)
+                .careerYears(careerYears)
+                .introduction("소개글")
+                .linkedinUrl(null)
+                .pricePerReview(price)
+                .build();
+        skills.forEach(s -> profile.addSkill(SeniorSkill.builder().skillName(s).build()));
+        seniorProfileRepository.save(profile);
+    }
+
+    @Test
+    @DisplayName("조건 없으면 전체 프로필을 반환한다")
+    void searchProfiles_조건없음_전체반환() {
+        // given
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 70000, List.of("React", "TypeScript"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("닉네임 키워드로 검색하면 일치하는 프로필만 반환한다")
+    void searchProfiles_키워드_닉네임검색() {
+        // given
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 70000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setKeyword("시니어");    // setUp() 닉네임: "시니어유저"
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getNickname()).isEqualTo("시니어유저");
+    }
+
+    @Test
+    @DisplayName("회사명 키워드로 검색하면 일치하는 프로필만 반환한다")
+    void searchProfiles_키워드_회사명검색() {
+        // given
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 70000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setKeyword("네이버");
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCompany()).isEqualTo("네이버");
+    }
+
+    @Test
+    @DisplayName("직군 키워드로 검색하면 일치하는 프로필만 반환한다")
+    void searchProfiles_키워드_직군검색() {
+        // given
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 70000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setKeyword("프론트엔드");
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getPosition()).isEqualTo("프론트엔드 개발자");
+    }
+
+    @Test
+    @DisplayName("연차 필터를 설정하면 해당 연차 이상인 프로필만 반환한다")
+    void searchProfiles_연차필터() {
+        // given: setUp() careerYears=3, 추가 careerYears=8
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                8, 70000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setCareerYears(5);    // 5년 이상 → careerYears=8만 해당
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCareerYears()).isGreaterThanOrEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("최대 가격 필터를 설정하면 해당 가격 이하인 프로필만 반환한다")
+    void searchProfiles_최대가격필터() {
+        // given: setUp() price=50000, 추가 price=100000
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 100000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setMaxPrice(60000);    // 60,000 이하 → price=50000만 해당
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getPricePerReview()).isLessThanOrEqualTo(60000);
+    }
+
+    @Test
+    @DisplayName("스킬 필터를 설정하면 해당 스킬을 보유한 프로필만 반환한다")
+    void searchProfiles_스킬필터() {
+        // given: setUp() skills=[Java, Spring], 추가 skills=[React]
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                5, 70000, List.of("React", "TypeScript"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setSkill("React");
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getSkills()).contains("React");
+    }
+
+    @Test
+    @DisplayName("여러 조건을 동시에 적용하면 모든 조건을 만족하는 프로필만 반환한다")
+    void searchProfiles_복합조건() {
+        // given: setUp() 카카오/Java/price=50000/career=3
+        //        추가 네이버/React/price=80000/career=7
+        createExtraProfile("extra@knoc.com", "추가유저", "네이버", "프론트엔드 개발자",
+                7, 80000, List.of("React"));
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setKeyword("카카오");
+        cond.setMaxPrice(60000);
+        cond.setSkill("Java");
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCompany()).isEqualTo("카카오");
+        assertThat(result.get(0).getSkills()).contains("Java");
+    }
+
+    @Test
+    @DisplayName("조건에 맞는 프로필이 없으면 빈 리스트를 반환한다")
+    void searchProfiles_결과없음() {
+        // given
+        em.flush();
+        em.clear();
+
+        SeniorSearchCondition cond = new SeniorSearchCondition();
+        cond.setKeyword("존재하지않는닉네임XYZ");
+
+        // when
+        List<SeniorProfileResponseDto> result = seniorProfileService.searchProfiles(cond);
+
+        // then
+        assertThat(result).isEmpty();
     }
 }
