@@ -51,19 +51,26 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_REQUEST_IN_PROGRESS);
         }
 
-        // 커밋 이후(트랜잭션 종류 이후)에 락을 풀도록 등록
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                // 트랜잭션 commit/rollback이 끝난 뒤 락 해제
-                try {
-                    namedLockRepository.releaseLock(lockKey);
-                } catch (Exception ignored) {
-                    // release 실패가 원래 예외/정상 흐름을 덮지 않도록 예외는 삼킨다.
-                    // 로깅이 있다면 warn 권장
+        // 커밋 전에 락이 풀리는 것을 방지하기 위해, 트랜잭션이 활성화되면 커밋/롤백 이후에 락을 해제
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            // 커밋 이후(트랜잭션 종류 이후)에 락을 풀도록 등록
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    // 트랜잭션 commit/rollback이 끝난 뒤 락 해제
+                    try {
+                        namedLockRepository.releaseLock(lockKey);
+                    } catch (Exception ignored) {
+                        // release 실패가 원래 예외/정상 흐름을 덮지 않도록 예외는 삼킨다 (로깅이 있다면 warn 권장)
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // 단위테스트(Mockito) 같은 트랜잭션 없는 환경 대비
+            try {
+                namedLockRepository.releaseLock(lockKey);
+            } catch (Exception ignored) {}
+        }
 
         // 1) 락 안에서 먼저 조회: 이미 주문이 있다면 그대로 반환(멱등 응답)
         return orderRepository.findByOrderNumber(orderNumber)
