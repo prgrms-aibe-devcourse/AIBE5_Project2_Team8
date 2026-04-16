@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+
+<th:block layout:fragment="content">
+
+    <style>
+        .btn-gradient {
+            background: linear-gradient(90deg, #00CFE8, #0080FF);
+            color: #fff;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(90deg, #00A6BA, #0060CC);
+            color: #fff;
+        }
+        .form-card {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 16px;
+        }
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #00CFE8;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-control, .form-select {
+            background-color: #1e2435 !important;
+            border: 1px solid #2a2f40 !important;
+            color: #fff !important;
+            border-radius: 8px;
+        }
+        .form-control::placeholder { color: #555; }
+        .form-control:focus, .form-select:focus {
+            border-color: #00CFE8 !important;
+            box-shadow: 0 0 0 0.2rem rgba(0,207,232,0.15) !important;
+        }
+        .form-select option { background-color: #1e2435; }
+        .tag-input-area {
+            background-color: #1e2435;
+            border: 1px solid #2a2f40;
+            border-radius: 8px;
+            padding: 8px 12px;
+            min-height: 48px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            cursor: text;
+        }
+        .tag-item {
+            background-color: #2a2f40;
+            color: #ccc;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .tag-item .remove-tag {
+            cursor: pointer;
+            color: #888;
+            font-size: 0.8rem;
+        }
+        .tag-item .remove-tag:hover { color: #fff; }
+        .tag-input {
+            background: none;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 0.9rem;
+            min-width: 120px;
+        }
+        .form-label { color: #aaa; font-size: 0.9rem; margin-bottom: 6px; }
+        .btn-detail {
+            background-color: #1e2435;
+            border: 1px solid #2a2f40;
+            color: #ccc;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 0.95rem;
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+        }
+        .btn-detail:hover { border-color: #00CFE8; color: #00CFE8; }
+        .modal-content {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+        }
+        .modal-textarea {
+            background-color: #1e2435 !important;
+            border: 1px solid #2a2f40 !important;
+            color: #fff !important;
+            resize: none;
+            height: 50vh;
+            min-height: 280px;
+        }
+        .modal-textarea::placeholder { color: #555; }
+        .char-count {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #555;
+            margin-top: 6px;
+        }
+        .career-block {
+            background-color: #1e2435;
+            border: 1px solid #2a2f40;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .btn-remove-career {
+            background: none;
+            border: 1px solid #2a2f40;
+            color: #888;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+        .btn-remove-career:hover { border-color: #ff6b6b; color: #ff6b6b; }
+    </style>
+
+    <section class="container py-5 mt-4" style="max-width: 700px;">
+
+        <!-- 페이지 헤더 -->
+        <div class="text-center mb-5">
+            <span class="badge rounded-pill px-3 py-2 mb-4 d-inline-flex align-items-center gap-2 fw-semibold"
+                  style="background-color: #1a1f2e; border: 1px solid #2a2f40; color: #ccc;">
+                ✏ 시니어 프로필 수정
+            </span>
+            <h2 class="fw-bold mb-3 text-white">시니어 프로필 수정</h2>
+            <p class="text-secondary">기존 정보를 수정하고 저장해주세요.</p>
+        </div>
+
+        <!-- 폼 카드 -->
+        <div class="form-card p-4 p-md-5">
+
+            <form th:action="@{/senior/profile/update}" method="post" id="profileForm">
+
+                <!-- 전문성 정보 -->
+                <div class="mb-5">
+                    <p class="section-title">🎓 전문성 정보</p>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">🏢 현재 (또는 이전) 소속</label>
+                            <input type="text"
+                                   name="company"
+                                   class="form-control"
+                                   placeholder="네이버 / 카카오 등"
+                                   th:value="${profile.company}"
+                                   required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">연차</label>
+                            <select name="careerYears" class="form-select" required>
+                                <option value="" disabled>선택</option>
+                                <option value="0"  th:selected="${profile.careerYears == 0}">1년 미만</option>
+                                <option value="1"  th:selected="${profile.careerYears == 1}">1 - 3년</option>
+                                <option value="3"  th:selected="${profile.careerYears == 3}">3 - 5년</option>
+                                <option value="5"  th:selected="${profile.careerYears == 5}">5 - 10년</option>
+                                <option value="10" th:selected="${profile.careerYears == 10}">10년 이상</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">LinkedIn 프로필 링크</label>
+                        <input type="url"
+                               name="linkedinUrl"
+                               class="form-control"
+                               placeholder="https://linkedin.com/in/username"
+                               th:value="${profile.linkedinUrl}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">* 직군/직무</label>
+                        <select name="position" class="form-select" required>
+                            <option value="" disabled>선택</option>
+                            <option value="백엔드 개발자"    th:selected="${profile.position == '백엔드 개발자'}">백엔드 개발자</option>
+                            <option value="프론트엔드 개발자" th:selected="${profile.position == '프론트엔드 개발자'}">프론트엔드 개발자</option>
+                            <option value="풀스택 개발자"    th:selected="${profile.position == '풀스택 개발자'}">풀스택 개발자</option>
+                            <option value="DevOps / 인프라"  th:selected="${profile.position == 'DevOps / 인프라'}">DevOps / 인프라</option>
+                            <option value="데이터 엔지니어"  th:selected="${profile.position == '데이터 엔지니어'}">데이터 엔지니어</option>
+                            <option value="AI / ML 엔지니어" th:selected="${profile.position == 'AI / ML 엔지니어'}">AI / ML 엔지니어</option>
+                        </select>
+                    </div>
+
+                    <!-- 기술 스택 태그 -->
+                    <div>
+                        <label class="form-label">기술 스택</label>
+                        <div class="tag-input-area" id="skillTagArea"
+                             onclick="document.getElementById('skillTagInput').focus()">
+                            <input type="text" class="tag-input" id="skillTagInput"
+                                   placeholder="추가 입력 후 엔터"
+                                   onkeydown="addTag(event)">
+                        </div>
+                        <div id="skillHiddenInputs"></div>
+                    </div>
+                </div>
+
+                <!-- 경력 사항 -->
+                <div class="mb-5">
+                    <p class="section-title">💼 경력 사항</p>
+                    <div id="careerList" class="d-flex flex-column gap-3"></div>
+                    <button type="button"
+                            class="btn-detail mt-3"
+                            onclick="addCareerBlock()">
+                        + 경력 추가
+                    </button>
+                </div>
+
+                <!-- 멘토링 희망 금액 -->
+                <div class="mb-5">
+                    <p class="section-title">💰 멘토링 희망 금액</p>
+                    <label class="form-label">1회 (또는 1시간) 기준 리뷰 단가 (원)</label>
+                    <div class="input-group">
+                        <input type="number"
+                               name="pricePerReview"
+                               class="form-control fw-bold text-mint"
+                               id="priceInput"
+                               th:value="${profile.pricePerReview}"
+                               min="0"
+                               style="font-size: 1.1rem;"
+                               required>
+                        <span class="input-group-text"
+                              style="background-color: #1e2435; border-color: #2a2f40; color: #aaa;">원</span>
+                    </div>
+                    <p class="text-secondary small mt-2 mb-0">
+                        실제 멘토링 전 채팅을 통해 주니어와 금액을 최종 조율할 수 있습니다.
+                    </p>
+                </div>
+
+                <!-- 상세 소개 (모달 연동) -->
+                <div class="mb-4">
+                    <input type="hidden" name="introduction" id="introHidden" th:value="${profile.introduction}">
+                    <button type="button" class="btn-detail" data-bs-toggle="modal" data-bs-target="#introModal">
+                        상세소개 수정하기
+                    </button>
+                </div>
+
+                <!-- 최종 제출 버튼 -->
+                <div class="d-grid mb-3">
+                    <button type="submit"
+                            class="btn btn-gradient btn-lg rounded-3 py-3 d-flex align-items-center justify-content-center gap-2">
+                        프로필 수정 완료 <span>›</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </section>
+
+    <!-- 상세 소개 모달 -->
+    <div class="modal fade" id="introModal" tabindex="-1" aria-labelledby="introModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content p-4">
+
+                <div class="text-center mb-4">
+                    <span class="badge rounded-pill px-3 py-2 mb-3 d-inline-flex align-items-center gap-2 fw-semibold"
+                          style="background-color: #1e2435; border: 1px solid #2a2f40; color: #ccc;">
+                        ✏ 상세 소개 수정
+                    </span>
+                    <h4 class="fw-bold text-white mb-2">상세 소개</h4>
+                    <p class="text-secondary small mb-0">자신의 강점, 자격증, 기타 스킬 등을 자유롭게 어필해 보세요.</p>
+                </div>
+
+                <div class="modal-body p-0">
+                    <p class="text-secondary small mb-2 fw-semibold">📄 상세 소개 작성</p>
+                    <textarea class="form-control modal-textarea"
+                              id="introText"
+                              maxlength="5000"
+                              placeholder="ex)&#10;- 직무와 관련된 자신의 장점 입력&#10;- 보유한 자격증 입력&#10;- 검색되지 않는 추가 스킬 입력"
+                              oninput="updateCharCount()"></textarea>
+                    <p class="char-count" id="charCount">(0/5000)</p>
+                </div>
+
+                <div class="modal-footer border-0 flex-column gap-2 p-0 mt-3">
+                    <button type="button"
+                            class="btn btn-gradient w-100 py-3 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                            onclick="saveIntro()"
+                            data-bs-dismiss="modal">
+                        상세 소개 작성완료 <span>›</span>
+                    </button>
+                    <button type="button"
+                            class="btn w-100 py-3 rounded-3"
+                            style="background-color: #1e2435; border: 1px solid #2a2f40; color: #aaa;"
+                            data-bs-dismiss="modal">
+                        취소
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        // ── 서버 데이터 주입 ────────────────────────────────
+        const existingSkills = /*[[${profile.skills}]]*/ [];
+        const existingCareers = /*[[${profile.careers}]]*/ [];
+        const existingIntro   = /*[[${profile.introduction}]]*/ '';
+
+        // ── 글자 수 카운트 ──────────────────────────────────
+        function updateCharCount() {
+            const len = document.getElementById('introText').value.length;
+            document.getElementById('charCount').textContent = `(${len}/5000)`;
+        }
+
+        // ── 소개글 모달 → hidden input 저장 ─────────────────
+        function saveIntro() {
+            const text = document.getElementById('introText').value;
+            document.getElementById('introHidden').value = text;
+        }
+
+        // ── 기술 스택 태그 ───────────────────────────────────
+        function addTag(event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const input = document.getElementById('skillTagInput');
+            const value = input.value.trim();
+            if (!value) return;
+            renderTag(value);
+            input.value = '';
+        }
+
+        function renderTag(value) {
+            const area = document.getElementById('skillTagArea');
+            const input = document.getElementById('skillTagInput');
+            const tag = document.createElement('span');
+            tag.className = 'tag-item';
+            tag.dataset.value = value;
+            tag.innerHTML = `${value} <span class="remove-tag" onclick="this.parentElement.remove(); syncSkillHiddens()">✕</span>`;
+            area.insertBefore(tag, input);
+            syncSkillHiddens();
+        }
+
+        function syncSkillHiddens() {
+            const container = document.getElementById('skillHiddenInputs');
+            container.innerHTML = '';
+            document.querySelectorAll('#skillTagArea .tag-item').forEach(tag => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'skills';
+                input.value = tag.dataset.value;
+                container.appendChild(input);
+            });
+        }
+
+        // ── 경력 추가 ────────────────────────────────────────
+        let careerIndex = 0;
+
+        function addCareerBlock(data = {}) {
+            const i = careerIndex++;
+            const block = document.createElement('div');
+            block.className = 'career-block';
+            block.id = `career-${i}`;
+            block.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span style="color:#aaa; font-size:0.9rem;">경력 ${i + 1}</span>
+                    <button type="button" class="btn-remove-career" onclick="removeCareer('career-${i}')">✕ 삭제</button>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-7">
+                        <label class="form-label">회사명</label>
+                        <input type="text" name="careers[${i}].companyName" class="form-control"
+                               placeholder="회사명" value="${data.companyName || ''}" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">직무</label>
+                        <input type="text" name="careers[${i}].position" class="form-control"
+                               placeholder="백엔드 개발자" value="${data.position || ''}" required>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">입사일</label>
+                        <input type="date" name="careers[${i}].startDate" class="form-control"
+                               value="${data.startDate || ''}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">퇴사일 <span style="color:#555;">(재직 중이면 비워두세요)</span></label>
+                        <input type="date" name="careers[${i}].endDate" class="form-control"
+                               value="${data.endDate || ''}">
+                    </div>
+                </div>
+            `;
+            document.getElementById('careerList').appendChild(block);
+        }
+
+        function removeCareer(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // ── 페이지 로드 시 기존 데이터 렌더링 ────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            // 기술 스택 태그 렌더링
+            existingSkills.forEach(skill => renderTag(skill));
+
+            // 경력 블록 렌더링
+            existingCareers.forEach(career => addCareerBlock({
+                companyName: career.companyName,
+                position:    career.position,
+                startDate:   career.startDate,
+                endDate:     career.endDate || ''
+            }));
+
+            // 상세 소개 렌더링
+            if (existingIntro) {
+                document.getElementById('introText').value = existingIntro;
+                updateCharCount();
+            }
+        });
+    </script>
+</th:block>
+
+</html>
