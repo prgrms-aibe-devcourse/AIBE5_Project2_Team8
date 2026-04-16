@@ -21,7 +21,9 @@ public enum ErrorCode {
 
     // 주문 관련 (Order)
     ORDER_NOT_FOUND(404, "존재하지 않는 주문입니다."),
-    NOT_SENIOR_IN_ROOM(403, "해당 채팅방의 시니어가 아닙니다."); // 권한 검증용
+    NOT_SENIOR_IN_ROOM(403, "해당 채팅방의 시니어가 아닙니다."), // 권한 검증용
+
+    ORDER_REQUEST_IN_PROGRESS(429, "요청이 처리 중입니다. 잠시 후 다시 시도해주세요."); // 멱등 요청 중복 방지용
 
     private final int status;
     private final String message;
