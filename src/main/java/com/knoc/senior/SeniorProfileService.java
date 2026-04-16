@@ -4,20 +4,33 @@ import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import com.knoc.senior.dto.SeniorProfileResponseDto;
+import com.knoc.senior.dto.SeniorSearchCondition;
 import com.knoc.senior.entity.SeniorCareer;
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.entity.SeniorSkill;
+import com.knoc.senior.repository.SeniorProfileQueryRepository;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SeniorProfileService {
     private final SeniorProfileRepository seniorProfileRepository;
+    private final SeniorProfileQueryRepository seniorProfileQueryRepository;
     private final MemberRepository memberRepository;
+
+    // 시니어 목록 검색 (QueryDSL)
+    public List<SeniorProfileResponseDto> searchProfiles(SeniorSearchCondition condition) {
+        return seniorProfileQueryRepository.search(condition).stream()
+                .map(SeniorProfileResponseDto::from)
+                .collect(Collectors.toList());
+    }
 
     // 시니어 프로필 조회
     public SeniorProfileResponseDto getProfile(Long memberId) {

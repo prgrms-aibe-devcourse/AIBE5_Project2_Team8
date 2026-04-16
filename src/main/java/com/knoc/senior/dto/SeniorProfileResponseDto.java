@@ -11,23 +11,31 @@ import java.util.stream.Collectors;
 public class SeniorProfileResponseDto {
 
     private final Long id;
+    private final String nickname;
+    private final String profileImageUrl;
     private final String company;
     private final String position;
     private final int careerYears;
     private final String introduction;
     private final String linkedinUrl;
     private final int pricePerReview;
+    private final java.math.BigDecimal avgRating;
+    private final int totalReviewCount;
     private final List<String> skills;
     private final List<CareerDto> careers;
 
     private SeniorProfileResponseDto(SeniorProfile profile) {
         this.id = profile.getId();
+        this.nickname = profile.getMember().getNickname();
+        this.profileImageUrl = profile.getMember().getProfileImageUrl();
         this.company = profile.getCompany();
         this.position = profile.getPosition();
         this.careerYears = profile.getCareerYears();
         this.introduction = profile.getIntroduction();
         this.linkedinUrl = profile.getLinkedinUrl();
         this.pricePerReview = profile.getPricePerReview();
+        this.avgRating = profile.getAvgRating();
+        this.totalReviewCount = profile.getTotalReviewCount();
         this.skills = profile.getSkills().stream()
                 .map(s -> s.getSkillName())
                 .collect(Collectors.toList());
