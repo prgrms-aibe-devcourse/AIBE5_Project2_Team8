@@ -36,6 +36,18 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    // refreshToken 생성(수명 7일, 이메일 저장)
+    public String createRefreshToken(String email) {
+        Date now = new Date();
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + refreshTokenValidityTime))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
