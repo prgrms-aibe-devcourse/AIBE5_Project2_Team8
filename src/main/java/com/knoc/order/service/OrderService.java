@@ -51,9 +51,9 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_REQUEST_IN_PROGRESS);
         }
 
-        // 커밋 전에 락이 풀리는 것을 방지하기 위해, 트랜잭션이 활성화되면 커밋/롤백 이후에 락을 해제
+        // 커밋 전에 락이 풀리는 것을 방지하기 위해, 트랜잭션이 활성화되면 커밋/롤백 이후(afterCompletion)에 락을 해제한다.
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            // 커밋 이후(트랜잭션 종류 이후)에 락을 풀도록 등록
+            // 트랜잭션 종료 후(afterCompletion) 락을 풀도록 등록
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCompletion(int status) {
@@ -66,7 +66,7 @@ public class OrderService {
                 }
             });
         } else {
-            // 단위테스트(Mockito) 같은 트랜잭션 없는 환경 대비
+            // 단위테스트(Mockito) 등 트랜잭션 없는 환경 대비: 즉시 해제(커밋 이후 해제 의미 없음)
             try {
                 namedLockRepository.releaseLock(lockKey);
             } catch (Exception ignored) {}
