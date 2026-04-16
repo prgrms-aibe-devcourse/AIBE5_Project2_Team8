@@ -95,7 +95,7 @@ public class OrderService {
 
                             // 저장된 주문을 응답 DTO로 반환
                             return OrderResponse.from(savedOrder);
-                        } catch (DataIntegrityViolationException e) {
+                        } catch (DataIntegrityViolationException e) { // 데이터베이스가 요구하는 데이터 규칙(무결성)이 깨졌을 때 던져지는 예외
                             // 매우 드물게(동시성/재시도 타이밍) UNIQUE 충돌이 나면,
                             // "이미 생성된 주문"을 조회해서 멱등 응답으로 돌려준다.
                             return orderRepository.findByOrderNumber(orderNumber)
