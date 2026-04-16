@@ -25,29 +25,49 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // accessToken을 찾음
-        String token = null;
-        if(request.getCookies() != null) {
-            token = Arrays.stream(request.getCookies())
-                    .filter(c -> c.getName().equals("accessToken"))
-                    .map(Cookie::getValue)
-                    .findFirst()
-                    .orElse(null);
+        String accessToken = getCookieValue(request, "accessToken");
+        String refreshToken = getCookieValue(request, "refreshToken");
+
+        // access token 살아있으면 통과
+        if(accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
+            setAuthentication(jwtTokenProvider.getEmailFromToken(accessToken));
         }
-        if(token != null && jwtTokenProvider.validateToken(token)) {
-            String email = jwtTokenProvider.getEmailFromToken(token);
+        // access token 만료, refresh token이 유효하면 access token 재발급
+        else if(refreshToken != null && jwtTokenProvider.validateToken(refreshToken)) {
+            String email = jwtTokenProvider.getEmailFromToken(refreshToken);
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            String role = userDetails.getAuthorities().iterator().next().getAuthority();
 
-            if(userDetails != null) {
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                // Spring security에 등록
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            String newAccessToken = jwtTokenProvider.createAccessToken(email, role);
+            Cookie newCookie = new Cookie("accessToken", newAccessToken);
+            newCookie.setPath("/");
+            newCookie.setHttpOnly(true);
+            newCookie.setMaxAge(60 * 30);
+            response.addCookie(newCookie);
 
-            }
+            setAuthentication(email);
+
         }
         filterChain.doFilter(request, response);
 
+    }
+
+    // 쿠키 배열에서 원하는 쿠키를 가져옴
+    private String getCookieValue(HttpServletRequest request, String cookieName) {
+        if(request.getCookies() == null) return null;
+        return Arrays.stream(request.getCookies())
+                .filter(c -> c.getName().equals(cookieName))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElse(null);
+
+    }
+
+    private void setAuthentication(String email) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
 }
