@@ -197,7 +197,7 @@ class SeniorProfileServiceTest {
         // when & then
         assertThatThrownBy(() -> seniorProfileService.updateProfile(nonExistentMemberId, dto))
                 .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SENIOR_PROFILE_NOT_FOUNT);;
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SENIOR_PROFILE_NOT_FOUND);
     }
 
     // ═══════════════════════════════════════════════════════
