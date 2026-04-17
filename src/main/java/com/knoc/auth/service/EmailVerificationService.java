@@ -2,6 +2,8 @@ package com.knoc.auth.service;
 
 import com.knoc.auth.repository.EmailVerificationRepository;
 import com.knoc.auth.verification.EmailVerification;
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ public class EmailVerificationService {
     public void validateEmail(String email) {
         String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
         if (blockedDomains.contains(domain)) {
-            throw new IllegalArgumentException("기업 이메일만 인증 가능합니다");
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_DOMAIN);
         }
     }
 
@@ -42,7 +44,7 @@ public class EmailVerificationService {
         EmailVerification verification = emailVerificationRepository.findByMember(member)
                 .map(existing -> {
                     if(existing.isVerified()){
-                        throw new IllegalStateException("이미 인증이 완료된 이메일입니다.");
+                        throw new BusinessException(ErrorCode.ALREADY_VERIFIED);
                     }
                     existing.updateVerificationCode(code, LocalDateTime.now().plusMinutes(5));
                     return existing;
@@ -61,14 +63,14 @@ public class EmailVerificationService {
     public void verifyCode(Member member, String inputCode){
         // 인증 번호 6자리 제한은 html form에서 처리하고
         EmailVerification verification = emailVerificationRepository.findByMember(member)
-                .orElseThrow(() -> new IllegalArgumentException("인증 요청 내역이 없습니다"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
 
         if (LocalDateTime.now().isAfter(verification.getExpiredAt())) {
-            throw new IllegalArgumentException("인증번호가 만료되었습니다");
+            throw new BusinessException(ErrorCode.EXPIRED_VERIFICATION_CODE);
         }
 
         if (!verification.getVerificationCode().equals(inputCode)) {
-            throw new IllegalArgumentException("인증번호가 일치하지 않습니다");
+            throw new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE);
         }
 
         verification.verify();

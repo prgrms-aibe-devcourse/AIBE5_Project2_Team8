@@ -1,6 +1,8 @@
 package com.knoc.senior.controller;
 
 import com.knoc.auth.service.EmailVerificationService;
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.SeniorProfileService;
@@ -34,7 +36,7 @@ public class SeniorApplyController {
     public String auth(@AuthenticationPrincipal UserDetails userDetails) {
         // Username == Email
         Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         boolean alreadyVerified = emailVerificationService.isVerified(member);
 
@@ -49,7 +51,7 @@ public class SeniorApplyController {
     public String profileSetup(@AuthenticationPrincipal UserDetails userDetails,
                                RedirectAttributes redirectAttributes) {
         Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         if (!emailVerificationService.isVerified(member)) {
             redirectAttributes.addFlashAttribute("errorMessage", "기업 이메일 인증 후 접근 가능합니다.");
@@ -71,7 +73,7 @@ public class SeniorApplyController {
 
     private Long getMemberId(UserDetails userDetails) {
         Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         return member.getId();
     }
 
@@ -95,32 +97,21 @@ public class SeniorApplyController {
     @PostMapping("/verify/send")
     @ResponseBody
     public ResponseEntity<Map<String, String>> sendVerificationCode(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String companyEmail){
-        try {
-            Member member = memberRepository.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-            emailVerificationService.sendCode(member, companyEmail);
-            return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-        catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", "메일 발송에 실패했습니다"));
-        }
+        emailVerificationService.sendCode(member, companyEmail);
+        return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다"));
     }
 
     @PostMapping("/verify/confirm")
     @ResponseBody
     public ResponseEntity<Map<String, String>> confirmVerificationCode(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String inputCode){
-        try {
-            Member member = memberRepository.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-            emailVerificationService.verifyCode(member, inputCode);
-            return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        emailVerificationService.verifyCode(member, inputCode);
+
+        return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
     }
-
 }

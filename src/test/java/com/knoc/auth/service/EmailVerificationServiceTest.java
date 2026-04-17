@@ -2,6 +2,7 @@ package com.knoc.auth.service;
 
 import com.knoc.auth.repository.EmailVerificationRepository;
 import com.knoc.auth.verification.EmailVerification;
+import com.knoc.global.exception.BusinessException;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.member.MemberRole;
@@ -46,7 +47,7 @@ public class EmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("이미 인증 완료한 사용자가 재요청 시 IllegalStateException 발생")
+    @DisplayName("이미 인증 완료한 사용자가 재요청 시 에러 발생")
     void sendCode_isVerified() {
         // given
         EmailVerification existing = EmailVerification.builder()
@@ -60,15 +61,15 @@ public class EmailVerificationServiceTest {
 
         // when & then
         assertThatThrownBy(() -> emailVerificationService.sendCode(member, "test@company.com"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("이미 인증이 완료된 이메일입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("이미 완료된 인증입니다.");
     }
 
     @Test
-    @DisplayName("일반 이메일 도메인 입력 시 IllegalArgumentException 발생")
+    @DisplayName("일반 이메일 도메인 입력 시 에러 발생")
     void sendCode_exclude() {
         assertThatThrownBy(() -> emailVerificationService.sendCode(member, "test@naver.com"))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("기업 이메일만");
     }
 
