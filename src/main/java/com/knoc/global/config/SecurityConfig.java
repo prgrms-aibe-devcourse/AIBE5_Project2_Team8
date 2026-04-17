@@ -3,8 +3,11 @@ package com.knoc.global.config;
 import com.knoc.auth.jwt.JwtAuthenticationFilter;
 import com.knoc.auth.jwt.JwtTokenProvider;
 import com.knoc.auth.jwt.LoginSuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,6 +17,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     // Spring 컨테이너에 BCryptPasswordEncoder를 Bean으로 등록
@@ -22,19 +27,32 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // 의존성 주입
+    private final UserDetailsService userDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final LoginSuccessHandler loginSuccessHandler;
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, LoginSuccessHandler loginSuccessHandler,
-                                           JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 // 세션을 사용하지 않음(jwt 중심)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // url 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // auth, error로 시작하는 모든 url 인증 없이 접근 허용(정적 리소스 추가)
-                        .requestMatchers("/auth/**", "/error/**", "/css/**", "/js/**", "/images/**").permitAll()
-                        // 그외 나머지 경로는 인증을 해야만 접근 허용
+                        // [공통/비로그인] AUTH-01(로그인), POST-02(후기 목록 조회-비로그인 가능 명시)
+                        .requestMatchers("/", "/auth/**", "/error/**", "/reviews/posts", "/css/**", "/js/**", "/images/**").permitAll()
+                        // [시니어 전용] PROF-01(프로필 관리), REV-02(리포트 제출), MY-02(시니어 마이페이지), ORD-01(결제 요청)
+                        .requestMatchers("/senior/profile/**", "/reports/**", "/my/senior/**", "/orders/request").hasRole("SENIOR")
+                        // [주니어 전용] CHAT-01(방생성), ORD-01/02(결제), REV-01(요청), SET-01(구매확정), POST-01(후기작성), MY-01(주니어 마이페이지)
+                        .requestMatchers("/chats/new", "/orders/**", "/requests/**", "/settlements/confirm", "/reviews/posts/write", "/my/junior/**").hasRole("USER")
+                        // 그외 나머지 경로는 로그인 사용자 허용
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "접근 권한이 없습니다.");
+                        })
                 )
 
                 // 로그인 폼 설정 업데이트
