@@ -253,7 +253,7 @@
                         <span class="fw-bold fs-5 text-mint">
                             ₩ <span th:text="${#numbers.formatInteger(senior.pricePerReview, 0, 'COMMA')}">0</span>
                         </span>
-                        <a th:href="@{/seniors/{id}(id=${senior.id})}"
+                        <a th:href="@{/senior/{id}(id=${senior.id})}"
                            class="btn btn-outline-light rounded-pill btn-sm px-3">멘토링 신청</a>
                     </div>
                 </div>
