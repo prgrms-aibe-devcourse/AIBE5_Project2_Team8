@@ -1,5 +1,6 @@
 package com.knoc.senior.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.knoc.auth.service.EmailVerificationService;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
