@@ -1,5 +1,7 @@
 package com.knoc.senior;
 
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.dto.SeniorDetailResponseDto;
@@ -36,14 +38,14 @@ public class SeniorProfileService {
     // 시니어 상세 프로필 조회 (ID 기반)
     public SeniorDetailResponseDto getDetailById(Long id) {
         SeniorProfile profile = seniorProfileRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("시니어 프로필이 존재하지 않습니다."));
+                .orElseThrow(() ->  new BusinessException(ErrorCode.SENIOR_PRPRILE_NOT_FOUNT));
         return SeniorDetailResponseDto.from(profile);
     }
 
     // 시니어 프로필 조회
     public SeniorProfileResponseDto getProfile(Long memberId) {
         SeniorProfile profile = seniorProfileRepository.findByMemberId(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("시니어 프로필이 존재하지 않습니다."));
+                .orElseThrow(() ->  new BusinessException(ErrorCode.SENIOR_PRPRILE_NOT_FOUNT));
         return SeniorProfileResponseDto.from(profile);
     }
 
@@ -51,7 +53,7 @@ public class SeniorProfileService {
     @Transactional
     public void updateProfile(Long memberId, SeniorProfileRequestDto dto) {
         SeniorProfile profile = seniorProfileRepository.findByMemberId(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("시니어 프로필이 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PRPRILE_NOT_FOUNT));
 
         // 기본 필드 수정
         profile.update(
@@ -92,7 +94,7 @@ public class SeniorProfileService {
     public Long createProfile(Long memberId, SeniorProfileRequestDto dto) {
         //프로필 작성하는 member 조회
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원 입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         //부모 엔티티(SeniorProfile) 생성
         SeniorProfile profile = SeniorProfile.builder()

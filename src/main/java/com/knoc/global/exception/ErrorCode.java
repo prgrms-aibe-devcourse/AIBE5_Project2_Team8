@@ -13,6 +13,9 @@ public enum ErrorCode {
     ENTITY_NOT_FOUND(404, "찾을 수 없는 페이지입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
+    //시니어 프로필 관련(Senior)
+    SENIOR_PRPRILE_NOT_FOUNT(404,"시니어 프로필이 존재하지 않습니다"),
+
     // 회원 관련 (Member)
     MEMBER_NOT_FOUND(404, "존재하지 않는 회원입니다."),
 
