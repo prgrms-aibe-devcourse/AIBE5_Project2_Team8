@@ -5,6 +5,7 @@ import com.knoc.member.MemberRepository;
 import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -24,21 +25,25 @@ public class SeniorApplyController {
     private final MemberRepository memberRepository;
 
     @GetMapping("/apply")
+    @PreAuthorize("hasRole('USER')")
     public String apply() {
         return "senior/apply";
     }
 
     @GetMapping("/apply/auth")
+    @PreAuthorize("hasRole('USER')")
     public String auth() {
         return "senior/apply-auth";
     }
 
     @GetMapping("/profile/setup")
+    @PreAuthorize("hasRole('SENIOR')")
     public String profileSetup() {
         return "senior/profile_setup";
     }
 
     @PostMapping("/profile/create")
+    @PreAuthorize("hasRole('SENIOR')")
     public String createProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute SeniorProfileRequestDto dto,
                                 RedirectAttributes redirectAttributes) {
@@ -48,13 +53,8 @@ public class SeniorApplyController {
         return "redirect:/";
     }
 
-    private Long getMemberId(UserDetails userDetails) {
-        Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        return member.getId();
-    }
-
     @GetMapping("/profile/update")
+    @PreAuthorize("hasRole('SENIOR')")
     public String profileUpdate(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         Long memberId = getMemberId(userDetails);
         model.addAttribute("profile", seniorProfileService.getProfile(memberId));
@@ -62,6 +62,7 @@ public class SeniorApplyController {
     }
 
     @PostMapping("/profile/update")
+    @PreAuthorize("hasRole('SENIOR')")
     public String updateProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute SeniorProfileRequestDto dto,
                                 RedirectAttributes redirectAttributes) {
@@ -69,6 +70,12 @@ public class SeniorApplyController {
         seniorProfileService.updateProfile(memberId, dto);
         redirectAttributes.addFlashAttribute("successMessage", "시니어 프로필이 수정되었습니다.");
         return "redirect:/senior/profile-update";
+    }
+
+    private Long getMemberId(UserDetails userDetails) {
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+        return member.getId();
     }
 
 }
