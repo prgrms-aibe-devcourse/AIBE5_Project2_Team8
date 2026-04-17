@@ -28,6 +28,7 @@ public class SeniorApplyController {
     private final EmailVerificationService emailVerificationService;
 
     @GetMapping("/apply")
+    @PreAuthorize("hasRole('USER')")
     public String apply() {
         return "senior/apply";
     }
@@ -62,6 +63,7 @@ public class SeniorApplyController {
     }
 
     @PostMapping("/profile/create")
+    @PreAuthorize("hasRole('SENIOR')")
     public String createProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute SeniorProfileRequestDto dto,
                                 RedirectAttributes redirectAttributes) {
@@ -78,6 +80,7 @@ public class SeniorApplyController {
     }
 
     @GetMapping("/profile/update")
+    @PreAuthorize("hasRole('SENIOR')")
     public String profileUpdate(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         Long memberId = getMemberId(userDetails);
         model.addAttribute("profile", seniorProfileService.getProfile(memberId));
@@ -85,6 +88,7 @@ public class SeniorApplyController {
     }
 
     @PostMapping("/profile/update")
+    @PreAuthorize("hasRole('SENIOR')")
     public String updateProfile(@AuthenticationPrincipal UserDetails userDetails,
                                 @ModelAttribute SeniorProfileRequestDto dto,
                                 RedirectAttributes redirectAttributes) {
