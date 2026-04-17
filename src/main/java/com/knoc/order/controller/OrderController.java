@@ -5,6 +5,7 @@ import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController // JSON 데이터를 주고받는 API 전용 컨트롤러
@@ -14,6 +15,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping("/request")
+    @PreAuthorize("hasRole('SENIOR')") // 시니어만 결제 요청 가능
     public ResponseEntity<OrderResponse> requestOrder(@RequestBody OrderRequest dto) {
         // 1. 현재 로그인한 시니어 ID를 가져온다.
         Long seniorId = 1L; // 테스트용 id
