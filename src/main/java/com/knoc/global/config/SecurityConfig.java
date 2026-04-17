@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // url 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // auth로 시작하는 모든 url 인증 없이 접근 허용(정적 리소스 추가)
+                        // auth, error로 시작하는 모든 url 인증 없이 접근 허용(정적 리소스 추가)
                         .requestMatchers("/auth/**", "/error/**", "/css/**", "/js/**", "/images/**").permitAll()
                         // 그외 나머지 경로는 인증을 해야만 접근 허용
                         .anyRequest().authenticated()
