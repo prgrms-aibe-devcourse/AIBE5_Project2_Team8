@@ -109,6 +109,13 @@ public class SeniorApplyController {
         return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다"));
     }
 
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable Long id, Model model) {
+        model.addAttribute("senior", seniorProfileService.getDetailById(id));
+        return "senior/detail";
+    }
+
     @PostMapping("/verify/confirm")
     @ResponseBody
     public ResponseEntity<Map<String, String>> confirmVerificationCode(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String inputCode){

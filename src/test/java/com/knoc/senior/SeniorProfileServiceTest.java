@@ -1,5 +1,7 @@
 package com.knoc.senior;
 
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
@@ -194,8 +196,8 @@ class SeniorProfileServiceTest {
 
         // when & then
         assertThatThrownBy(() -> seniorProfileService.updateProfile(nonExistentMemberId, dto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("시니어 프로필이 존재하지 않습니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SENIOR_PROFILE_NOT_FOUND);
     }
 
     // ═══════════════════════════════════════════════════════
