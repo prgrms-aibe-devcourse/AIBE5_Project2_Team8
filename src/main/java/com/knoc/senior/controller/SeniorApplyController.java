@@ -46,7 +46,16 @@ public class SeniorApplyController {
     }
 
     @GetMapping("/profile/setup")
-    public String profileSetup() {
+    public String profileSetup(@AuthenticationPrincipal UserDetails userDetails,
+                               RedirectAttributes redirectAttributes) {
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        if (!emailVerificationService.isVerified(member)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "기업 이메일 인증 후 접근 가능합니다.");
+            return "redirect:/senior/apply/auth";
+        }
+
         return "senior/profile_setup";
     }
 

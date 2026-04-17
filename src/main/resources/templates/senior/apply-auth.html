@@ -54,6 +54,12 @@
     </style>
 
     <section class="container py-5 mt-4" style="max-width: 560px;">
+        <!-- 리다이렉트 메시지 표시 -->
+        <div th:if="${errorMessage}"
+             class="alert rounded-3 mb-4 text-center"
+             style="background-color: rgba(255,80,80,0.1); border: 1px solid #ff5050;">
+            <span style="color: #ff5050;" th:text="${errorMessage}"></span>
+        </div>
 
         <!-- 페이지 헤더 -->
         <div class="text-center mb-5">
