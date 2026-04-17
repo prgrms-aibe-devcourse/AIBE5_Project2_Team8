@@ -3,7 +3,9 @@ package com.knoc.auth.service;
 import com.knoc.auth.repository.EmailVerificationRepository;
 import com.knoc.auth.verification.EmailVerification;
 import com.knoc.member.Member;
+import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,16 +20,17 @@ public class EmailVerificationService {
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailService emailService;
 
-    private final static Set<String> BLOCKED_DOMAINS = Set.of(
-            "naver.com"
-    );
+
+    @Value("${email.blocked-domains}")
+    private List<String> blockedDomains;
+
+    private final MemberRepository memberRepository;
 
     // 도메인 검증 코드
-    // 이메일을 @google.com 만 허용시켜두고, 나머지 메일은 접근 불가
     public void validateEmail(String email) {
         String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
-        if (BLOCKED_DOMAINS.contains(domain)) {
-            throw new IllegalArgumentException("기업 이메일만 인증 가능합니다. 개인 이메일은 사용할 수 없습니다.");
+        if (blockedDomains.contains(domain)) {
+            throw new IllegalArgumentException("기업 이메일만 인증 가능합니다");
         }
     }
 
@@ -39,6 +42,9 @@ public class EmailVerificationService {
 
         EmailVerification verification = emailVerificationRepository.findByMember(member)
                 .map(existing -> {
+                    if(existing.isVerified()){
+                        throw new IllegalStateException("이미 인증이 완료된 이메일입니다.");
+                    }
                     existing.updateVerificationCode(code, LocalDateTime.now().plusMinutes(5));
                     return existing;
                 })
@@ -68,11 +74,20 @@ public class EmailVerificationService {
 
         verification.verify();
         emailVerificationRepository.save(verification);
+
+        member.promoteToSenior();
+        memberRepository.save(member);
     }
 
     public String generateCode(){
         Random random = new Random();
         return String.format("%06d", random.nextInt(1000000));
+    }
+
+    public boolean isVerified(Member member){
+        return emailVerificationRepository.findByMember(member)
+                .map(EmailVerification::isVerified)
+                .orElse(false);
     }
 
 }

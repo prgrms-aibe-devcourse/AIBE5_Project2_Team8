@@ -3,6 +3,7 @@ package com.knoc.senior.controller;
 import com.knoc.auth.service.EmailVerificationService;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
+import com.knoc.member.MemberRole;
 import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,17 @@ public class SeniorApplyController {
     }
 
     @GetMapping("/apply/auth")
-    public String auth() {
+    public String auth(@AuthenticationPrincipal UserDetails userDetails) {
+        // Username == Email
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다"));
+
+        boolean alreadyVerified = emailVerificationService.isVerified(member);
+
+        if(alreadyVerified){
+            return "redirect:/senior/profile/setup";
+        }
+
         return "senior/apply-auth";
     }
 
