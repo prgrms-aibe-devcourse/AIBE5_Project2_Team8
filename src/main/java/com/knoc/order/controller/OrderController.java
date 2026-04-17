@@ -28,6 +28,7 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/pay")
+    @PreAuthorize("hasRole('USER')")  // 주니어 결제 가능
     public ResponseEntity<OrderResponse> requestPay(@PathVariable Long orderId, @RequestHeader("Idempotency-Key") String idempotencyKey) {
         Long juniorId = 1L; // 테스트용 id
         OrderResponse orderResponse = orderService.payOrder(orderId, idempotencyKey, juniorId);
