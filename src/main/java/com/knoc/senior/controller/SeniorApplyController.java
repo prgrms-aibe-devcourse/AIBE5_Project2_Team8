@@ -3,7 +3,6 @@ package com.knoc.senior.controller;
 import com.knoc.auth.service.EmailVerificationService;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
-import com.knoc.member.MemberRole;
 import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import lombok.RequiredArgsConstructor;
