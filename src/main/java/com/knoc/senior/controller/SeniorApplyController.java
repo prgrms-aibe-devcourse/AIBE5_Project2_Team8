@@ -1,20 +1,23 @@
 package com.knoc.senior.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.knoc.auth.service.EmailVerificationService;
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.Map;
 
 @Controller
 @RequestMapping("/senior")
@@ -23,6 +26,7 @@ public class SeniorApplyController {
 
     private final SeniorProfileService seniorProfileService;
     private final MemberRepository memberRepository;
+    private final EmailVerificationService emailVerificationService;
 
     @GetMapping("/apply")
     @PreAuthorize("hasRole('USER')")
@@ -31,14 +35,31 @@ public class SeniorApplyController {
     }
 
     @GetMapping("/apply/auth")
-    @PreAuthorize("hasRole('USER')")
-    public String auth() {
+    public String auth(@AuthenticationPrincipal UserDetails userDetails) {
+        // Username == Email
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        boolean alreadyVerified = emailVerificationService.isVerified(member);
+
+        if(alreadyVerified){
+            return "redirect:/senior/profile/setup";
+        }
+
         return "senior/apply-auth";
     }
 
     @GetMapping("/profile/setup")
-    @PreAuthorize("hasRole('SENIOR')")
-    public String profileSetup() {
+    public String profileSetup(@AuthenticationPrincipal UserDetails userDetails,
+                               RedirectAttributes redirectAttributes) {
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        if (!emailVerificationService.isVerified(member)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "기업 이메일 인증 후 접근 가능합니다.");
+            return "redirect:/senior/apply/auth";
+        }
+
         return "senior/profile_setup";
     }
 
@@ -51,6 +72,12 @@ public class SeniorApplyController {
         seniorProfileService.createProfile(memberId, dto);
         redirectAttributes.addFlashAttribute("successMessage", "시니어 프로필이 등록되었습니다.");
         return "redirect:/";
+    }
+
+    private Long getMemberId(UserDetails userDetails) {
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        return member.getId();
     }
 
     @GetMapping("/profile/update")
@@ -72,10 +99,24 @@ public class SeniorApplyController {
         return "redirect:/senior/profile-update";
     }
 
-    private Long getMemberId(UserDetails userDetails) {
+    @PostMapping("/verify/send")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> sendVerificationCode(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String companyEmail){
         Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        return member.getId();
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        emailVerificationService.sendCode(member, companyEmail);
+        return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다"));
     }
 
+    @PostMapping("/verify/confirm")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> confirmVerificationCode(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String inputCode){
+        Member member = memberRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        emailVerificationService.verifyCode(member, inputCode);
+
+        return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다"));
+    }
 }

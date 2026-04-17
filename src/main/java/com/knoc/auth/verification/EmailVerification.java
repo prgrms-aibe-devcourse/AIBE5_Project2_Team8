@@ -2,10 +2,7 @@ package com.knoc.auth.verification;
 
 import com.knoc.member.Member;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -48,6 +45,11 @@ public class EmailVerification {
         this.companyEmail = companyEmail;
         this.verificationCode = verificationCode;
         this.isVerified = false;
+        this.expiredAt = expiredAt;
+    }
+
+    public void updateVerificationCode(String verificationCode, LocalDateTime expiredAt) {
+        this.verificationCode = verificationCode;
         this.expiredAt = expiredAt;
     }
 

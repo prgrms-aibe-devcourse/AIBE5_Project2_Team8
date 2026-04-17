@@ -41,4 +41,8 @@ public class Member extends BaseEntity {
         this.role = role != null ? role : MemberRole.USER;
         this.profileImageUrl = profileImageUrl;
     }
+
+    public void promoteToSenior(){
+        this.role = MemberRole.SENIOR;
+    }
 }

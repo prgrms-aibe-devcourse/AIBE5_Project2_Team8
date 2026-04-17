@@ -21,7 +21,15 @@ public enum ErrorCode {
 
     // 주문 관련 (Order)
     ORDER_NOT_FOUND(404, "존재하지 않는 주문입니다."),
-    NOT_SENIOR_IN_ROOM(403, "해당 채팅방의 시니어가 아닙니다."); // 권한 검증용
+    NOT_SENIOR_IN_ROOM(403, "해당 채팅방의 시니어가 아닙니다."), // 권한 검증용
+
+    // 이메일 관련 (Auth)
+    ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),
+    EXPIRED_VERIFICATION_CODE(400, "인증번호 유효기간이 지났습니다."),
+    INVALID_VERIFICATION_CODE(400, "인증번호가 일치하지 않습니다."),
+    INVALID_EMAIL_DOMAIN(400, "기업 이메일만 인증 가능합니다."),
+    EMAIL_VERIFICATION_NOT_FOUND(404, "인증 요청 내역이 없습니다.");
+
 
     private final int status;
     private final String message;
