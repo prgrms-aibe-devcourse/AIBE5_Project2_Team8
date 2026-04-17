@@ -155,20 +155,44 @@
             const email = document.getElementById('companyEmail').value;
             if (!email) { alert('기업 이메일을 입력해주세요.'); return; }
 
-            // TODO: fetch POST /senior/verify/send
+            // ✅ 즉시 비활성화
+            const btn = document.getElementById('sendCodeBtn');
+            btn.disabled = true;
+            btn.textContent = '발송 중...';
 
-            // 임시 UI 처리 (AJAX 구현 전 확인용)
-            const verifySection = document.getElementById('verifySection');
-            verifySection.style.opacity = '1';
-            verifySection.style.pointerEvents = 'auto';
+            fetch('/senior/verify/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ companyEmail: email })
+            })
+                .then(response => {
+                    if (!response.ok) return response.json().then(e => { throw new Error(e.message); });
+                    return response.json();
+                })
+                .then(data => {
+                    // STEP 2 활성화
+                    const verifySection = document.getElementById('verifySection');
+                    verifySection.style.opacity = '1';
+                    verifySection.style.pointerEvents = 'auto';
 
-            const result = document.getElementById('sendResult');
-            result.style.display = 'block';
-            result.className = 'mt-2 small text-mint';
-            result.textContent = '✔ 인증 코드가 발송되었습니다. 이메일을 확인해주세요.';
+                    const result = document.getElementById('sendResult');
+                    result.style.display = 'block';
+                    result.className = 'mt-2 small text-mint';
+                    result.textContent = '✔ ' + data.message;
 
-            document.getElementById('sendCodeBtn').textContent = '재발송';
-            document.getElementById('step1Badge').classList.add('done');
+                    btn.textContent = '재발송';
+                    btn.disabled = false;  // ✅ 성공 후 재활성화 (재발송 허용)
+                    document.getElementById('step1Badge').classList.add('done');
+                })
+                .catch((error) => {
+                    const result = document.getElementById('sendResult');
+                    result.style.display = 'block';
+                    result.className = 'mt-2 small text-danger';
+                    result.textContent = '✖ ' + (error.message || '인증번호 발송에 실패했습니다. 다시 시도해주세요.');
+
+                    btn.textContent = '인증번호 발송';
+                    btn.disabled = false;  // ✅ 실패 시에도 재활성화
+                });
         }
 
         // AUTH-02-4에서 구현 예정: 인증 코드 검증
@@ -176,23 +200,36 @@
             const code = document.getElementById('verificationCode').value;
             if (!code || code.length !== 6) { alert('6자리 코드를 입력해주세요.'); return; }
 
-            // TODO: fetch POST /senior/verify/confirm
+            fetch('/senior/verify/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ inputCode: code })
+            })
+                .then(response => {
+                    if (!response.ok) return response.json().then(e => { throw new Error(e.message); });
+                    return response.json();
+                })
+                .then(data => {
+                    const result = document.getElementById('verifyResult');
+                    result.style.display = 'block';
+                    result.className = 'mt-2 small text-mint';
+                    result.textContent = '✔ ' + data.message;
 
-            // 임시 UI 처리 (AJAX 구현 전 확인용)
-            const result = document.getElementById('verifyResult');
-            result.style.display = 'block';
-            result.className = 'mt-2 small text-mint';
-            result.textContent = '✔ 인증이 완료되었습니다.';
+                    document.getElementById('step2Badge').classList.add('done');
+                    document.getElementById('verifiedBadge').style.display = 'block';
+                    document.getElementById('confirmCodeBtn').disabled = true;
 
-            document.getElementById('step2Badge').classList.add('done');
-            document.getElementById('verifiedBadge').style.display = 'block';
-
-            // 다음 버튼 활성화
-            const nextBtn = document.getElementById('nextBtn');
-            nextBtn.style.pointerEvents = 'auto';
-            nextBtn.style.opacity = '1';
-
-            document.getElementById('confirmCodeBtn').disabled = true;
+                    // 다음 버튼 활성화
+                    const nextBtn = document.getElementById('nextBtn');
+                    nextBtn.style.pointerEvents = 'auto';
+                    nextBtn.style.opacity = '1';
+                })
+                .catch(error => {
+                    const result = document.getElementById('verifyResult');
+                    result.style.display = 'block';
+                    result.className = 'mt-2 small text-danger';
+                    result.textContent = '✖ ' + (error.message || '인증에 실패했습니다.');
+                });
         }
     </script>
 </th:block>
