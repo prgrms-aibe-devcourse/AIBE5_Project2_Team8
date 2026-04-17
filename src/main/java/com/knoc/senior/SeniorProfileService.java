@@ -2,6 +2,7 @@ package com.knoc.senior;
 
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
+import com.knoc.senior.dto.SeniorDetailResponseDto;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import com.knoc.senior.dto.SeniorProfileResponseDto;
 import com.knoc.senior.dto.SeniorSearchCondition;
@@ -30,6 +31,13 @@ public class SeniorProfileService {
         return seniorProfileQueryRepository.search(condition).stream()
                 .map(SeniorProfileResponseDto::from)
                 .collect(Collectors.toList());
+    }
+
+    // 시니어 상세 프로필 조회 (ID 기반)
+    public SeniorDetailResponseDto getDetailById(Long id) {
+        SeniorProfile profile = seniorProfileRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("시니어 프로필이 존재하지 않습니다."));
+        return SeniorDetailResponseDto.from(profile);
     }
 
     // 시니어 프로필 조회
