@@ -26,4 +26,11 @@ public class OrderController {
         // 3. 생성된 주문 정보(JSON 데이터로 변환됨)와 함께 200 OK 응답을 브라우저로 보낸다.
         return ResponseEntity.ok(orderResponse);
     }
+
+    @PostMapping("/{orderId}/pay")
+    public ResponseEntity<OrderResponse> requestPay(@PathVariable Long orderId, @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        Long juniorId = 1L; // 테스트용 id
+        OrderResponse orderResponse = orderService.payOrder(orderId, idempotencyKey, juniorId);
+        return ResponseEntity.ok(orderResponse);
+    }
 }

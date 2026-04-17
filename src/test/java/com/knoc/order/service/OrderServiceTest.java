@@ -90,10 +90,10 @@ class OrderServiceTest {
         // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 확인
         verify(orderRepository, times(1)).save(any(Order.class));
         // Verify: 결제 요청 시스템 메시지 내용 검증
-        verify(chatMessageRepository, times(1)).save(argThat(message ->
-                message.getMessageType() ==  MessageType.PAYMENT_REQUESTED && // 타입 확인
-                message.getContent().contains("50,000") && // 금액 포함 확인
-                message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
+        verify(chatMessageRepository, times(1))
+                .save(argThat(message -> message.getMessageType() == MessageType.PAYMENT_REQUESTED && // 타입 확인
+                        message.getContent().contains("50,000") && // 금액 포함 확인
+                        message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
     }
 
     @Test
@@ -140,6 +140,109 @@ class OrderServiceTest {
 
         // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
         verify(orderRepository, never()).save(any());
+        verify(chatMessageRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("결제 성공: PENDING 주문이 PAID로 전이되고 결제완료 시스템 메시지가 1회 저장된다.")
+    void payOrder_Success_PendingToPaid() {
+        // given
+        Long orderId = 100L;
+        Long juniorId = 2L;
+        String idempotencyKey = "idem-123";
+
+        ChatRoom chatRoom = mock(ChatRoom.class);
+        given(chatRoom.getId()).willReturn(10L);
+
+        Member junior = mock(Member.class);
+        given(junior.getId()).willReturn(juniorId);
+
+        Order order = Order.builder()
+                .orderNumber("ORD-TEST")
+                .chatRoom(chatRoom)
+                .junior(junior)
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build(); // status = PENDING
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(orderRepository.saveAndFlush(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        OrderResponse response = orderService.payOrder(orderId, idempotencyKey, juniorId);
+
+        // then
+        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
+
+        verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
+        verify(chatMessageRepository, times(1))
+                .save(argThat(message -> message.getMessageType() == MessageType.PAYMENT_COMPLETED &&
+                        message.getContent().contains("결제가 성공적으로 처리되었습니다.")));
+    }
+
+    @Test
+    @DisplayName("결제 멱등: 이미 PAID면 저장/메시지 없이 그대로 응답한다.")
+    void payOrder_Idempotent_WhenAlreadyPaid() {
+        // given
+        Long orderId = 101L;
+        Long juniorId = 2L;
+        String idempotencyKey = "idem-456";
+
+        ChatRoom chatRoom = mock(ChatRoom.class);
+        given(chatRoom.getId()).willReturn(10L);
+
+        Member junior = mock(Member.class);
+        given(junior.getId()).willReturn(juniorId);
+
+        Order order = Order.builder()
+                .orderNumber("ORD-PAID")
+                .chatRoom(chatRoom)
+                .junior(junior)
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+        order.updateStatus(OrderStatus.PAID);
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+
+        // when
+        OrderResponse response = orderService.payOrder(orderId, idempotencyKey, juniorId);
+
+        // then
+        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
+
+        verify(orderRepository, never()).saveAndFlush(any());
+        verify(chatMessageRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("결제 실패: 주문의 주니어가 아니면 403 예외가 발생하고 저장/메시지가 발생하지 않는다.")
+    void payOrder_Fail_NotJunior() {
+        // given
+        Long orderId = 102L;
+        Long actualJuniorId = 2L;
+        Long attackerJuniorId = 999L;
+        String idempotencyKey = "idem-789";
+
+        Member junior = mock(Member.class);
+        given(junior.getId()).willReturn(actualJuniorId);
+
+        Order order = Order.builder()
+                .orderNumber("ORD-NOT-JUNIOR")
+                .chatRoom(mock(ChatRoom.class))
+                .junior(junior)
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.payOrder(orderId, idempotencyKey, attackerJuniorId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.NOT_JUNIOR_FOR_ORDER.getMessage());
+
+        verify(orderRepository, never()).saveAndFlush(any());
         verify(chatMessageRepository, never()).save(any());
     }
 }
