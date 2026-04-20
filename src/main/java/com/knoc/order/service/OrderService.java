@@ -1,6 +1,7 @@
 package com.knoc.order.service;
 
 
+import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
@@ -145,19 +146,16 @@ public class OrderService {
                 }
                 Order order = found.get();
 
-                String msg = (reason == null || reason.isBlank())
+                String customMessage = (reason == null || reason.isBlank())
                         ? "결제가 취소되었거나 실패했습니다.\n다시 시도해주세요."
                         : "결제가 취소되었거나 실패했습니다.\n사유: " + reason;
 
-                ChatMessage message = ChatMessage.builder()
-                        .chatRoom(order.getChatRoom())
-                        .messageType(MessageType.PAYMENT_FAILED)
-                        .content(msg)
-                        .referenceId(order.getId())
-                        .sender(null)
-                        .build();
-
-                chatMessageRepository.save(message);
+                eventPublisher.publishEvent(new ChatSystemEvent(
+                        order.getChatRoom().getId(),
+                        MessageType.PAYMENT_FAILED,
+                        customMessage,
+                        order.getId()
+                ));
         }
 
         // PG(토스 등) 승인 이후 공통 처리: PENDING -> PAID, 저장, 결제완료 시스템 메시지
