@@ -74,7 +74,7 @@ class ReviewFeedbackServiceTest {
         SeniorProfile seniorProfile = mock(SeniorProfile.class);
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-        given(reviewFeedbackRepository.existsById(order.getId())).willReturn(false);
+        given(reviewFeedbackRepository.existsByOrderId(order.getId())).willReturn(false);
         given(seniorProfileRepository.findByMemberId(seniorMemberId)).willReturn(Optional.of(seniorProfile));
         given(reviewFeedbackRepository.save(any(ReviewFeedback.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -189,7 +189,7 @@ class ReviewFeedbackServiceTest {
         order.updateStatus(OrderStatus.PAID);
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-        given(reviewFeedbackRepository.existsById(order.getId())).willReturn(true);
+        given(reviewFeedbackRepository.existsByOrderId(order.getId())).willReturn(true);
 
         // when & then
         assertThatThrownBy(() -> reviewFeedbackService.createReview(dto, juniorId))
@@ -226,7 +226,7 @@ class ReviewFeedbackServiceTest {
         order.updateStatus(OrderStatus.PAID);
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-        given(reviewFeedbackRepository.existsById(order.getId())).willReturn(false);
+        given(reviewFeedbackRepository.existsByOrderId(order.getId())).willReturn(false);
         given(seniorProfileRepository.findByMemberId(seniorMemberId)).willReturn(Optional.empty());
 
         // when & then
