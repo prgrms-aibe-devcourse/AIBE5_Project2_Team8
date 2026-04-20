@@ -24,6 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,7 +90,8 @@ public class OrderChatIntegrationTest {
                 .orderNumber("TEST-ORD").chatRoom(chatRoom).junior(junior).senior(senior).amount(55000).build());
 
         // when
-        OrderResponse response = orderService.payOrder(order.getId(), "idempotency-key", junior.getId());
+        OrderResponse response = orderService.confirmPayment(order.getOrderNumber(), order.getAmount())
+                .orElseThrow(() -> new NoSuchElementException("Order not found"));
 
         // then: 상태 변경 확인
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
