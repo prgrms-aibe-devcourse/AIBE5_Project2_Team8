@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+    /*  */
    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
-
    private final JavaMailSender mailSender;
 
    @Value("${spring.mail.username}")
