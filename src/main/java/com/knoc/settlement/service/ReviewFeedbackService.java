@@ -28,44 +28,38 @@ public class ReviewFeedbackService {
 
     @Transactional
     public void createReview(ReviewFeedbackRequestDto dto, Long juniorId) {
-        // 1. 주문 조회
-        Order order = orderRepository.findById(dto.getOrderId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-
+        //1. 주문 확인
+        Order order = orderRepository.findById(dto.getOrderId()).orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
         // 2. 요청자가 해당 주문의 주니어인지 검증
-        if (!order.getJunior().getId().equals(juniorId)) {
+        if(!order.getJunior().getId().equals(juniorId)){
             throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
         }
-
-        // 3. 결제 완료 상태인지 검증 (PAID 상태에서만 후기 작성 가능)
+        //3. 결제 완료 상태인지 확인 (결제 완료PAID 상태에서만 후기 작성이 가능)
         if (order.getStatus() != OrderStatus.PAID) {
             throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
         }
-
-        // 4. 동일 주문에 대한 중복 후기 방지
-        if (reviewFeedbackRepository.existsByOrderId(order.getId())) {
+        //4. 후기를 이미 작성한 주문인지 검증
+        if (reviewFeedbackRepository.existsById(order.getId())) {
             throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
-
-        // 5. 주니어, 시니어 프로필 조회
-        Member junior = memberRepository.findById(juniorId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-
-        SeniorProfile seniorProfile = seniorProfileRepository.findByMemberId(order.getSenior().getId())
+        
+        //5. 시니어 프로필 확인
+        SeniorProfile senior = seniorProfileRepository.findByMemberId(order.getSenior().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
 
-        // 6. 후기 저장
-        ReviewFeedback feedback = ReviewFeedback.builder()
+        //6. 검증완료-> 저장
+        ReviewFeedback review=ReviewFeedback.builder()
                 .order(order)
-                .junior(junior)
-                .seniorProfile(seniorProfile)
+                .junior(order.getJunior())
+                .seniorProfile(senior)
                 .rating(dto.getRating())
                 .comment(dto.getComment())
                 .build();
+        reviewFeedbackRepository.save(review);
 
-        reviewFeedbackRepository.save(feedback);
+        //시니어 프로필 avgReview 최신화
+        senior.updateRating(dto.getRating());
 
-        // 7. 시니어 평점 업데이트
-        seniorProfile.updateRating(dto.getRating());
     }
+
 }
