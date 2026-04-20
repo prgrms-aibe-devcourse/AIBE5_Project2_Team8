@@ -11,7 +11,6 @@ public enum MessageType {
     USER(""),
 
     // 아래부터는 이벤트 발생 시 템플릿에 들어갈 기본 문구
-    SYSTEM("시스템 알림입니다."),
     PAYMENT_REQUESTED("시니어님이 %,d원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다."),
     PAYMENT_COMPLETED("결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다."),
     PAYMENT_FAILED("결제가 실패하거나 취소되었습니다. 다시 시도해주세요."),
