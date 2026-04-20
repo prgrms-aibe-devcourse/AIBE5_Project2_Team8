@@ -1,9 +1,9 @@
 package com.knoc.order.service;
 
-import com.knoc.chat.entity.ChatMessage;
+
 import com.knoc.chat.entity.ChatRoom;
+import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
-import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
@@ -16,6 +16,7 @@ import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +29,8 @@ import java.util.UUID;
 public class OrderService {
         private final OrderRepository orderRepository;
         private final ChatRoomRepository chatRoomRepository;
-        private final ChatMessageRepository chatMessageRepository;
         private final MemberRepository memberRepository;
+        private final ApplicationEventPublisher eventPublisher;
 
         public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId) {
                 // 1. 엔티티 조회 (채팅방, 주니어, 시니어)
@@ -62,17 +63,13 @@ public class OrderService {
                 // 4. 결제 요청 시스템 메시지 생성 및 저장
                 // 금액에 콤마 추가 (예: 55000 -> 55,000)
                 String formattedAmount = String.format("%,d", dto.getAmount());
-                ChatMessage message = ChatMessage.builder()
-                                .chatRoom(chatRoom)
-                                .messageType(MessageType.PAYMENT_REQUESTED)
-                                .content("시니어님이 " + formattedAmount
-                                                + "원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다.")
-                                .referenceId(savedOrder.getId()) // 주문 ID 연결
-                                .sender(null) // 시스템 메시지이므로 발신자는 null 또는 별도의 시스템 계정
-                                .build();
-
-                chatMessageRepository.save(message);
-
+                String customMessage = "시니어님이 " + formattedAmount + "원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다.";
+                eventPublisher.publishEvent(new ChatSystemEvent(
+                        chatRoom.getId(),
+                        MessageType.PAYMENT_REQUESTED,
+                        customMessage,
+                        savedOrder.getId()
+                ));
                 // 5. 저장된 주문을 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
                 return OrderResponse.from(savedOrder);
         }
@@ -115,16 +112,14 @@ public class OrderService {
                     throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
                 }
 
-                ChatMessage message = ChatMessage.builder()
-                                .chatRoom(savedOrder.getChatRoom())
-                                .messageType(MessageType.PAYMENT_COMPLETED)
-                                .content("결제가 성공적으로 처리되었습니다.\n" +
-                                                "결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다.")
-                                .referenceId(savedOrder.getId())
-                                .sender(null) // 시스템 메시지이므로 발신자는 null
-                                .build();
+                String customMessage = "결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다.";
 
-                chatMessageRepository.save(message);
+                eventPublisher.publishEvent(new ChatSystemEvent(
+                        savedOrder.getChatRoom().getId(),
+                        MessageType.PAYMENT_COMPLETED,
+                        customMessage,
+                        savedOrder.getId()
+                ));
 
                 return OrderResponse.from(savedOrder);
         }
