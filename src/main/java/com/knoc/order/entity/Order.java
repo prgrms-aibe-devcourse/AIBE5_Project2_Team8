@@ -47,12 +47,6 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private Long version;
 
-    private String kakaoTid;
-
-    private String paymentProvider;
-
-    private PaymentStatus paymentStatus;
-
     @Builder
     public Order(String orderNumber, ChatRoom chatRoom, Member junior, Member senior, int amount) {
         this.orderNumber = orderNumber;

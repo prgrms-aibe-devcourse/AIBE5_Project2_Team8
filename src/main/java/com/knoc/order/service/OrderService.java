@@ -14,13 +14,13 @@ import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
-import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -74,22 +74,95 @@ public class OrderService {
                 return OrderResponse.from(savedOrder);
         }
 
-        public OrderResponse payOrder(Long orderId, String idempotencyKey, Long juniorId) {
+        // 결제창 호출 전 단계(사전 검증/조회)
+        // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
+        public OrderResponse preparePayment(Long orderId, String idempotencyKey, Long juniorId) {
                 // 입력 검증
                 if (idempotencyKey == null || idempotencyKey.isBlank() || juniorId == null) {
                         throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
                 }
 
                 // 주문 조회
+                if (orderId == null) {
+                        throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                }
                 Order order = orderRepository.findById(orderId)
                                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
                 // String lockKey = "pay:" + order.getOrderNumber(); // 주문 생성 단계에서의 lockKey와 동일
                 // (같은 주문에 대한 작업을 같은 키로 직렬화)
 
                 // 주니어 검증
+                if (order.getJunior() == null || order.getJunior().getId() == null) {
+                        throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                }
                 if (!order.getJunior().getId().equals(juniorId)) {
                         throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
                 }
+
+                // 결제 가능 상태 검증
+                if (order.getStatus() == OrderStatus.PAID) {
+                        return OrderResponse.from(order); // 이미 결제 완료된 경우 멱등 성공 (200)
+                }
+                if (order.getStatus() != OrderStatus.PENDING) {
+                        throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID); // 결제 불가능한 상태
+                }
+
+                return OrderResponse.from(order); // 결제 가능한 상태
+        }
+
+        // 토스페이먼츠 결제 승인(confirm) 성공 후 호출
+        // tossOrderId는 결제 요청 시 넣은 주문번호로, OrderService의 orderNumber와 같아야 함
+        // 로컬에 해당 주문이 없으면(예: 메인 테스트용 TEST-...) Optional.empty() 를 반환
+        public Optional<OrderResponse> confirmPayment(String tossOrderId, long confirmedAmount) {
+                if (tossOrderId == null || tossOrderId.isBlank()) {
+                        throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                }
+                Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
+                if (found.isEmpty()) {
+                        return Optional.empty();
+                }
+                Order order = found.get();
+                if (order.getAmount() != confirmedAmount) {
+                        throw new BusinessException(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH); // 결제 금액 불일치
+                }
+                return Optional.of(markPaid(order)); // 결제 완료 처리
+        }
+
+        /**
+         * 토스 결제 실패/취소 리다이렉트 후 호출합니다.
+         * - 주문이 존재하면 채팅방에 시스템 메시지를 저장합니다.
+         * - 주문이 없으면(예: TEST-...) 아무 것도 하지 않습니다.
+         * - 주문 상태는 기본적으로 변경하지 않습니다(PENDING 유지).
+         */
+        public void recordPaymentFailure(String tossOrderId, String reason) {
+                if (tossOrderId == null || tossOrderId.isBlank()) {
+                        return; // 토스 fail 콜백에서 orderId가 없을 수 있어 조용히 무시
+                }
+                Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
+                if (found.isEmpty()) {
+                        return;
+                }
+                Order order = found.get();
+
+                String msg = (reason == null || reason.isBlank())
+                        ? "결제가 취소되었거나 실패했습니다.\n다시 시도해주세요."
+                        : "결제가 취소되었거나 실패했습니다.\n사유: " + reason;
+
+                ChatMessage message = ChatMessage.builder()
+                        .chatRoom(order.getChatRoom())
+                        .messageType(MessageType.PAYMENT_FAILED)
+                        .content(msg)
+                        .referenceId(order.getId())
+                        .sender(null)
+                        .build();
+
+                chatMessageRepository.save(message);
+        }
+
+        // PG(토스 등) 승인 이후 공통 처리: PENDING -> PAID, 저장, 결제완료 시스템 메시지
+        private OrderResponse markPaid(Order order) {
+                Long orderId = order.getId();
 
                 // 상태 분기
                 if (order.getStatus() == OrderStatus.PAID) {
@@ -102,14 +175,14 @@ public class OrderService {
                 // 저장 (낙관적 락 충돌 시: 재조회 후 멱등 성공/충돌 응답)
                 final Order savedOrder;
                 try {
-                    savedOrder = orderRepository.saveAndFlush(order);
+                        savedOrder = orderRepository.saveAndFlush(order);
                 } catch (OptimisticLockingFailureException e) {
-                    Order latest = orderRepository.findById(orderId)
-                            .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-                    if (latest.getStatus() == OrderStatus.PAID) {
-                        return OrderResponse.from(latest); // 이미 결제 처리 완료된 경우 멱등 성공 (200)
-                    }
-                    throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
+                        Order latest = orderRepository.findById(orderId)
+                                        .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+                        if (latest.getStatus() == OrderStatus.PAID) {
+                                return OrderResponse.from(latest); // 이미 결제 처리 완료된 경우 멱등 성공 (200)
+                        }
+                        throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
                 }
 
                 String customMessage = "결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다.";
