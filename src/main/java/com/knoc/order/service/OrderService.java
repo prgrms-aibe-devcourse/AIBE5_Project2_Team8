@@ -128,4 +128,9 @@ public class OrderService {
                     }
                 });
     }
+
+    public OrderResponse payOrder(Long orderId, String idempotencyKey, Long juniorId) {
+        return OrderResponse.from(orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND)));
+    }
 }

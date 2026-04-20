@@ -29,7 +29,7 @@ public enum ErrorCode {
     ORDER_CANNOT_BE_PAID(400, "현재 주문 상태에서는 결제를 진행할 수 없습니다."),
     ORDER_PAYMENT_CONFLICT(409, "동시에 결제가 시도되어 처리에 실패했습니다. 다시 시도해주세요."),
 
-    ORDER_REQUEST_IN_PROGRESS(429, "요청이 처리 중입니다. 잠시 후 다시 시도해주세요."); // 멱등 요청 중복 방지용
+    ORDER_REQUEST_IN_PROGRESS(429, "요청이 처리 중입니다. 잠시 후 다시 시도해주세요."), // 멱등 요청 중복 방지용
 
     // 이메일 관련 (Auth)
     ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),
