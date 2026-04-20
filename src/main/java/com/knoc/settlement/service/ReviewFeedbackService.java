@@ -39,7 +39,7 @@ public class ReviewFeedbackService {
             throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
         }
         //4. 후기를 이미 작성한 주문인지 검증
-        if (reviewFeedbackRepository.existsById(order.getId())) {
+        if (reviewFeedbackRepository.existsByOrderId(order.getId())) {
             throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
         
