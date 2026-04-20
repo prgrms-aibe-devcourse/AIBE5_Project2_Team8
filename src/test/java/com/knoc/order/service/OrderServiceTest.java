@@ -1,8 +1,8 @@
 package com.knoc.order.service;
 
 import com.knoc.chat.entity.ChatRoom;
+import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
-import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
@@ -19,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
@@ -45,7 +47,7 @@ class OrderServiceTest {
     private MemberRepository memberRepository;
 
     @Mock
-    private ChatMessageRepository chatMessageRepository;
+    private ApplicationEventPublisher eventPublisher;
 
     @Test
     @DisplayName("결제 요청 성공: 정상적인 데이터가 입력되면 주문이 PENDING 상태로 생성된다.")
@@ -64,6 +66,7 @@ class OrderServiceTest {
         // Stubbing: 도메인 객체 간의 관계 및 상태 정의
         given(senior.getId()).willReturn(seniorId);
         given(chatRoom.getSenior()).willReturn(senior);
+        given(chatRoom.getId()).willReturn(chatRoomId);
 
         // Stubbing: Repository 조회 시나리오 설정 (DB 의존성 제거)
         given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
@@ -90,10 +93,16 @@ class OrderServiceTest {
         // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 확인
         verify(orderRepository, times(1)).save(any(Order.class));
         // Verify: 결제 요청 시스템 메시지 내용 검증
-        verify(chatMessageRepository, times(1))
-                .save(argThat(message -> message.getMessageType() == MessageType.PAYMENT_REQUESTED && // 타입 확인
-                        message.getContent().contains("50,000") && // 금액 포함 확인
-                        message.getContent().contains("결제를 완료하시면"))); // 문구 포함 확인
+        // 직접 저장(Repository) 대신 이벤트 발행 여부 검증
+        // ArgumentCaptor를 사용해 발행된 이벤트를 낚아챔.
+        ArgumentCaptor<ChatSystemEvent> eventCaptor = ArgumentCaptor.forClass(ChatSystemEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+
+        // 낚아챈 이벤트를 꺼내서 값들을 하나씩 검증
+        ChatSystemEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.roomId()).isEqualTo(chatRoomId);
+        assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_REQUESTED);
+        assertThat(capturedEvent.customContent()).contains("50,000");
     }
 
     @Test
@@ -123,7 +132,7 @@ class OrderServiceTest {
 
         // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
         verify(orderRepository, never()).save(any());
-        verify(chatMessageRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any()); // 실패 시 이벤트 발행 안 됨
     }
 
     @Test
@@ -140,7 +149,7 @@ class OrderServiceTest {
 
         // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
         verify(orderRepository, never()).save(any());
-        verify(chatMessageRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -173,11 +182,16 @@ class OrderServiceTest {
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
-
         verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
-        verify(chatMessageRepository, times(1))
-                .save(argThat(message -> message.getMessageType() == MessageType.PAYMENT_COMPLETED &&
-                        message.getContent().contains("결제가 성공적으로 처리되었습니다.")));
+
+        // 결제 완료 이벤트 검증
+        ArgumentCaptor<ChatSystemEvent> eventCaptor = ArgumentCaptor.forClass(ChatSystemEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+
+        ChatSystemEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_COMPLETED);
+        assertThat(capturedEvent.customContent()).contains("결제가 성공적으로 처리되었습니다.");
+
     }
 
     @Test
@@ -189,8 +203,6 @@ class OrderServiceTest {
         String idempotencyKey = "idem-456";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
-        given(chatRoom.getId()).willReturn(10L);
-
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(juniorId);
 
@@ -212,7 +224,7 @@ class OrderServiceTest {
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
 
         verify(orderRepository, never()).saveAndFlush(any());
-        verify(chatMessageRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -243,6 +255,6 @@ class OrderServiceTest {
                 .hasMessage(ErrorCode.NOT_JUNIOR_FOR_ORDER.getMessage());
 
         verify(orderRepository, never()).saveAndFlush(any());
-        verify(chatMessageRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }
