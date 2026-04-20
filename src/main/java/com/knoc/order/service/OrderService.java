@@ -64,7 +64,7 @@ public class OrderService {
         // 4. 결제 요청 시스템 메시지 생성 및 저장
         // 금액에 콤마 추가 (예: 55000 -> 55,000)
         String formattedAmount = String.format("%,d", dto.getAmount());
-        String customMessage = "시니어님이 " + formattedAmount + "원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다.";
+        String customMessage = MessageType.PAYMENT_REQUESTED.formatMessage(dto.getAmount());
         eventPublisher.publishEvent(new ChatSystemEvent(
                 chatRoom.getId(),
                 MessageType.PAYMENT_REQUESTED,
@@ -73,7 +73,7 @@ public class OrderService {
         ));
         // 5. 저장된 주문을 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
         return OrderResponse.from(savedOrder);
-    }
+        }
 
     // 결제창 호출 전 단계(사전 검증/조회)
     // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
@@ -147,7 +147,7 @@ public class OrderService {
         Order order = found.get();
 
         String customMessage = (reason == null || reason.isBlank())
-                ? "결제가 취소되었거나 실패했습니다.\n다시 시도해주세요."
+                ? MessageType.PAYMENT_FAILED.getTemplate()
                 : "결제가 취소되었거나 실패했습니다.\n사유: " + reason;
 
         eventPublisher.publishEvent(new ChatSystemEvent(
@@ -183,7 +183,7 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
         }
 
-        String customMessage = "결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다.";
+        String customMessage = MessageType.PAYMENT_COMPLETED.getTemplate();
 
         eventPublisher.publishEvent(new ChatSystemEvent(
                 savedOrder.getChatRoom().getId(),
