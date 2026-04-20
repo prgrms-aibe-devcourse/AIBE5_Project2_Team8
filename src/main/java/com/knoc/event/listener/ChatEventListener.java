@@ -33,7 +33,7 @@ public class ChatEventListener {
         ChatRoom chatRoom = chatRoomRepository.findById(event.roomId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
         String content = (event.customContent() != null && !event.customContent().isBlank())
-                ? event.customContent() : event.type().getDefaultTemplate();
+                ? event.customContent() : event.type().getTemplate();
         ChatMessage systemMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .messageType(event.type())
