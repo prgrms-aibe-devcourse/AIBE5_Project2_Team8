@@ -29,6 +29,10 @@ public enum ErrorCode {
     ORDER_CANNOT_BE_PAID(400, "현재 주문 상태에서는 결제를 진행할 수 없습니다."),
     ORDER_PAYMENT_CONFLICT(409, "동시에 결제가 시도되어 처리에 실패했습니다. 다시 시도해주세요."),
 
+    // 리뷰 관련 (Review)
+    REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
+    REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
+
     // 이메일 관련 (Auth)
     ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),
     EXPIRED_VERIFICATION_CODE(400, "인증번호 유효기간이 지났습니다."),
