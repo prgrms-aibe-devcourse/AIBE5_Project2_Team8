@@ -20,6 +20,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Optional;
 
@@ -32,10 +33,10 @@ public class OrderService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
         // 0. 멱등키 검증 (비어있거나 너무 짧은 경우에 대한 에러 처리)
-        if (idempotencyKey == null || idempotencyKey.length() < 10) {
+        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
             throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
         }
 
@@ -69,7 +70,7 @@ public class OrderService {
                             .build();
 
                     Order savedOrder;
-                    try {
+                    try { // saveAndFlush를 통해 즉시 쿼리를 날려 충돌을 감지함
                         savedOrder = orderRepository.saveAndFlush(order);
                     } catch (DataIntegrityViolationException e) { // 데이터 무결성 제약 조건을 위반했을 때 발생하는 예외
                         // 동시 요청으로 인해 UNIQUE 제약조건 위반 시, 이미 저장된 주문을 다시 찾아 반환
