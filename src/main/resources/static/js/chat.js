@@ -35,20 +35,26 @@ function renderSystemMessage(data) {
     switch (data.type) {
         case 'PAYMENT_REQUESTED': {
             cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '🪙';
-            const amountMatch = data.customContent.match(/([\d,]+)원/);
-            const amount = amountMatch ? amountMatch[1] : '';
-            buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${data.referenceId}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
+
+            // 정규식 파싱 대신 서버에서 준 amount 숫자 직접 사용
+            // 값이 없을 경우를 대비해 기본값 0 처리
+            const amount = data.amount ? data.amount.toLocaleString() : '0';
+
+            // referenceId에 escapeHTML 적용
+            buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${escapeHTML(String(data.referenceId))}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
             break;
         }
         case 'PAYMENT_COMPLETED':
         case 'WORKSPACE_READY': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
-            buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${data.roomId}">&lt;/&gt; 상세 리뷰 요청서 작성</button>`;
+            // roomId에 escapeHTML 적용
+            buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(data.roomId))}">&lt;/&gt; 상세 리뷰 요청서 작성</button>`;
             break;
         }
         case 'REPORT_COMPLETED': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '✅';
-            buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${data.referenceId}">✔️ 구매 확정 및 리뷰 남기기</button>`;
+            // referenceId에 escapeHTML 적용
+            buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${escapeHTML(String(data.referenceId))}">✔️ 구매 확정 및 리뷰 남기기</button>`;
             break;
         }
         default: {
