@@ -14,6 +14,9 @@ public class OrderResponse {
     private Long chatRoomId;
     private int amount;
     private OrderStatus orderStatus;
+    // preparePayment()에서도 해당 dto를 반환하기 때문에 시니어 정보가 필요함
+    private String seniorNickname;
+    private String seniorProfileImageUrl;
 
     public static OrderResponse from(Order order) {
         return OrderResponse.builder()
@@ -22,6 +25,8 @@ public class OrderResponse {
                 .chatRoomId(order.getChatRoom().getId())
                 .amount(order.getAmount())
                 .orderStatus(order.getStatus())
+                .seniorNickname(order.getSenior().getNickname())
+                .seniorProfileImageUrl(order.getSenior().getProfileImageUrl())
                 .build();
     }
 }
