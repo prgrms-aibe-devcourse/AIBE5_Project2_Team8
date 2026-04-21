@@ -78,8 +78,7 @@ public class OrderService {
                     }
 
                     // 5. 결제 요청 메시지 생성 및 시스템 이벤트 발행
-                    String formattedAmount = String.format("%,d", dto.getAmount()); // 금액에 콤마 추가 (예: 55000 -> 55,000)
-                    String customMessage = MessageType.PAYMENT_REQUESTED.formatMessage(formattedAmount);
+                    String customMessage = MessageType.PAYMENT_REQUESTED.formatMessage(dto.getAmount());
                     eventPublisher.publishEvent(new ChatSystemEvent(
                             chatRoom.getId(),
                             MessageType.PAYMENT_REQUESTED,
