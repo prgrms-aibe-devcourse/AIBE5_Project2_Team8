@@ -140,6 +140,13 @@ public class OrderService {
             return Optional.empty();
         }
         Order order = found.get();
+
+        // 이미 PAID면 금액검증/마크 없이 멱등 반환
+        if (order.getStatus() == OrderStatus.PAID) {
+            return Optional.of(OrderResponse.from(order));
+        }
+        // SETTLED, CANCELLED 상태는 preparePayment()에서 ORDER_CANNOT_BE_PAID 에러로 이미 걸러짐
+
         if (order.getAmount() != confirmedAmount) {
             throw new BusinessException(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH); // 결제 금액 불일치
         }
@@ -175,15 +182,8 @@ public class OrderService {
     // PG(토스 등) 승인 이후 공통 처리: PENDING -> PAID, 저장, 결제완료 시스템 메시지
     private OrderResponse markPaid(Order order) {
         Long orderId = order.getId();
+        order.updateStatus(OrderStatus.PAID);
 
-        // 상태 분기
-        if (order.getStatus() == OrderStatus.PAID) {
-            return OrderResponse.from(order); // 결제 완료 메시지 중복 방지
-        } else if (order.getStatus() == OrderStatus.PENDING) {
-            order.updateStatus(OrderStatus.PAID);
-        } else { // 그 외의 상태(SETTLED, CANCELLED)는 에러
-            throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID);
-        }
         // 저장 (낙관적 락 충돌 시: 재조회 후 멱등 성공/충돌 응답)
         final Order savedOrder;
         try {
