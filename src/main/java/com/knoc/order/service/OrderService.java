@@ -109,9 +109,6 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
-        // String lockKey = "pay:" + order.getOrderNumber(); // 주문 생성 단계에서의 lockKey와 동일
-        // (같은 주문에 대한 작업을 같은 키로 직렬화)
-
         // 주니어 검증
         if (order.getJunior() == null || order.getJunior().getId() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -128,7 +125,7 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID); // 결제 불가능한 상태
         }
 
-        return OrderResponse.from(order); // 결제 가능한 상태
+        return OrderResponse.from(order); // 결제 가능한 상태(PENDING)면 dto 만들어서 반환
     }
 
     // 토스페이먼츠 결제 승인(confirm) 성공 후 호출
