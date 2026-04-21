@@ -28,6 +28,7 @@ public enum ErrorCode {
     NOT_JUNIOR_FOR_ORDER(403, "해당 주문의 주니어가 아닙니다."), // 권한 검증용
     ORDER_CANNOT_BE_PAID(400, "현재 주문 상태에서는 결제를 진행할 수 없습니다."),
     ORDER_PAYMENT_CONFLICT(409, "동시에 결제가 시도되어 처리에 실패했습니다. 다시 시도해주세요."),
+    ORDER_PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 주문 금액과 일치하지 않습니다."),
 
     // 리뷰 관련 (Review)
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),

@@ -4,18 +4,34 @@
       layout:decorate="~{layout/default_layout}">
 <head>
     <title>Knoc. 완벽한 사수를 만나는 가장 가벼운 노크</title>
+    <!-- 토스 SDK 스크립트 로드 -->
+    <th:block layout:fragment="head-extra">
+      <script src="https://js.tosspayments.com/v2/standard"></script>
+    </th:block>
 </head>
 
 <div layout:fragment="content">
 
     <!-- ── 히어로 섹션 ─────────────────────────────────── -->
     <section class="container text-center py-5 mt-5">
-        <h5 class="text-mint fw-bold mb-3">상위 1% 개발자의 노하우를 내 것으로</h5>
-        <h1 class="display-5 fw-bold mb-4">성장을 이끌어줄 현업 시니어 개발자를<br>만나보세요.</h1>
+        <div class="hero-pill mb-3">
+            <span aria-hidden="true">⚡</span><span class="text-mint">상위 1% 개발자의 노하우를 내 것으로</span>
+        </div>
+        <h1 class="display-5 fw-bold mb-4">성장을 이끌어줄 현업 <span class="text-mint">시니어 개발자</span>를<br>만나보세요.</h1>
         <p class="text-secondary mb-5">
             네카라쿠배 등 최정상 IT 기업의 시니어 개발자들과 함께하는 1:1 코드리뷰 &amp; 멘토링.<br>
             안전한 에스크로 결제와 통합 워크스페이스로 오직 성장에만 집중하세요.
         </p>
+
+        <!-- 토스페이먼츠 테스트 결제 (채팅 연동 전 임시) -->
+        <div class="mb-4">
+            <button type="button"
+                    id="tossTestPayBtn"
+                    class="btn btn-outline-light rounded-pill px-4 fw-semibold"
+                    th:attr="disabled=${tossClientKey == null or #strings.isEmpty(tossClientKey)}">
+                테스트 결제하기 (토스)
+            </button>
+        </div>
 
         <!-- 키워드 검색 -->
         <form th:action="@{/}" method="get" id="searchForm">
@@ -137,7 +153,7 @@
     </section>
 
 <th:block layout:fragment="script">
-    <script>
+    <script th:inline="javascript">
         const MAX_PRICE = 200000;
 
         function updateCareerDisplay(val) {
@@ -165,6 +181,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // 결제창 호출 로직은 `/js/toss-pay.js`에 분리되어 있고,
+            // 여기서는 서버에서 내려준 설정만 전역으로 주입합니다.
+            window.__TOSS_CLIENT_KEY__ = /*[[${tossClientKey}]]*/ "";
+            window.__TOSS_SUCCESS_PATH__ = "/orders/payment/toss/success";
+            window.__TOSS_FAIL_PATH__ = "/orders/payment/toss/fail";
+
             const careerSlider = document.getElementById('careerSlider');
             updateCareerDisplay(careerSlider.value);
             careerSlider.addEventListener('change', function () {
@@ -187,6 +209,7 @@
             }
         });
     </script>
+    <script src="/js/toss-pay.js"></script>
 </th:block>
 
     <!-- ── 시니어 목록 섹션 ──────────────────────────────── -->

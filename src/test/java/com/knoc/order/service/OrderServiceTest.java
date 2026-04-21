@@ -153,8 +153,8 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("결제 성공: PENDING 주문이 PAID로 전이되고 결제완료 시스템 메시지가 1회 저장된다.")
-    void payOrder_Success_PendingToPaid() {
+    @DisplayName("결제창 요청 성공: PENDING 주문이면 상태 변경 없이 주문 정보를 반환한다.")
+    void payOrder_Success_ReturnsOrderWithoutStateChange() {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
@@ -175,27 +175,21 @@ class OrderServiceTest {
                 .build(); // status = PENDING
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-        given(orderRepository.saveAndFlush(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        OrderResponse response = orderService.payOrder(orderId, idempotencyKey, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, idempotencyKey, juniorId);
 
         // then
-        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
-        verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
+        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(response.getOrderNumber()).isEqualTo("ORD-TEST");
+        assertThat(response.getAmount()).isEqualTo(50000);
 
-        // 결제 완료 이벤트 검증
-        ArgumentCaptor<ChatSystemEvent> eventCaptor = ArgumentCaptor.forClass(ChatSystemEvent.class);
-        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
-
-        ChatSystemEvent capturedEvent = eventCaptor.getValue();
-        assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_COMPLETED);
-        assertThat(capturedEvent.customContent()).contains("결제가 성공적으로 처리되었습니다.");
+        verify(orderRepository, never()).saveAndFlush(any(Order.class));
 
     }
 
     @Test
-    @DisplayName("결제 멱등: 이미 PAID면 저장/메시지 없이 그대로 응답한다.")
+    @DisplayName("결제창 요청 멱등: 이미 PAID면 저장/메시지 없이 그대로 응답한다.")
     void payOrder_Idempotent_WhenAlreadyPaid() {
         // given
         Long orderId = 101L;
@@ -218,13 +212,52 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when
-        OrderResponse response = orderService.payOrder(orderId, idempotencyKey, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, idempotencyKey, juniorId);
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
 
         verify(orderRepository, never()).saveAndFlush(any());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 승인 성공: 토스 confirm 이후 호출되면 PENDING 주문이 PAID로 전이되고 결제완료 시스템 메시지가 1회 저장된다.")
+    void confirmPayment_Success_PendingToPaid() {
+        // given
+        String tossOrderId = "ORD-TEST";
+        long confirmedAmount = 50000L;
+
+        ChatRoom chatRoom = mock(ChatRoom.class);
+        Member junior = mock(Member.class);
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(chatRoom)
+                .junior(junior)
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build(); // status = PENDING
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+        given(orderRepository.saveAndFlush(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        Optional<OrderResponse> responseOpt = orderService.confirmPayment(tossOrderId, confirmedAmount);
+
+        // then
+        assertThat(responseOpt).isPresent();
+        assertThat(responseOpt.get().getOrderStatus()).isEqualTo(OrderStatus.PAID);
+
+        verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
+
+        // 결제 완료 이벤트 검증
+        ArgumentCaptor<ChatSystemEvent> eventCaptor = ArgumentCaptor.forClass(ChatSystemEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+
+        ChatSystemEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_COMPLETED);
+        assertThat(capturedEvent.customContent()).contains("결제가 성공적으로 처리되었습니다.");
     }
 
     @Test
@@ -250,7 +283,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when & then
-        assertThatThrownBy(() -> orderService.payOrder(orderId, idempotencyKey, attackerJuniorId))
+        assertThatThrownBy(() -> orderService.preparePayment(orderId, idempotencyKey, attackerJuniorId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.NOT_JUNIOR_FOR_ORDER.getMessage());
 
