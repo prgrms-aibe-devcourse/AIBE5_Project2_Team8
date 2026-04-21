@@ -1,6 +1,5 @@
 package com.knoc.chat.dto;
 
-import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.MessageType;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,6 +18,6 @@ public class ChatMessageResponse {
         this.senderNickname = senderNickname;
         this.content = content;
         this.createdAt = createdAt;
-        this.messageType = MessageType.USER;
+        this.messageType = messageType;
     }
 }

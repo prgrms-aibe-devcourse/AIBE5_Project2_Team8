@@ -12,5 +12,5 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     Optional<ChatRoom> findByJuniorAndSenior(Member junior, Member senior);
 
     // 현재 로그인한 유저가 주니어인지 시니어인지
-    List<ChatRoom> findByJuniorOrSenior(Member Junior, Member Senior);
+    List<ChatRoom> findByJuniorOrSenior(Member junior, Member senior);
 }

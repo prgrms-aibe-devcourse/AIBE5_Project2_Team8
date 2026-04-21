@@ -9,11 +9,13 @@ import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
 import java.util.Optional;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class ChatRoomService {
     //그 결과를 보고 이미 있으면 예외, 없으면 생성 판단
@@ -33,10 +35,9 @@ public class ChatRoomService {
         }
 
         ChatRoom newChatRoom = ChatRoom.builder()
-
-                        .junior(junior)
-                                .senior(senior)
-                                        .build();
+                .junior(junior)
+                .senior(senior)
+                .build();
 
 
 
