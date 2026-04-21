@@ -48,7 +48,7 @@ public class ChatEventListener {
         payload.put("messageId", systemMessage.getId());
         payload.put("roomId", event.roomId());
         payload.put("type", event.type().name());
-        payload.put("content", content);
+        payload.put("customContent", content);  // js와 맞추기 위해 content -> customContent 변경
         payload.put("referenceId", event.referenceId());
 
         String destination = "/topic/chat/" + event.roomId();
