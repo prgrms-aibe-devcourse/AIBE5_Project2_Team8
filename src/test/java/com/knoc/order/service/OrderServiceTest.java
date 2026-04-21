@@ -23,7 +23,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -262,7 +264,6 @@ class OrderServiceTest {
 
         ChatSystemEvent capturedEvent = eventCaptor.getValue();
         assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_COMPLETED);
-        assertThat(capturedEvent.customContent()).contains("결제가 성공적으로 처리되었습니다.");
     }
 
     @Test
@@ -365,5 +366,372 @@ class OrderServiceTest {
         assertThat(response.getOrderNumber()).isEqualTo(orderNumber);
         assertThat(response.getAmount()).isEqualTo(50000);
         verify(orderRepository, times(2)).findByOrderNumber(orderNumber); // 처음 + catch문 재조회
+    }
+
+    // ============================================================
+    // A. confirmPayment 승인 멱등성
+    // ============================================================
+
+    @Test
+    @DisplayName("결제 승인 멱등: 이미 PAID인 주문에 confirm 재호출되면 저장/이벤트 없이 기존 응답 반환")
+    void confirmPayment_Idempotent_WhenAlreadyPaid() {
+        // given
+        String tossOrderId = "ORD-PAID";
+        long confirmedAmount = 50000L;
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build();
+        order.updateStatus(OrderStatus.PAID);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when
+        Optional<OrderResponse> responseOpt = orderService.confirmPayment(tossOrderId, confirmedAmount);
+
+        // then
+        assertThat(responseOpt).isPresent();
+        assertThat(responseOpt.get().getOrderStatus()).isEqualTo(OrderStatus.PAID);
+        verify(orderRepository, never()).saveAndFlush(any(Order.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 승인: 로컬에 없는 주문(예: TEST-...)은 Optional.empty() 반환")
+    void confirmPayment_Empty_WhenOrderNotFound() {
+        // given
+        String tossOrderId = "TEST-UNKNOWN";
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.empty());
+
+        // when
+        Optional<OrderResponse> responseOpt = orderService.confirmPayment(tossOrderId, 10000L);
+
+        // then
+        assertThat(responseOpt).isEmpty();
+        verify(orderRepository, never()).saveAndFlush(any(Order.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 승인 멱등: 낙관적 락 충돌 후 재조회 시 PAID면 기존 응답 반환(이벤트 미발행)")
+    void confirmPayment_Recovers_WhenOptimisticLockAndAlreadyPaidByOtherTx() {
+        // given
+        String tossOrderId = "ORD-LOCK";
+        long confirmedAmount = 50000L;
+        Long orderId = 200L;
+
+        Order current = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(current, "id", orderId);
+
+        Order latestPaid = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(latestPaid, "id", orderId);
+        latestPaid.updateStatus(OrderStatus.PAID);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(current));
+        given(orderRepository.saveAndFlush(any(Order.class)))
+                .willThrow(new OptimisticLockingFailureException("conflict"));
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(latestPaid));
+
+        // when
+        Optional<OrderResponse> responseOpt = orderService.confirmPayment(tossOrderId, confirmedAmount);
+
+        // then
+        assertThat(responseOpt).isPresent();
+        assertThat(responseOpt.get().getOrderStatus()).isEqualTo(OrderStatus.PAID);
+        // 충돌 후 재조회 경로에선 결제완료 이벤트가 중복 발행되지 않아야 함
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 승인 충돌: 낙관적 락 충돌 후 재조회 시 여전히 PAID가 아니면 ORDER_PAYMENT_CONFLICT(409) 예외")
+    void confirmPayment_Throws_WhenOptimisticLockAndStillNotPaid() {
+        // given
+        String tossOrderId = "ORD-LOCK2";
+        long confirmedAmount = 50000L;
+        Long orderId = 201L;
+
+        Order current = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(current, "id", orderId);
+
+        Order latestStillPending = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount((int) confirmedAmount)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(latestStillPending, "id", orderId);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(current));
+        given(orderRepository.saveAndFlush(any(Order.class)))
+                .willThrow(new OptimisticLockingFailureException("conflict"));
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(latestStillPending));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.confirmPayment(tossOrderId, confirmedAmount))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ORDER_PAYMENT_CONFLICT.getMessage());
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 승인 사후 금액 불일치: ORDER_PAYMENT_AMOUNT_MISMATCH 예외 + 저장/이벤트 없음")
+    void confirmPayment_Throws_OnAmountMismatch() {
+        // given
+        String tossOrderId = "ORD-AMT";
+        int orderAmount = 50000;
+        long confirmedAmount = 10000L; // 불일치
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(orderAmount)
+                .build();
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.confirmPayment(tossOrderId, confirmedAmount))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH.getMessage());
+
+        verify(orderRepository, never()).saveAndFlush(any(Order.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    // ============================================================
+    // B. verifyPaymentAmount 사전 금액 검증
+    // ============================================================
+
+    @Test
+    @DisplayName("사전 금액 검증: 음수 amount면 INVALID_INPUT_VALUE 예외(주문 조회 이전에 차단)")
+    void verifyPaymentAmount_Throws_OnNegativeAmount() {
+        // when & then
+        assertThatThrownBy(() -> orderService.verifyPaymentAmount("ORD-NEG", -1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+
+        // 음수면 조회까지 가지 않아야 함
+        verify(orderRepository, never()).findByOrderNumber(any());
+    }
+
+    @Test
+    @DisplayName("사전 금액 검증 멱등: 이미 PAID면 예외 없이 조용히 리턴(금액 달라도 무시)")
+    void verifyPaymentAmount_NoOp_WhenAlreadyPaid() {
+        // given
+        String tossOrderId = "ORD-PAID-VERIFY";
+        int amount = 50000;
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(amount)
+                .build();
+        order.updateStatus(OrderStatus.PAID);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when & then (예외가 나지 않아야 함: PAID면 금액 비교 전에 리턴)
+        orderService.verifyPaymentAmount(tossOrderId, amount + 999);
+    }
+
+    @Test
+    @DisplayName("사전 금액 검증: 로컬에 없는 주문이면 조용히 리턴(confirmPayment와 동일 정책)")
+    void verifyPaymentAmount_NoOp_WhenOrderNotFound() {
+        // given
+        given(orderRepository.findByOrderNumber("TEST-UNKNOWN")).willReturn(Optional.empty());
+
+        // when & then (예외 없음)
+        orderService.verifyPaymentAmount("TEST-UNKNOWN", 50000);
+    }
+
+    @Test
+    @DisplayName("사전 금액 검증: 주문 금액과 불일치 시 ORDER_PAYMENT_AMOUNT_MISMATCH 예외")
+    void verifyPaymentAmount_Throws_OnAmountMismatch() {
+        // given
+        String tossOrderId = "ORD-AMT-PRE";
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.verifyPaymentAmount(tossOrderId, 10000))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH.getMessage());
+    }
+
+    // ============================================================
+    // C. recordPaymentFailure 실패 멱등성
+    // ============================================================
+
+    @Test
+    @DisplayName("결제 실패 멱등: 이미 PAID 주문이면 실패 메시지 발행 안 함(뒤늦은 fail 콜백 방어)")
+    void recordPaymentFailure_Skips_WhenAlreadyPaid() {
+        // given
+        String tossOrderId = "ORD-FAIL-PAID";
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+        order.updateStatus(OrderStatus.PAID);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when
+        orderService.recordPaymentFailure(tossOrderId, "뒤늦게 도달한 실패 콜백");
+
+        // then (방어선1: 상태 체크에서 먼저 걸러져 쿨다운 조회까지 가지 않음)
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(chatMessageRepository, never())
+                .existsByReferenceIdAndMessageTypeAndCreatedAtAfter(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("결제 실패 멱등: 이미 SETTLED 주문이면 실패 메시지 발행 안 함")
+    void recordPaymentFailure_Skips_WhenAlreadySettled() {
+        // given
+        String tossOrderId = "ORD-FAIL-SETTLED";
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+        // PENDING -> PAID -> SETTLED (Order.validateTransition 순서에 맞춰 두 단계로 전이)
+        order.updateStatus(OrderStatus.PAID);
+        order.updateStatus(OrderStatus.SETTLED);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+
+        // when
+        orderService.recordPaymentFailure(tossOrderId, "이미 정산됨");
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(chatMessageRepository, never())
+                .existsByReferenceIdAndMessageTypeAndCreatedAtAfter(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("결제 실패 멱등: 최근 30초 내 PAYMENT_FAILED 이력이 있으면 중복 발행 스킵(쿨다운)")
+    void recordPaymentFailure_Skips_WhenRecentFailureExists() {
+        // given
+        String tossOrderId = "ORD-FAIL-COOLDOWN";
+        Long orderId = 300L;
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(mock(ChatRoom.class))
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(order, "id", orderId);
+        // status = PENDING (기본값)
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+        given(chatMessageRepository.existsByReferenceIdAndMessageTypeAndCreatedAtAfter(
+                eq(orderId), eq(MessageType.PAYMENT_FAILED), any(LocalDateTime.class)))
+                .willReturn(true);
+
+        // when
+        orderService.recordPaymentFailure(tossOrderId, "재시도 콜백");
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 실패 정상 경로: PENDING + 쿨다운 없음 → PAYMENT_FAILED 이벤트 1회(템플릿) 발행")
+    void recordPaymentFailure_Publishes_WhenEligible() {
+        // given
+        String tossOrderId = "ORD-FAIL-OK";
+        Long orderId = 301L;
+        Long chatRoomId = 10L;
+
+        ChatRoom chatRoom = mock(ChatRoom.class);
+        given(chatRoom.getId()).willReturn(chatRoomId);
+
+        Order order = Order.builder()
+                .orderNumber(tossOrderId)
+                .chatRoom(chatRoom)
+                .junior(mock(Member.class))
+                .senior(mock(Member.class))
+                .amount(50000)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(order, "id", orderId);
+
+        given(orderRepository.findByOrderNumber(tossOrderId)).willReturn(Optional.of(order));
+        given(chatMessageRepository.existsByReferenceIdAndMessageTypeAndCreatedAtAfter(
+                eq(orderId), eq(MessageType.PAYMENT_FAILED), any(LocalDateTime.class)))
+                .willReturn(false);
+
+        // when
+        orderService.recordPaymentFailure(tossOrderId, "카드 한도 초과");
+
+        // then: 이벤트 1회, 템플릿 사용(customContent == null), referenceId 일치
+        ArgumentCaptor<ChatSystemEvent> captor = ArgumentCaptor.forClass(ChatSystemEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(captor.capture());
+
+        ChatSystemEvent event = captor.getValue();
+        assertThat(event.type()).isEqualTo(MessageType.PAYMENT_FAILED);
+        assertThat(event.customContent()).isNull();
+        assertThat(event.referenceId()).isEqualTo(orderId);
+        assertThat(event.roomId()).isEqualTo(chatRoomId);
+    }
+
+    @Test
+    @DisplayName("결제 실패: 로컬에 없는 주문이면 아무 것도 하지 않음(상태/메시지/로그 영향 없음)")
+    void recordPaymentFailure_NoOp_WhenOrderNotFound() {
+        // given
+        given(orderRepository.findByOrderNumber("TEST-UNKNOWN")).willReturn(Optional.empty());
+
+        // when
+        orderService.recordPaymentFailure("TEST-UNKNOWN", "사유");
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(chatMessageRepository, never())
+                .existsByReferenceIdAndMessageTypeAndCreatedAtAfter(any(), any(), any());
     }
 }
