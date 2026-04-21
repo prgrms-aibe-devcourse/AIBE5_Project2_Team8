@@ -60,7 +60,6 @@ class DashboardServiceTest {
 
         // PENDING 주문
         Order pendingOrder = Order.builder()
-                .orderNumber("ORD-001")
                 .chatRoom(mock(ChatRoom.class))
                 .junior(junior)
                 .senior(seniorMember)
@@ -70,7 +69,6 @@ class DashboardServiceTest {
 
         // PAID 주문
         Order paidOrder = Order.builder()
-                .orderNumber("ORD-002")
                 .chatRoom(mock(ChatRoom.class))
                 .junior(junior)
                 .senior(seniorMember)
@@ -81,7 +79,6 @@ class DashboardServiceTest {
 
         // SETTLED 주문 (후기 있음)
         Order settledOrder = Order.builder()
-                .orderNumber("ORD-003")
                 .chatRoom(mock(ChatRoom.class))
                 .junior(junior)
                 .senior(seniorMember)
@@ -108,7 +105,6 @@ class DashboardServiceTest {
         assertThat(result.getOrders()).hasSize(3);
 
         JuniorDashboardDto.OrderSummaryDto settledDto = result.getOrders().get(0);
-        assertThat(settledDto.getOrderNumber()).isEqualTo("ORD-003");
         assertThat(settledDto.getStatus()).isEqualTo(OrderStatus.SETTLED);
         assertThat(settledDto.isHasReview()).isTrue();
 
@@ -184,7 +180,6 @@ class DashboardServiceTest {
 
         // SETTLED 주문
         Order settledOrder = Order.builder()
-                .orderNumber("ORD-001")
                 .chatRoom(mock(ChatRoom.class))
                 .junior(juniorMember)
                 .senior(seniorMember)
@@ -196,7 +191,6 @@ class DashboardServiceTest {
 
         // PAID 주문
         Order paidOrder = Order.builder()
-                .orderNumber("ORD-002")
                 .chatRoom(mock(ChatRoom.class))
                 .junior(juniorMember)
                 .senior(seniorMember)
