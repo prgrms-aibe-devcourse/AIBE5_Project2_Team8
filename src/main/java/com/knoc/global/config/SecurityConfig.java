@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .requestMatchers("/senior/profile/**", "/reports/**", "/my/senior/**", "/orders/request").hasRole("SENIOR")
                         // [주니어 전용] CHAT-01(방생성), ORD-01/02(결제), REV-01(요청), SET-01(구매확정), POST-01(후기작성), MY-01(주니어 마이페이지)
                         .requestMatchers("/chats/new", "/orders/**", "/requests/**", "/settlements/confirm", "/reviews/posts/write", "/my/junior/**").hasRole("USER")
+                        // [공통 로그인] /my/** 등 역할 무관 인증 필요 경로
+                        .requestMatchers("/my/**").authenticated()
                         // 그외 나머지 경로는 로그인 사용자 허용
                         .anyRequest().authenticated()
                 )
