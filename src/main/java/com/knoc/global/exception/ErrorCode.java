@@ -18,6 +18,7 @@ public enum ErrorCode {
 
     // 채팅 관련 (Chat)
     CHATROOM_NOT_FOUND(404, "존재하지 않는 채팅방입니다."),
+    CHATROOM_ALREADY_EXISTS(400, "이미 존재하는 채팅방입니다."),
 
     // 주문 관련 (Order)
     ORDER_NOT_FOUND(404, "존재하지 않는 주문입니다."),

@@ -19,18 +19,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // /topic, /app prefix 등록
-
         // 구독 prefix
-        registry.enableSimpleBroker("/topic");
+        registry.enableSimpleBroker("/queue", "/topic");
         // 발행 prefix
         registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // /ws 엔드포인트 + SockJS 설정
-
         // 연결 진입점
         registry.addEndpoint("/ws")
                 .addInterceptors(jwtHandshakeInterceptor)
