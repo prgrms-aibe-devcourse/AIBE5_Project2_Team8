@@ -6,9 +6,11 @@
   <header th:fragment="headerFragment">
     <nav class="navbar navbar-expand-lg navbar-dark header-nav">
       <div class="container">
-        <a class="navbar-brand fw-bold fs-4" th:href="@{/}"
-          >knoc<span class="text-mint">.</span></a
-        >
+        <a class="navbar-brand fw-bold fs-4 d-inline-flex align-items-center gap-2"
+          th:href="@{/}">
+          <img src="/images/Knoc_logo.png" alt="Knoc 로고" class="knoc-logo"/>
+          <span>Knoc<span class="text-mint">.</span></span>
+        </a>
 
         <button
           class="navbar-toggler"
