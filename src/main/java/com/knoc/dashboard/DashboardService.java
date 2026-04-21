@@ -83,7 +83,7 @@ public class DashboardService {
                         .build())
                 .toList();
 
-        // 전체 후기 → 별점 분포 계산
+        // 전체 후기에서  별점 분포 계산 로직
         List<ReviewFeedback> allReviews = reviewFeedbackRepository.findBySeniorProfile_Id(seniorProfile.getId());
         Map<Integer, Integer> ratingDistribution = allReviews.stream()
                 .collect(Collectors.groupingBy(r -> (int) r.getRating(),
