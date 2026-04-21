@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -75,14 +76,14 @@ class OrderServiceTest {
 
         // Stubbing: 데이터 저장 로직 모의 처리
         // willAnswer를 사용하여 저장 시도된 Order 객체를 ID값만 임의로 채워 반환 (referenceId 확인용)
-        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> {
-            // 실제 DB 저장이 아니므로 Reflection 등을 쓰지 않고 객체 그대로 반환
-            // (Service에서 savedOrder.getId()를 쓰므로 이 테스트 환경에서는 null이 반환되어도 로직은 수행됨)
+        given(orderRepository.saveAndFlush(any(Order.class))).willAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            org.springframework.test.util.ReflectionTestUtils.setField(order, "id", 1L);
             return invocation.getArgument(0);
         });
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, seniorId);
+        OrderResponse response = orderService.createOrderRequest(request, seniorId, "idempotencyKey");
 
         // then
         assertThat(response).isNotNull();
@@ -91,7 +92,7 @@ class OrderServiceTest {
         assertThat(response.getOrderNumber()).startsWith("ORD-");
 
         // Verify: 실제로 DB 저장 메서드가 '한 번' 호출되었는지 확인
-        verify(orderRepository, times(1)).save(any(Order.class));
+        verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
         // Verify: 결제 요청 시스템 메시지 내용 검증
         // 직접 저장(Repository) 대신 이벤트 발행 여부 검증
         // ArgumentCaptor를 사용해 발행된 이벤트를 낚아챔.
@@ -126,12 +127,12 @@ class OrderServiceTest {
         given(memberRepository.findById(anyLong())).willReturn(Optional.of(mock(Member.class)));
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId, "idempotencyKey"))
                 .isInstanceOf(BusinessException.class) // BusinessException이 터져야 함
                 .hasMessage(ErrorCode.NOT_SENIOR_IN_ROOM.getMessage()); // 메시지도 일치해야 함
 
         // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
-        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
         verify(eventPublisher, never()).publishEvent(any()); // 실패 시 이벤트 발행 안 됨
     }
 
@@ -143,12 +144,12 @@ class OrderServiceTest {
         OrderRequest request = new OrderRequest(1L, 2L, 10000);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, "idempotencyKey"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.CHATROOM_NOT_FOUND.getMessage());
 
         // Verify: 예외 발생 시 어떠한 데이터 저장도 일어나지 않아야 함
-        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
 
@@ -158,7 +159,7 @@ class OrderServiceTest {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
-        String idempotencyKey = "idem-123";
+        String idempotencyKey = "idempotencyKey-123";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         given(chatRoom.getId()).willReturn(10L);
@@ -194,7 +195,7 @@ class OrderServiceTest {
         // given
         Long orderId = 101L;
         Long juniorId = 2L;
-        String idempotencyKey = "idem-456";
+        String idempotencyKey = "idempotencyKey-456";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         Member junior = mock(Member.class);
@@ -267,7 +268,7 @@ class OrderServiceTest {
         Long orderId = 102L;
         Long actualJuniorId = 2L;
         Long attackerJuniorId = 999L;
-        String idempotencyKey = "idem-789";
+        String idempotencyKey = "idempotencyKey-789";
 
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(actualJuniorId);
@@ -289,5 +290,76 @@ class OrderServiceTest {
 
         verify(orderRepository, never()).saveAndFlush(any());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("결제 요청 실패: 멱등키가 너무 짧으면 예외가 발생한다.")
+    void createOrderRequest_Fail_InvalidIdempotencyKey() {
+        // given
+        String shortKey = "short"; // 10자 미만
+        OrderRequest request = new OrderRequest(1L, 2L, 50000);
+
+        // when & then
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, shortKey))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.INVALID_IDEMPOTENCY_KEY.getMessage());
+
+        verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("결제 요청 멱등: 동시에 두 요청이 들어와 DB 충돌이 발생해도 기존 주문을 반환한다.")
+    void createOrderRequest_Success_WhenConcurrencyConflict() {
+        // given
+        Long seniorId = 1L;
+        Long juniorId = 2L;
+        OrderRequest request = new OrderRequest(10L, juniorId, 50000);
+        String idempotencyKey = "idempotency-789";
+        String orderNumber = "ORD-" + idempotencyKey;
+
+        // 1. 필요한 연관 엔티티들을 Mock으로 준비 (OrderResponse.from에서 필드 추출 시 필요)
+        ChatRoom mockChatRoom = mock(ChatRoom.class);
+        given(mockChatRoom.getId()).willReturn(10L);
+
+        Member mockJunior = mock(Member.class);
+
+        Member mockSenior = mock(Member.class);
+        given(mockSenior.getId()).willReturn(1L);
+
+        // 2. 실제 Order 객체 생성 (Mock 대신 Builder 사용)
+        Order existingOrder = Order.builder()
+                .orderNumber(orderNumber)
+                .amount(50000)
+                .chatRoom(mockChatRoom)
+                .junior(mockJunior)
+                .senior(mockSenior)
+                .build();
+
+        // 만약 필드에 직접 접근하거나 getId() 등이 필요하면 ReflectionTestUtils 사용
+        org.springframework.test.util.ReflectionTestUtils.setField(existingOrder, "id", 100L);
+
+        // 3. Stubbing 설정
+        given(orderRepository.findByOrderNumber(orderNumber))
+                .willReturn(Optional.empty()) // 첫번째 조회: Optional.empty 반환
+                .willReturn(Optional.of(existingOrder)); // 두번째 조회: existingOrder 반환
+
+        // 저장 시도 시 누군가 먼저 저장해서 충돌 발생
+        given(orderRepository.saveAndFlush(any(Order.class)))
+                .willThrow(new DataIntegrityViolationException("Duplicate Entry"));
+
+        // 나머지 엔티티 조회 Stubbing (orElseGet 내부 진입 시 필요)
+        given(chatRoomRepository.findById(anyLong())).willReturn(Optional.of(mockChatRoom));
+        given(memberRepository.findById(juniorId)).willReturn(Optional.of(mockJunior));
+        given(memberRepository.findById(seniorId)).willReturn(Optional.of(mockSenior));
+
+        given(mockChatRoom.getSenior()).willReturn(mockSenior);
+
+        // when
+        OrderResponse response = orderService.createOrderRequest(request, seniorId, idempotencyKey);
+
+        // then
+        assertThat(response.getOrderNumber()).isEqualTo(orderNumber);
+        assertThat(response.getAmount()).isEqualTo(50000);
+        verify(orderRepository, times(2)).findByOrderNumber(orderNumber); // 처음 + catch문 재조회
     }
 }
