@@ -31,16 +31,14 @@ public class JuniorDashboardDto {
     public static class OrderSummaryDto {
 
         private final Long orderId;
-        private final String orderNumber;
         private final String seniorNickname;
         private final OrderStatus status;
         private final boolean hasReview;
 
         @Builder
-        public OrderSummaryDto(Long orderId, String orderNumber, String seniorNickname,
+        public OrderSummaryDto(Long orderId, String seniorNickname,
                                 OrderStatus status, boolean hasReview) {
             this.orderId = orderId;
-            this.orderNumber = orderNumber;
             this.seniorNickname = seniorNickname;
             this.status = status;
             this.hasReview = hasReview;

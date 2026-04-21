@@ -54,16 +54,14 @@ public class SeniorDashBoardDto {
     @Getter
     public static class OrderSummaryDto {
         private final Long orderId;
-        private final String orderNumber;
         private final String juniorNickname;
         private final OrderStatus status;
         private final boolean hasReview;
 
         @Builder
-        public OrderSummaryDto(Long orderId, String orderNumber, String juniorNickname,
+        public OrderSummaryDto(Long orderId, String juniorNickname,
                                OrderStatus status, boolean hasReview) {
             this.orderId = orderId;
-            this.orderNumber = orderNumber;
             this.juniorNickname = juniorNickname;
             this.status = status;
             this.hasReview = hasReview;
