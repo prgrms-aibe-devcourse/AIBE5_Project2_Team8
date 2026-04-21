@@ -159,7 +159,7 @@ class OrderServiceTest {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
-        String idempotencyKey = "idem-123";
+        String idempotencyKey = "idempotencyKey-123";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         given(chatRoom.getId()).willReturn(10L);
@@ -195,7 +195,7 @@ class OrderServiceTest {
         // given
         Long orderId = 101L;
         Long juniorId = 2L;
-        String idempotencyKey = "idem-456";
+        String idempotencyKey = "idempotencyKey-456";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         Member junior = mock(Member.class);
@@ -268,7 +268,7 @@ class OrderServiceTest {
         Long orderId = 102L;
         Long actualJuniorId = 2L;
         Long attackerJuniorId = 999L;
-        String idempotencyKey = "idem-789";
+        String idempotencyKey = "idempotencyKey-789";
 
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(actualJuniorId);
