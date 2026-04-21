@@ -103,18 +103,16 @@ public class TossPaymentController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String message,
             @RequestParam(required = false) String orderId) {
-        String msg = message != null ? message : "결제가 취소되었거나 실패했습니다.";
+        String reason = (message == null || message.isBlank()) ? null : message;
         if (code != null && !code.isBlank()) {
-            msg = msg + " (" + code + ")";
+            reason = (reason == null) ? code : reason + " (" + code + ")";
         }
         // 실패/취소도 채팅에 시스템 메시지로 남김
-        orderService.recordPaymentFailure(orderId, msg);
+        orderService.recordPaymentFailure(orderId, reason);
 
         // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
         // (채팅 URL이 정해지면 여기 Location("/")만 채팅방 URL로 바꾸면 됨)
-        return ResponseEntity.status(302)
-                .header(HttpHeaders.LOCATION, "/")
-                .build();
+        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
     }
 
     private String parseTossErrorMessage(String responseBody) {

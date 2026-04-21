@@ -3,6 +3,7 @@ package com.knoc.order.service;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
+import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
@@ -14,6 +15,7 @@ import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -21,8 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -31,6 +35,10 @@ public class OrderService {
     private final ChatRoomRepository chatRoomRepository;
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ChatMessageRepository chatMessageRepository;
+
+    // 결제 실패 메시지 중복 발행 방지를 위한 쿨다운 (30초)
+    private static final long FAILURE_MESSAGE_COOLDOWN_SECONDS = 30L;
 
     @Transactional
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
@@ -167,14 +175,26 @@ public class OrderService {
         }
         Order order = found.get();
 
-        String customMessage = (reason == null || reason.isBlank())
-                ? MessageType.PAYMENT_FAILED.getTemplate()
-                : MessageType.PAYMENT_FAILED.getTemplate() + "\n사유: " + reason;
+        // 방어선1: 이미 결제 성공/정산된 주문이면 실패 메시지 발행 안 함
+        // (결제 성공 직후 뒤늦게 fail 콜백이 도달하는 엣지 케이스 방어)
+        if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SETTLED) {
+            return;
+        }
+
+        // 방어선2: 최근 30초 이내 동일 주문의 실패 메시지가 이미 있으면 스킵
+        LocalDateTime threshold = LocalDateTime.now().minusSeconds(FAILURE_MESSAGE_COOLDOWN_SECONDS);
+        if (chatMessageRepository.existsByReferenceIdAndMessageTypeAndCreatedAtAfter(
+                order.getId(), MessageType.PAYMENT_FAILED, threshold)) {
+            return;
+        }
+
+        // 결제 실패에 대한 로그
+        log.warn("결제 실패 처리: orderId={}, reason={}", order.getId(), reason);
 
         eventPublisher.publishEvent(new ChatSystemEvent(
                 order.getChatRoom().getId(),
                 MessageType.PAYMENT_FAILED,
-                customMessage,
+                null, // 템플릿 사용 → "결제가 실패하거나 취소되었습니다. 다시 시도해주세요."
                 order.getId()
         ));
     }
