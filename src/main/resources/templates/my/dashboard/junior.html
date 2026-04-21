@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+<head>
+    <title>내 대시보드 | Knoc.</title>
+    <style>
+        /* ===== 공통 카드 ===== */
+        .card-dark {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.25rem;
+        }
+
+        /* ===== 헤더 영역 ===== */
+        .greeting-card {
+            background: linear-gradient(135deg, #161b27 0%, #1a2030 100%);
+            border: 1px solid #2a2f40;
+            border-radius: 1.25rem;
+            padding: 1.75rem 2rem;
+        }
+        .avatar-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 0.9rem;
+            background: linear-gradient(135deg, #00CFE8 0%, #0ea5b7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #0b0f1a;
+            flex-shrink: 0;
+        }
+
+        /* ===== 상단 통계 미니 카드 ===== */
+        .mini-stat {
+            background-color: #0f1320;
+            border: 1px solid #2a2f40;
+            border-radius: 0.9rem;
+            padding: 0.85rem 1.1rem;
+            min-width: 88px;
+            text-align: center;
+        }
+        .mini-stat-label {
+            font-size: 0.7rem;
+            color: #8b93a7;
+            margin-bottom: 0.15rem;
+        }
+        .mini-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* ===== 추천 가이드 카드 ===== */
+        .guide-card {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            height: 100%;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .guide-card:hover {
+            transform: translateY(-3px);
+            border-color: #00CFE8;
+        }
+        .guide-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            background-color: #1e2433;
+            color: #00CFE8;
+            border: 1px solid #2a3a4f;
+            margin-bottom: 0.85rem;
+        }
+        .guide-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 0.6rem;
+            background-color: #1e2433;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 0.85rem;
+        }
+        .guide-title {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.35;
+        }
+        .guide-desc {
+            color: #8b93a7;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            margin-bottom: 1.1rem;
+            min-height: 3.3em;
+        }
+        .guide-link {
+            color: #00CFE8;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .guide-link:hover { color: #33d9ed; }
+
+        /* ===== 멘토링 내역 리스트 ===== */
+        .mentoring-item {
+            background-color: #0f1320;
+            border: 1px solid #2a2f40;
+            border-radius: 0.9rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .mentoring-item + .mentoring-item { margin-top: 0.75rem; }
+        .mentoring-item:hover {
+            border-color: #3a4256;
+            background-color: #121727;
+        }
+        .mentor-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a2f40 0%, #1e2433 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #00CFE8;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            border: 1px solid #2a3a4f;
+        }
+        .mentor-info { flex: 1; min-width: 0; }
+        .mentor-name-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.15rem;
+            flex-wrap: wrap;
+        }
+        .mentor-name { color: #fff; font-weight: 700; font-size: 0.95rem; }
+        .order-tag {
+            font-size: 0.68rem;
+            color: #8b93a7;
+            background-color: #1e2433;
+            padding: 0.1rem 0.5rem;
+            border-radius: 999px;
+        }
+        .mentor-sub {
+            color: #6b7385;
+            font-size: 0.78rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ===== 상태 배지 ===== */
+        .status-pill {
+            font-size: 0.72rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .status-pending { background: rgba(250, 204, 21, 0.12); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.35); }
+        .status-paid { background: rgba(0, 207, 232, 0.1); color: #00CFE8; border: 1px solid rgba(0, 207, 232, 0.35); }
+        .status-settled { background: rgba(74, 222, 128, 0.1); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.35); }
+        .status-cancelled { background: rgba(248, 113, 113, 0.1); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.35); }
+
+        /* ===== 액션 버튼 ===== */
+        .btn-action {
+            font-size: 0.78rem;
+            padding: 0.45rem 1rem;
+            border-radius: 999px;
+            font-weight: 600;
+            white-space: nowrap;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .btn-action-outline {
+            background-color: transparent;
+            border-color: #2a3a4f;
+            color: #c9cfdb;
+        }
+        .btn-action-outline:hover {
+            border-color: #00CFE8;
+            color: #00CFE8;
+        }
+        .btn-action-mint {
+            background-color: #00CFE8;
+            color: #0b0f1a;
+        }
+        .btn-action-mint:hover {
+            background-color: #33d9ed;
+            color: #0b0f1a;
+        }
+
+        /* ===== 섹션 헤더 ===== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 1.1rem;
+        }
+        .section-header-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 0.5rem;
+            background-color: #1e2433;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #00CFE8;
+        }
+        .section-title {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* ===== 빈 상태 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #8b93a7;
+        }
+    </style>
+</head>
+
+<div layout:fragment="content" class="container py-5 mt-5" style="max-width: 1080px;">
+
+    <!-- ===== 상단: 인사 + 통계 ===== -->
+    <div class="greeting-card mb-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="avatar-box">
+                    <span th:text="${#strings.substring(junior.nickname, 0, 1)}">닉</span>
+                </div>
+                <div>
+                    <h4 class="fw-bold text-white mb-1">
+                        반갑습니다, <span class="text-mint" th:text="${junior.nickname}">닉네임</span>님
+                        <a href="#" class="text-secondary ms-1" style="font-size: 0.85rem; text-decoration: none;">✎</a>
+                    </h4>
+                    <p class="text-secondary mb-0 small">Knoc.에서 더 나은 코드를 만나 성장해보세요.</p>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <div class="mini-stat">
+                    <div class="mini-stat-label">내가 쓴</div>
+                    <div class="mini-stat-value text-warning" th:text="${junior.pendingCount}">0</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">진행 중</div>
+                    <div class="mini-stat-value text-mint" th:text="${junior.inProgressCount}">1</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">완료됨</div>
+                    <div class="mini-stat-value text-success" th:text="${junior.completedCount}">1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 추천 가이드 ===== -->
+    <div class="mb-4">
+        <div class="section-header">
+            <span class="section-header-icon">📚</span>
+            <h5 class="section-title">다음 성장을 위한 추천 가이드</h5>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <span class="guide-tag">기초 / 스타일</span>
+                    <div class="guide-icon">🎯</div>
+                    <div class="guide-title">내 코드가 개발자와 멀어지는 고민이라면?</div>
+                    <div class="guide-desc">기초부터 단단하게, 코드 스타일과 네이밍 습관을 다지는 리뷰 가이드입니다.</div>
+                    <a href="/" class="guide-link">코드 리뷰 멘토링 가기 →</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <span class="guide-tag">성능 / 리팩터링</span>
+                    <div class="guide-icon">⚡</div>
+                    <div class="guide-title">더 빠르고 효율적인 코드를 원한다면?</div>
+                    <div class="guide-desc">성능 병목과 리팩터링 포인트를 함께 짚어주는 실전 리뷰 가이드입니다.</div>
+                    <a href="/" class="guide-link">코드 리뷰 멘토링 가기 →</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <span class="guide-tag">커리어 / 성장</span>
+                    <div class="guide-icon">🚀</div>
+                    <div class="guide-title">현업에서 사랑받는 개발 습관을 알고 싶다면?</div>
+                    <div class="guide-desc">시니어 관점의 코드 리뷰로 실무 감각과 성장 방향을 함께 점검해보세요.</div>
+                    <a href="/" class="guide-link">코드 리뷰 멘토링 가기 →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 전체 멘토링 내역 ===== -->
+    <div class="card-dark p-4">
+        <div class="section-header">
+            <span class="section-header-icon">💬</span>
+            <h5 class="section-title">전체 멘토링 내역</h5>
+        </div>
+
+        <!-- 주문 없을 때 -->
+        <div th:if="${junior.orders == null or junior.orders.isEmpty()}" class="empty-state">
+            <div class="fs-1 mb-3">📭</div>
+            <p class="mb-3">아직 의뢰한 코드 리뷰가 없어요.</p>
+            <a href="/" class="btn-action btn-action-mint">시니어 찾아보기</a>
+        </div>
+
+        <!-- 주문 목록 -->
+        <div th:unless="${junior.orders == null or junior.orders.isEmpty()}">
+            <div th:each="order : ${junior.orders}" class="mentoring-item">
+                <!-- 아바타 -->
+                <div class="mentor-avatar">
+                    <span th:text="${#strings.substring(order.seniorNickname, 0, 1)}">김</span>
+                </div>
+
+                <!-- 시니어 정보 -->
+                <div class="mentor-info">
+                    <div class="mentor-name-row">
+                        <span class="mentor-name" th:text="${order.seniorNickname}">시니어닉네임</span>
+                        <span class="order-tag" th:text="${order.orderNumber}">ORD-001</span>
+
+                        <!-- 상태 배지 -->
+                        <span th:if="${order.status.name() == 'PENDING'}" class="status-pill status-pending">결제 대기</span>
+                        <span th:if="${order.status.name() == 'PAID'}" class="status-pill status-paid">PAID</span>
+                        <span th:if="${order.status.name() == 'SETTLED'}" class="status-pill status-settled">완료</span>
+                        <span th:if="${order.status.name() == 'CANCELLED'}" class="status-pill status-cancelled">취소됨</span>
+                    </div>
+                    <div class="mentor-sub">
+                        <span th:if="${order.status.name() == 'PENDING'}">결제를 완료하면 리뷰가 시작됩니다</span>
+                        <span th:if="${order.status.name() == 'PAID'}">리뷰가 진행 중입니다</span>
+                        <span th:if="${order.status.name() == 'SETTLED'}">리뷰가 완료되었습니다</span>
+                        <span th:if="${order.status.name() == 'CANCELLED'}">취소된 주문입니다</span>
+                    </div>
+                </div>
+
+                <!-- 액션 -->
+                <div class="d-flex align-items-center gap-2">
+                    <!-- 상태별 메인 액션 -->
+                    <a th:if="${order.status.name() == 'SETTLED' and !order.hasReview}"
+                       th:href="@{|/reviews/orders/${order.orderId}/new|}"
+                       class="btn-action btn-action-mint">✎ 후기 작성하기</a>
+
+                    <span th:if="${order.status.name() == 'SETTLED' and order.hasReview}"
+                          class="text-mint small fw-semibold">✓ 후기 작성됨</span>
+
+                    <span th:if="${order.status.name() == 'PAID'}" class="text-secondary small">리뷰 진행중</span>
+                    <span th:if="${order.status.name() == 'PENDING'}" class="text-warning small">결제 대기</span>
+
+                    <!-- 상세 버튼 -->
+                    <a th:href="@{|/orders/${order.orderId}|}" class="btn-action btn-action-outline">상세 →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</html>
