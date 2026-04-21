@@ -82,7 +82,7 @@ class OrderServiceTest {
         });
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, seniorId);
+        OrderResponse response = orderService.createOrderRequest(request, seniorId, "idempotencyKey");
 
         // then
         assertThat(response).isNotNull();
@@ -126,7 +126,7 @@ class OrderServiceTest {
         given(memberRepository.findById(anyLong())).willReturn(Optional.of(mock(Member.class)));
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId, "idempotencyKey"))
                 .isInstanceOf(BusinessException.class) // BusinessException이 터져야 함
                 .hasMessage(ErrorCode.NOT_SENIOR_IN_ROOM.getMessage()); // 메시지도 일치해야 함
 
@@ -143,7 +143,7 @@ class OrderServiceTest {
         OrderRequest request = new OrderRequest(1L, 2L, 10000);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, "idempotencyKey"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.CHATROOM_NOT_FOUND.getMessage());
 

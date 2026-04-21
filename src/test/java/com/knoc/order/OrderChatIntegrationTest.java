@@ -68,7 +68,7 @@ public class OrderChatIntegrationTest {
         OrderRequest request = new OrderRequest(chatRoom.getId(), junior.getId(), 55000);
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, senior.getId());
+        OrderResponse response = orderService.createOrderRequest(request, senior.getId(), "idempotencyKey");
 
         // then: DTO 확인
         assertThat(response.getAmount()).isEqualTo(55000);
