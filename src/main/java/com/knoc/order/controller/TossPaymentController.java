@@ -36,16 +36,25 @@ public class TossPaymentController {
     @Value("${toss.payments.secret-key:}")
     private String secretKey;
 
+    // Toss 결제창 종료 (브라우저 리다이렉트, ?paymentKey=&orderId=&amount=)
     @GetMapping("/success")
     @ResponseBody
     public ResponseEntity<Void> success(
             @RequestParam String paymentKey,
             @RequestParam String orderId,
-            @RequestParam long amount) {
+            @RequestParam int amount) {
         if (secretKey == null || secretKey.isBlank()) {
             orderService.recordPaymentFailure(orderId, "서버 설정 오류로 결제 결과를 처리하지 못했습니다.");
             // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
             // (채팅 URL이 정해지면 여기 Location("/")만 채팅방 URL로 바꾸면 됨)
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+        }
+
+        // Toss confirm 호출 전 사전 금액 검증 (돈 묶이기 전에 차단) + 이미 PAID면 멱등 허용
+        try {
+            orderService.verifyPaymentAmount(orderId, amount);
+        } catch (BusinessException e) {
+            orderService.recordPaymentFailure(orderId, e.getMessage());
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
         }
 

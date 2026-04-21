@@ -26,6 +26,15 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+// 주문/결제 서비스
+// 메서드 순서는 실제 호출 흐름(해피 패스)을 따른다:
+//   1) createOrderRequest     - 시니어가 주문 생성
+//   2) preparePayment         - 주니어가 결제 버튼 클릭 시 사전 검증/조회
+//   3) verifyPaymentAmount    - Toss confirm API 호출 전 사전 금액 검증
+//   4) confirmPayment         - Toss confirm 성공 후 상태 전이 (PENDING -> PAID)
+//   5) markPaid (private)     - confirmPayment 내부 공통 처리 (저장 + 완료 이벤트)
+//   6) recordPaymentFailure   - 실패/취소 경로
+//
 @Slf4j
 @Service
 @Transactional
@@ -106,7 +115,7 @@ public class OrderService {
         if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
             throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
         }
-        if(juniorId == null) {
+        if (juniorId == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
@@ -136,9 +145,49 @@ public class OrderService {
         return OrderResponse.from(order); // 결제 가능한 상태(PENDING)면 dto 만들어서 반환
     }
 
+    // Toss confirm API 호출 전 사전 금액 검증.
+    // "돈이 Toss에 묶이기 전에" 주문 금액과 요청 금액의 일치 여부를 확인하여,
+    // 승인 이후에야 불일치를 발견하는 치명 케이스(환불 필요 상태)를 원천 차단하는 것이 목적.
+    // - 로컬에 주문이 없는 경우(예: 메인 테스트용 TEST-...): confirmPayment 정책과 동일하게 스킵
+    // - 이미 PAID: 중복 호출 대비 멱등 허용
+    // - 불일치: ORDER_PAYMENT_AMOUNT_MISMATCH 예외 + error 로그
+    // NOTE: confirmPayment에도 동일 성격의 사후 재검증이 남아있음. 두 검증은 defense-in-depth로 공존함
+    // (사전: 일반적인 변조/버그 차단 / 사후: Toss 응답 totalAmount가 요청 amount와 달라지는 극희소 케이스 대비)
+    public void verifyPaymentAmount(String tossOrderId, int amount) {
+        // 음수 방어 (쿼리 변조로 음수 전달 가능)
+        if (amount < 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // OrderId가 없거나 빈 값이면 에러
+        if (tossOrderId == null || tossOrderId.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
+        if (found.isEmpty()) {
+            return; // 로컬에 없는 주문은 스킵 (confirmPayment 정책과 동일)
+        }
+        Order order = found.get();
+
+        // 이미 PAID면 멱등 허용 (중복 confirm 호출 대비)
+        if (order.getStatus() == OrderStatus.PAID) {
+            return;
+        }
+
+        if (order.getAmount() != amount) {
+            log.error("결제 사전 금액 불일치: orderId={}, orderNumber={}, expected={}, received={}",
+                    order.getId(), order.getOrderNumber(), order.getAmount(), amount);
+            throw new BusinessException(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH);
+        }
+    }
+
     // 토스페이먼츠 결제 승인(confirm) 성공 후 호출
     // tossOrderId는 결제 요청 시 넣은 주문번호로, OrderService의 orderNumber와 같아야 함
     // 로컬에 해당 주문이 없으면(예: 메인 테스트용 TEST-...) Optional.empty() 를 반환
+    // NOTE: verifyPaymentAmount에서 이미 동일한 입력/조회 체크가 수행될 수 있지만,
+    // confirmPayment도 단독 호출 가능한 public 엔트리포인트이므로 방어적으로 재검증/재조회를 수행함
+    // (defense-in-depth, 쿼리 비용은 UNIQUE 인덱스 조회라 무시 가능)
     public Optional<OrderResponse> confirmPayment(String tossOrderId, long confirmedAmount) {
         if (tossOrderId == null || tossOrderId.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -155,16 +204,53 @@ public class OrderService {
         }
         // SETTLED, CANCELLED 상태는 preparePayment()에서 ORDER_CANNOT_BE_PAID 에러로 이미 걸러짐
 
+        // Toss 승인은 이미 완료된 상태이므로, 여기서 불일치가 잡히면 돈이 묶인 상태다.
+        // verifyPaymentAmount가 사전에 있지만, 이 분기는
+        //   (a) Toss 응답 totalAmount가 우리가 보낸 amount와 다른 극희소 케이스
+        //   (b) confirmPayment가 다른 경로에서 단독 호출된 경우
+        // 를 대비한 최후 방어선이며, 도달 시 즉시 운영 알람이 필요한 상황이다.
+        // TODO: 이 분기 진입 시 자동 환불(Toss cancel API) 트리거 연동
         if (order.getAmount() != confirmedAmount) {
-            throw new BusinessException(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH); // 결제 금액 불일치
+            log.error("결제 사후 금액 불일치(승인 완료 상태): orderId={}, orderNumber={}, expected={}, confirmed={}",
+                    order.getId(), order.getOrderNumber(), order.getAmount(), confirmedAmount);
+            throw new BusinessException(ErrorCode.ORDER_PAYMENT_AMOUNT_MISMATCH);
         }
         return Optional.of(markPaid(order)); // 결제 완료 처리
     }
 
-    // 토스 결제 실패/취소 리다이렉트 후 호출합니다.
-    // 주문이 존재하면 채팅방에 시스템 메시지를 저장합니다.
-    // 주문이 없으면(예: TEST-...) 아무 것도 하지 않습니다.
-    // 주문 상태는 기본적으로 변경하지 않습니다(PENDING 유지).
+    // PG(토스 등) 승인 이후 공통 처리: PENDING -> PAID, 저장, 결제완료 시스템 메시지
+    private OrderResponse markPaid(Order order) {
+        Long orderId = order.getId();
+        order.updateStatus(OrderStatus.PAID);
+
+        // 저장 (낙관적 락 충돌 시: 재조회 후 멱등 성공/충돌 응답)
+        final Order savedOrder;
+        try {
+            savedOrder = orderRepository.saveAndFlush(order);
+        } catch (OptimisticLockingFailureException e) {
+            Order latest = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+            if (latest.getStatus() == OrderStatus.PAID) {
+                return OrderResponse.from(latest); // 이미 결제 처리 완료된 경우 멱등 성공 (200)
+            }
+            throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
+        }
+
+        // 결제 완료 시스템 이벤트 발행
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                savedOrder.getChatRoom().getId(),
+                MessageType.PAYMENT_COMPLETED,
+                null, // 템플릿 사용 → "결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc에서 안전하게 보호합니다."
+                savedOrder.getId()
+        ));
+
+        return OrderResponse.from(savedOrder);
+    }
+
+    // 토스 결제 실패/취소 리다이렉트 후 호출
+    // 주문이 존재하면 채팅방에 시스템 메시지를 저장함
+    // 주문이 없으면(예: TEST-...) 아무 것도 하지 않음
+    // 주문 상태는 기본적으로 변경하지 않음(PENDING 유지)
     public void recordPaymentFailure(String tossOrderId, String reason) {
         if (tossOrderId == null || tossOrderId.isBlank()) {
             return; // 토스 fail 콜백에서 orderId가 없을 수 있어 조용히 무시
@@ -191,41 +277,12 @@ public class OrderService {
         // 결제 실패에 대한 로그
         log.warn("결제 실패 처리: orderId={}, reason={}", order.getId(), reason);
 
+        // 결제 실패 시스템 이벤트 발행
         eventPublisher.publishEvent(new ChatSystemEvent(
                 order.getChatRoom().getId(),
                 MessageType.PAYMENT_FAILED,
                 null, // 템플릿 사용 → "결제가 실패하거나 취소되었습니다. 다시 시도해주세요."
                 order.getId()
         ));
-    }
-
-    // PG(토스 등) 승인 이후 공통 처리: PENDING -> PAID, 저장, 결제완료 시스템 메시지
-    private OrderResponse markPaid(Order order) {
-        Long orderId = order.getId();
-        order.updateStatus(OrderStatus.PAID);
-
-        // 저장 (낙관적 락 충돌 시: 재조회 후 멱등 성공/충돌 응답)
-        final Order savedOrder;
-        try {
-            savedOrder = orderRepository.saveAndFlush(order);
-        } catch (OptimisticLockingFailureException e) {
-            Order latest = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-            if (latest.getStatus() == OrderStatus.PAID) {
-                return OrderResponse.from(latest); // 이미 결제 처리 완료된 경우 멱등 성공 (200)
-            }
-            throw new BusinessException(ErrorCode.ORDER_PAYMENT_CONFLICT); // 아직 PAID가 아니라면 충돌(409)
-        }
-
-        // 결제 완료 메시지 생성 및 시스템 이벤트 발행
-        String customMessage = MessageType.PAYMENT_COMPLETED.getTemplate();
-        eventPublisher.publishEvent(new ChatSystemEvent(
-                savedOrder.getChatRoom().getId(),
-                MessageType.PAYMENT_COMPLETED,
-                customMessage,
-                savedOrder.getId()
-        ));
-
-        return OrderResponse.from(savedOrder);
     }
 }
