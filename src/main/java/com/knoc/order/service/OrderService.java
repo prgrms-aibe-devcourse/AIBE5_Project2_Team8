@@ -1,6 +1,5 @@
 package com.knoc.order.service;
 
-
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
@@ -19,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -32,6 +32,7 @@ public class OrderService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
         // 0. 멱등키 검증 (비어있거나 너무 짧은 경우에 대한 에러 처리)
         if (idempotencyKey == null || idempotencyKey.length() < 10) {
@@ -88,7 +89,7 @@ public class OrderService {
                     // 6. 저장된 주문을 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
                     return OrderResponse.from(savedOrder);
                 });
-        }
+    }
 
     // 결제창 호출 전 단계(사전 검증/조회)
     // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
