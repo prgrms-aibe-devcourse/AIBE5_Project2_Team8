@@ -6,12 +6,12 @@ import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
-import com.knoc.member.MemberRole; // 프로젝트의 Role 위치에 맞게 수정
+import com.knoc.member.MemberRole;
 import com.knoc.order.dto.OrderRequest;
 import com.knoc.order.dto.OrderResponse;
-import com.knoc.order.entity.Order; // 추가
-import com.knoc.order.entity.OrderStatus; // 추가
-import com.knoc.order.repository.OrderRepository; // 추가
+import com.knoc.order.entity.Order;
+import com.knoc.order.entity.OrderStatus;
+import com.knoc.order.repository.OrderRepository;
 import com.knoc.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,7 +52,6 @@ public class OrderChatIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // 공통 데이터 세팅
         junior = memberRepository.save(Member.builder()
                 .nickname("주니어").email("junior@test.com").password("pass!").role(MemberRole.USER).build());
         senior = memberRepository.save(Member.builder()
@@ -70,22 +69,21 @@ public class OrderChatIntegrationTest {
         // when
         OrderResponse response = orderService.createOrderRequest(request, senior.getId(), "idempotencyKey");
 
-        // then: DTO 확인
+        // then
         assertThat(response.getAmount()).isEqualTo(55000);
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
 
-        // then: DB 메시지 확인
         List<ChatMessage> messages = chatMessageRepository.findAll();
         assertThat(messages).anyMatch(m -> m.getContent().contains("55,000원 결제를 요청"));
 
-        // then: 웹소켓 발송 확인
-        verify(messagingTemplate, atLeastOnce()).convertAndSend(eq("/topic/chat/" + chatRoom.getId()), any(Object.class));
+        // 변경된 Queue 방식 검증
+        verify(messagingTemplate, atLeastOnce()).convertAndSendToUser(eq(junior.getEmail()), eq("/queue/chat"), any(Object.class));
     }
 
     @Test
     @DisplayName("주니어가 결제 완료 시, 주문 상태가 PAID로 변경되고 완료 메시지가 발송된다")
     void payOrder_IntegrationTest() {
-        // given: PENDING 상태의 주문이 먼저 있어야 함
+        // given
         Order order = orderRepository.save(Order.builder()
                 .orderNumber("TEST-ORD").chatRoom(chatRoom).junior(junior).senior(senior).amount(55000).build());
 
@@ -93,14 +91,13 @@ public class OrderChatIntegrationTest {
         OrderResponse response = orderService.confirmPayment(order.getOrderNumber(), order.getAmount())
                 .orElseThrow(() -> new NoSuchElementException("Order not found"));
 
-        // then: 상태 변경 확인
+        // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
 
-        // then: DB에 결제 완료 메시지 저장 확인
         List<ChatMessage> messages = chatMessageRepository.findAll();
         assertThat(messages).anyMatch(m -> m.getContent().contains("결제가 성공적으로 처리"));
 
-        // then: 웹소켓 발송 확인
-        verify(messagingTemplate, atLeastOnce()).convertAndSend(eq("/topic/chat/" + chatRoom.getId()), any(Object.class));
+        // 변경된 Queue 방식 검증
+        verify(messagingTemplate, atLeastOnce()).convertAndSendToUser(eq(senior.getEmail()), eq("/queue/chat"), any(Object.class));
     }
 }
