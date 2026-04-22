@@ -46,12 +46,11 @@ public class OrderController {
     @PostMapping("/{orderId}/pay")
     @PreAuthorize("hasRole('USER')")  // 주니어 결제 가능
     public ResponseEntity<OrderResponse> requestPay(@AuthenticationPrincipal UserDetails userDetails,
-                                                    @PathVariable Long orderId,
-                                                    @RequestHeader("Idempotency-Key") String idempotencyKey) {
+                                                    @PathVariable Long orderId) {
         Member member = memberRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         Long juniorId = member.getId();
-        OrderResponse orderResponse = orderService.preparePayment(orderId, idempotencyKey, juniorId);
+        OrderResponse orderResponse = orderService.preparePayment(orderId, juniorId);
         return ResponseEntity.ok(orderResponse);
     }
 }

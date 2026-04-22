@@ -587,7 +587,7 @@
                 </svg>
             </span>
             <h5 class="section-title">받은 후기</h5>
-            <a href="#" class="section-more">전체 보기 →</a>
+            <a th:href="@{/my/reviews}" class="section-more">전체 보기 →</a>
         </div>
 
         <div th:if="${senior.reviews == null or senior.reviews.isEmpty()}" class="empty-state">
