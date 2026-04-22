@@ -35,6 +35,7 @@ public class DashboardController {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     @Operation(summary = "받은 후기 전체 조회", description = "시니어가 받은 후기를 페이지 단위로 반환합니다.")
     @GetMapping("/reviews")
     public String reviews(@AuthenticationPrincipal UserDetails userDetails,
@@ -42,10 +43,13 @@ public class DashboardController {
                           Model model) {
         model.addAttribute("page", dashboardService.getSeniorReviews(userDetails.getUsername(), p));
 =======
+=======
+>>>>>>> 8deb8a0 (feat: my/reviews 받은 후기를 전체 목록)
     @Operation(summary = "받은 후기 전체 조회", description = "시니어가 받은 후기 전체 목록을 반환합니다.")
     @GetMapping("/reviews")
     public String reviews(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         model.addAttribute("page", dashboardService.getSeniorReviews(userDetails.getUsername()));
+<<<<<<< HEAD
 >>>>>>> e91c8b1 (feat: my/reviews 받은 후기를 전체 목록)
 =======
     @Operation(summary = "받은 후기 전체 조회", description = "시니어가 받은 후기를 페이지 단위로 반환합니다.")
@@ -55,6 +59,8 @@ public class DashboardController {
                           Model model) {
         model.addAttribute("page", dashboardService.getSeniorReviews(userDetails.getUsername(), p));
 >>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
+=======
+>>>>>>> 8deb8a0 (feat: my/reviews 받은 후기를 전체 목록)
         return "my/dashboard/reviews";
     }
 }
