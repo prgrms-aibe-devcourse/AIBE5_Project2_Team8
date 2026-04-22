@@ -13,4 +13,9 @@ public class SeniorReviewPageDto {
     private final BigDecimal averageRating;
     private final int reviewCount;
     private final List<SeniorDashBoardDto.ReviewSummeryDto> reviews;
+    // 페이지네이션
+    private final int currentPage;
+    private final int totalPages;
+    private final boolean hasPrevious;
+    private final boolean hasNext;
 }

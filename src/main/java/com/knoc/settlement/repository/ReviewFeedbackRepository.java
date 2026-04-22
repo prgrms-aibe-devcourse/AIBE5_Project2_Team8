@@ -14,4 +14,6 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     List<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId);
 
+    org.springframework.data.domain.Page<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId, org.springframework.data.domain.Pageable pageable);
+
 }
