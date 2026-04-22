@@ -168,5 +168,25 @@
         </div>
     </div>
 
+    <!-- 페이지네이션 -->
+    <div th:if="${page.totalPages > 1}"
+         class="d-flex justify-content-center align-items-center gap-2 mt-4">
+
+        <a th:href="@{/my/reviews(p=${page.currentPage - 1})}"
+           th:classappend="${!page.hasPrevious} ? 'disabled pe-none opacity-25'"
+           class="btn-page">← 이전</a>
+
+        <th:block th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}">
+            <a th:href="@{/my/reviews(p=${i})}"
+               th:text="${i + 1}"
+               th:classappend="${i == page.currentPage} ? ' active'"
+               class="btn-page">1</a>
+        </th:block>
+
+        <a th:href="@{/my/reviews(p=${page.currentPage + 1})}"
+           th:classappend="${!page.hasNext} ? 'disabled pe-none opacity-25'"
+           class="btn-page">다음 →</a>
+    </div>
+
 </div>
 </html>
