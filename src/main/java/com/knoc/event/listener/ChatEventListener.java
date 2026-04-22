@@ -10,7 +10,6 @@ import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -39,12 +38,13 @@ public class ChatEventListener {
         String content = (event.customContent() != null && !event.customContent().isBlank())
                 ? event.customContent() : event.type().getTemplate();
 
+        // 1. 시스템 메시지 엔티티 생성 및 DB 저장
         ChatMessage systemMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .messageType(event.type())
                 .content(content)
                 .referenceId(event.referenceId())
-                .sender(null) // 시스템
+                .sender(null) // 시스템 알림이므로 발신자는 null
                 .build();
 
         chatMessageRepository.save(systemMessage);
