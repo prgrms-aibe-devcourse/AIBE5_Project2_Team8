@@ -51,8 +51,12 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
-        // 0. 멱등키 검증 (비어있거나 너무 짧은 경우에 대한 에러 처리)
-        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
+        // 0. 멱등키 검증 (비어있거나 너무 짧거나 너무 긴 경우에 대한 에러 처리)
+        // Toss 제약: orderId 6~64자
+        // idempotencyKey가 60자 초과면 orderNumber가 64자 초과이므로 에러.
+        if (!StringUtils.hasText(idempotencyKey)
+                || idempotencyKey.trim().length() < 10
+                || idempotencyKey.trim().length() > 60) { // "ORD-" prefix 4자 여유
             throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
         }
 
