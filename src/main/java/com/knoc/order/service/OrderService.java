@@ -37,7 +37,7 @@ import java.util.Optional;
 //
 @Slf4j
 @Service
-@Transactional
+@Transactional(readOnly = true) // 클래스 기본값: 읽기 전용 (쓰기 메서드에만 @Transactional 명시)
 @RequiredArgsConstructor
 public class OrderService {
     private final OrderRepository orderRepository;
@@ -185,6 +185,7 @@ public class OrderService {
     // NOTE: verifyPaymentAmount에서 이미 동일한 입력/조회 체크가 수행될 수 있지만,
     // confirmPayment도 단독 호출 가능한 public 엔트리포인트이므로 방어적으로 재검증/재조회를 수행함
     // (defense-in-depth, 쿼리 비용은 UNIQUE 인덱스 조회라 무시 가능)
+    @Transactional
     public Optional<OrderResponse> confirmPayment(String tossOrderId, long confirmedAmount) {
         if (tossOrderId == null || tossOrderId.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -252,6 +253,7 @@ public class OrderService {
     // 주문이 존재하면 채팅방에 시스템 메시지를 저장함
     // 주문이 없으면(예: TEST-...) 아무 것도 하지 않음
     // 주문 상태는 기본적으로 변경하지 않음(PENDING 유지)
+    @Transactional
     public void recordPaymentFailure(String tossOrderId, String reason) {
         if (tossOrderId == null || tossOrderId.isBlank()) {
             return; // 토스 fail 콜백에서 orderId가 없을 수 있어 조용히 무시
