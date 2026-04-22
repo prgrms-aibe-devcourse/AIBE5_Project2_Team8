@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <header th:fragment="headerFragment">
-    <nav class="navbar navbar-expand-lg navbar-dark header-nav">
+    <nav class="navbar navbar-expand-lg navbar-dark header-nav fixed-top">
         <div class="container">
             <a class="navbar-brand fw-bold fs-4 d-inline-flex align-items-center gap-2" th:href="@{/}">
                 <img src="/images/Knoc_logo.png" alt="Knoc 로고" class="knoc-logo"/>
@@ -39,15 +39,13 @@
                 <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
                     <a th:href="@{/my/dashboard}" class="text-decoration-none text-white">내 멘토링</a>
 
-                    <span class="badge rounded-pill px-3 py-2"
-                          style="background-color: #20c997; font-size: 0.8rem"
-                          sec:authorize="hasAuthority('SENIOR')">시니어</span>
-                    <span class="badge rounded-pill px-3 py-2 bg-secondary"
-                          style="font-size: 0.8rem"
-                          sec:authorize="hasAuthority('USER')">주니어</span>
+                    <span class="hero-pill text-mint" style="font-size: 0.9rem;"
+                          sec:authorize="hasRole('SENIOR')">시니어</span>
+                    <span class="hero-pill hero-pill--violet" style="font-size: 0.9rem;"
+                          sec:authorize="hasRole('USER')">주니어</span>
 
                     <form th:action="@{/auth/logout}" method="post" class="m-0">
-                        <button type="submit" class="btn btn-outline-light rounded-pill px-4">로그아웃</button>
+                        <button type="submit" class="btn btn-link text-decoration-none text-white p-0">로그아웃</button>
                     </form>
                 </div>
             </div>
