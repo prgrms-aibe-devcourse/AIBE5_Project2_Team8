@@ -13,10 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -29,7 +26,7 @@ import java.util.Map;
 // - 실제 HTTP 호출은 `TossPaymentConfig#tossRestClient`에서 생성된 공용 빈을 사용합니다.
 //   (baseUrl, 타임아웃, Basic 인증 헤더가 자동 구성되어 있음)
 @Slf4j
-@Controller
+@RestController
 @RequestMapping("/orders/payment/toss")
 @RequiredArgsConstructor
 public class TossPaymentController {
@@ -45,7 +42,6 @@ public class TossPaymentController {
 
     // Toss 결제창 종료 (브라우저 리다이렉트, ?paymentKey=&orderId=&amount=)
     @GetMapping("/success")
-    @ResponseBody
     public ResponseEntity<Void> success(
             @RequestParam String paymentKey,
             @RequestParam String orderId,
@@ -120,7 +116,6 @@ public class TossPaymentController {
     }
 
     @GetMapping("/fail")
-    @ResponseBody
     public ResponseEntity<Void> fail(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String message,
