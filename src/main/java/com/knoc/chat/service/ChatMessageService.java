@@ -1,5 +1,6 @@
 package com.knoc.chat.service;
 
+import com.knoc.chat.dto.ChatMessageResponse;
 import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatRoomStatus;
@@ -14,8 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -51,12 +50,19 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
-        Map<String, Object> responsePayload = Map.of(
-                "messageId", savedMessage.getId(),
-                "type", savedMessage.getMessageType().name(),
-                "content", savedMessage.getContent(),
-                "senderId", savedMessage.getSender().getId()
+        ChatMessageResponse responsePayload = new ChatMessageResponse(
+                sender.getNickname(),
+                savedMessage.getContent(),
+                savedMessage.getCreatedAt(),
+                savedMessage.getMessageType()
         );
-        messagingTemplate.convertAndSend("/topic/chat" + roomId, responsePayload);
+
+        // 1:1 Queue 전송
+        String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
+                ? chatRoom.getSenior().getEmail()
+                : chatRoom.getJunior().getEmail();
+
+        messagingTemplate.convertAndSendToUser(receiverEmail, "/queue/chat", responsePayload);
+        messagingTemplate.convertAndSendToUser(sender.getEmail(), "/queue/chat", responsePayload);
     }
 }
