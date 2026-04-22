@@ -113,19 +113,15 @@ public class OrderService {
     public OrderResponse preparePayment(Long orderId, Long juniorId) {
         // 입력 검증
         if (juniorId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 주문 조회
-        if (orderId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
         // 주니어 검증
         if (order.getJunior() == null || order.getJunior().getId() == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (!order.getJunior().getId().equals(juniorId)) {
             throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
@@ -153,12 +149,12 @@ public class OrderService {
     public void verifyPaymentAmount(String tossOrderId, int amount) {
         // 음수 방어 (쿼리 변조로 음수 전달 가능)
         if (amount < 0) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
         }
 
         // OrderId가 없거나 빈 값이면 에러
-        if (tossOrderId == null || tossOrderId.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (!StringUtils.hasText(tossOrderId)) {
+            throw new BusinessException(ErrorCode.ORDER_INVALID_ORDER_NUMBER);
         }
 
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
@@ -187,8 +183,8 @@ public class OrderService {
     // (defense-in-depth, 쿼리 비용은 UNIQUE 인덱스 조회라 무시 가능)
     @Transactional
     public Optional<OrderResponse> confirmPayment(String tossOrderId, long confirmedAmount) {
-        if (tossOrderId == null || tossOrderId.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (!StringUtils.hasText(tossOrderId)) {
+            throw new BusinessException(ErrorCode.ORDER_INVALID_ORDER_NUMBER);
         }
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
         if (found.isEmpty()) {
@@ -255,7 +251,7 @@ public class OrderService {
     // 주문 상태는 기본적으로 변경하지 않음(PENDING 유지)
     @Transactional
     public void recordPaymentFailure(String tossOrderId, String reason) {
-        if (tossOrderId == null || tossOrderId.isBlank()) {
+        if (!StringUtils.hasText(tossOrderId)) {
             return; // 토스 fail 콜백에서 orderId가 없을 수 있어 조용히 무시
         }
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
