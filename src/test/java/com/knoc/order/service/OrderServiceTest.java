@@ -165,7 +165,6 @@ class OrderServiceTest {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
-        String idempotencyKey = "idempotencyKey-123";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         given(chatRoom.getId()).willReturn(10L);
@@ -184,7 +183,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when
-        OrderResponse response = orderService.preparePayment(orderId, idempotencyKey, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, juniorId);
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
@@ -201,7 +200,6 @@ class OrderServiceTest {
         // given
         Long orderId = 101L;
         Long juniorId = 2L;
-        String idempotencyKey = "idempotencyKey-456";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         Member junior = mock(Member.class);
@@ -219,7 +217,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when
-        OrderResponse response = orderService.preparePayment(orderId, idempotencyKey, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, juniorId);
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
@@ -273,7 +271,6 @@ class OrderServiceTest {
         Long orderId = 102L;
         Long actualJuniorId = 2L;
         Long attackerJuniorId = 999L;
-        String idempotencyKey = "idempotencyKey-789";
 
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(actualJuniorId);
@@ -289,7 +286,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when & then
-        assertThatThrownBy(() -> orderService.preparePayment(orderId, idempotencyKey, attackerJuniorId))
+        assertThatThrownBy(() -> orderService.preparePayment(orderId, attackerJuniorId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.NOT_JUNIOR_FOR_ORDER.getMessage());
 

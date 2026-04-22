@@ -110,11 +110,8 @@ public class OrderService {
 
     // 결제창 호출 전 단계(사전 검증/조회)
     // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
-    public OrderResponse preparePayment(Long orderId, String idempotencyKey, Long juniorId) {
+    public OrderResponse preparePayment(Long orderId, Long juniorId) {
         // 입력 검증
-        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
-            throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
-        }
         if (juniorId == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
