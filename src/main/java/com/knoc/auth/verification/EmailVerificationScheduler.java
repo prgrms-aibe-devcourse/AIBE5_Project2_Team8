@@ -19,7 +19,7 @@ public class EmailVerificationScheduler {
     @Transactional
     // 테스트용으로 fixedDelay = 10000 으로 10초마다 설정
     // 통상시에는 @Scheduled(cron = "0 0 * * * *") 으로 변경 바람
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(cron = "0 0 * * * *")
     public void deleteExpiredVerification() {
 
         long before = emailVerificationRepository.count();

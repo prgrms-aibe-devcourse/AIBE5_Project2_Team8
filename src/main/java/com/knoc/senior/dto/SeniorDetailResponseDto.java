@@ -23,6 +23,7 @@ public class SeniorDetailResponseDto {
     private final int totalReviewCount;
     private final List<String> skills;
     private final List<SeniorDetailResponseDto.CareerDto> careers;
+    private final Long memberId;
 
 
     public SeniorDetailResponseDto(SeniorProfile profile) {
@@ -43,6 +44,7 @@ public class SeniorDetailResponseDto {
         this.careers = profile.getCareers().stream()
                 .map(CareerDto::from)
                 .collect(Collectors.toList());
+        this.memberId = profile.getMember().getId();
     }
     public static SeniorDetailResponseDto from(SeniorProfile profile) {
         return new SeniorDetailResponseDto(profile);

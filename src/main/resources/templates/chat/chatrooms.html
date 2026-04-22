@@ -373,7 +373,8 @@
                 </div>
 
                 <!-- 메시지 목록 -->
-                <div class="chat-messages" id="messageList">
+                <div class="chat-messages" id="messageList"
+                th:attr="data-first-message-id=${firstMessageId}">
                     <th:block th:each="msg : ${messages}">
                         <div th:class="${msg.sender.nickname == currentNickname} ? 'msg-right' : 'msg-left'">
                             <div class="msg-sender" th:text="${msg.sender.nickname}"></div>
@@ -402,6 +403,7 @@
     <script th:inline="javascript">
         const selectedRoomId = [[${selectedRoomId}]];
         const currentNickname = [[${currentNickname}]];
+        let cursor = [[${firstMessageId}]];
         let stompClient = null;
 
         // 방이 선택된 경우에만 WebSocket 연결
@@ -470,6 +472,32 @@
             updateSidebarPreview(msg.content);
         }
 
+        function prependMessage(msg) {
+            const list = document.getElementById('messageList');
+            if (!list) return;
+
+            const wrapper = document.createElement('div');
+            const isMine = msg.senderNickname === currentNickname;
+            wrapper.className = isMine ? 'msg-right' : 'msg-left';
+
+            const sender = document.createElement('div');
+            sender.className = 'msg-sender';
+            sender.textContent = msg.senderNickname;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            bubble.textContent = msg.content;
+
+            const time = document.createElement('div');
+            time.className = 'msg-time';
+            time.textContent = formatTime(msg.createdAt);
+
+            wrapper.appendChild(sender);
+            wrapper.appendChild(bubble);
+            wrapper.appendChild(time);
+            list.prepend(wrapper);  // append 대신 prepend
+        }
+
         function updateSidebarPreview(content) {
             const roomItem = document.querySelector(`.room-item[data-room-id="${selectedRoomId}"]`);
             if (!roomItem) return;
@@ -504,6 +532,26 @@
         if (selectedRoomId) {
             document.getElementById('messageInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.isComposing) sendMessage();
+            });
+        }
+
+        let isLoading = false;
+        const messageList = document.getElementById('messageList');
+        if (messageList) {
+            messageList.addEventListener('scroll', function () {
+                if (messageList.scrollTop === 0 && !isLoading) {
+                    isLoading = true;
+                    fetch(`/chat/${selectedRoomId}/messages?before=${cursor}`)
+                        .then(res => res.json())
+                        .then(messages => {
+                            if (messages.length === 0) return;
+                            const prevHeight = messageList.scrollHeight;
+                            messages.forEach(msg => prependMessage(msg));
+                            messageList.scrollTop = messageList.scrollHeight - prevHeight;
+                            cursor = messages[0].id;
+                        })
+                        .finally(() => { isLoading = false; });
+                }
             });
         }
     </script>
