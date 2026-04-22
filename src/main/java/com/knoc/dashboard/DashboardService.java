@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -124,4 +125,30 @@ public class DashboardService {
                 .build();
     }
 
+    public SeniorReviewPageDto getSeniorReviews(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        SeniorProfile profile = seniorProfileRepository.findByMemberId(member.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
+
+        List<SeniorDashBoardDto.ReviewSummeryDto> reviews =
+                reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(profile.getId())
+                        .stream()
+                        .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
+                                .reviewId(r.getId())
+                                .reviewerNickname(r.getJunior().getNickname())
+                                .rating(r.getRating())
+                                .comment(r.getComment())
+                                .createdAt(r.getCreatedAt())
+                                .build())
+                        .toList();
+
+        return SeniorReviewPageDto.builder()
+                .nickname(member.getNickname())
+                .averageRating(profile.getAvgRating())
+                .reviewCount(profile.getTotalReviewCount())
+                .reviews(reviews)
+                .build();
+    }
 }
