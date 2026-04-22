@@ -317,4 +317,118 @@ class DashboardServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.SENIOR_PROFILE_NOT_FOUND.getMessage());
     }
+
+    // ===== getSeniorReviews =====
+
+    @Test
+    @DisplayName("후기 전체 조회 성공: 닉네임·평균평점·총개수·후기 목록이 올바르게 반환된다")
+    void getSeniorReviews_Success() {
+        // given
+        String email = "senior@knoc.com";
+
+        Member seniorMember = mock(Member.class);
+        given(seniorMember.getId()).willReturn(2L);
+        given(seniorMember.getNickname()).willReturn("백엔드고수");
+        given(memberRepository.findByEmail(email)).willReturn(Optional.of(seniorMember));
+
+        SeniorProfile profile = mock(SeniorProfile.class);
+        given(profile.getId()).willReturn(10L);
+        given(profile.getAvgRating()).willReturn(new BigDecimal("4.5"));
+        given(profile.getTotalReviewCount()).willReturn(2);
+        given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.of(profile));
+
+        Member reviewer1 = mock(Member.class);
+        given(reviewer1.getNickname()).willReturn("코딩초보");
+        Member reviewer2 = mock(Member.class);
+        given(reviewer2.getNickname()).willReturn("자바러버");
+
+        ReviewFeedback review1 = mock(ReviewFeedback.class);
+        given(review1.getId()).willReturn(1L);
+        given(review1.getJunior()).willReturn(reviewer1);
+        given(review1.getRating()).willReturn((byte) 5);
+        given(review1.getComment()).willReturn("정말 도움이 됐어요!");
+        given(review1.getCreatedAt()).willReturn(LocalDateTime.of(2025, 4, 10, 12, 0));
+
+        ReviewFeedback review2 = mock(ReviewFeedback.class);
+        given(review2.getId()).willReturn(2L);
+        given(review2.getJunior()).willReturn(reviewer2);
+        given(review2.getRating()).willReturn((byte) 4);
+        given(review2.getComment()).willReturn("리뷰가 꼼꼼했어요.");
+        given(review2.getCreatedAt()).willReturn(LocalDateTime.of(2025, 3, 20, 9, 0));
+
+        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L))
+                .willReturn(List.of(review1, review2));
+
+        // when
+        SeniorReviewPageDto result = dashboardService.getSeniorReviews(email);
+
+        // then
+        assertThat(result.getNickname()).isEqualTo("백엔드고수");
+        assertThat(result.getAverageRating()).isEqualByComparingTo(new BigDecimal("4.5"));
+        assertThat(result.getReviewCount()).isEqualTo(2);
+        assertThat(result.getReviews()).hasSize(2);
+
+        SeniorDashBoardDto.ReviewSummeryDto first = result.getReviews().get(0);
+        assertThat(first.getReviewerNickname()).isEqualTo("코딩초보");
+        assertThat(first.getRating()).isEqualTo(5);
+        assertThat(first.getComment()).isEqualTo("정말 도움이 됐어요!");
+        assertThat(first.getCreatedAt()).isEqualTo(LocalDateTime.of(2025, 4, 10, 12, 0));
+    }
+
+    @Test
+    @DisplayName("후기 전체 조회 성공: 후기가 없으면 빈 목록이 반환된다")
+    void getSeniorReviews_Success_NoReviews() {
+        // given
+        String email = "senior@knoc.com";
+
+        Member seniorMember = mock(Member.class);
+        given(seniorMember.getId()).willReturn(2L);
+        given(seniorMember.getNickname()).willReturn("백엔드고수");
+        given(memberRepository.findByEmail(email)).willReturn(Optional.of(seniorMember));
+
+        SeniorProfile profile = mock(SeniorProfile.class);
+        given(profile.getId()).willReturn(10L);
+        given(profile.getAvgRating()).willReturn(BigDecimal.ZERO);
+        given(profile.getTotalReviewCount()).willReturn(0);
+        given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.of(profile));
+
+        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L))
+                .willReturn(List.of());
+
+        // when
+        SeniorReviewPageDto result = dashboardService.getSeniorReviews(email);
+
+        // then
+        assertThat(result.getReviews()).isEmpty();
+        assertThat(result.getReviewCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("후기 전체 조회 실패: 존재하지 않는 이메일이면 MEMBER_NOT_FOUND 예외가 발생한다")
+    void getSeniorReviews_Fail_MemberNotFound() {
+        // given
+        given(memberRepository.findByEmail("none@knoc.com")).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> dashboardService.getSeniorReviews("none@knoc.com"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.MEMBER_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("후기 전체 조회 실패: 시니어 프로필이 없으면 SENIOR_PROFILE_NOT_FOUND 예외가 발생한다")
+    void getSeniorReviews_Fail_SeniorProfileNotFound() {
+        // given
+        String email = "senior@knoc.com";
+
+        Member seniorMember = mock(Member.class);
+        given(seniorMember.getId()).willReturn(2L);
+        given(memberRepository.findByEmail(email)).willReturn(Optional.of(seniorMember));
+        given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> dashboardService.getSeniorReviews(email))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.SENIOR_PROFILE_NOT_FOUND.getMessage());
+    }
 }
