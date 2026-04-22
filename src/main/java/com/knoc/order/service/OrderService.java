@@ -201,8 +201,10 @@ public class OrderService {
         // 이미 PAID면 금액검증/마크 없이 멱등 반환
         if (order.getStatus() == OrderStatus.PAID) {
             return Optional.of(OrderResponse.from(order));
+        } // SETTLED, CANCELLED 상태는 결제 불가능한 상태이므로 에러
+        else if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID);
         }
-        // SETTLED, CANCELLED 상태는 preparePayment()에서 ORDER_CANNOT_BE_PAID 에러로 이미 걸러짐
 
         // 이 분기는:
         //   (a) Toss 응답 totalAmount가 우리가 보낸 amount와 다른 극희소 케이스
