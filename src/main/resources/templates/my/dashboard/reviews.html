@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+<head>
+    <title>받은 후기 전체 | Knoc.</title>
+    <style>
+        .card-dark {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.25rem;
+        }
+
+        /* ===== 섹션 헤더 ===== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 1.1rem;
+        }
+        .section-header-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 0.5rem;
+            background-color: #1e2433;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #00CFE8;
+            font-size: 0.85rem;
+        }
+        .section-title {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* ===== 평점 요약 ===== */
+        .rating-summary {
+            background-color: #0f1320;
+            border: 1px solid #2a2f40;
+            border-radius: 1rem;
+            padding: 1.25rem 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        .rating-score {
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+        }
+        .rating-count { font-size: 0.75rem; color: #8b93a7; }
+
+        /* ===== 후기 카드 (senior.html과 동일) ===== */
+        .review-item {
+            padding: 1.1rem 0;
+            border-bottom: 1px solid #2a2f40;
+        }
+        .review-item:last-child  { border-bottom: none; padding-bottom: 0; }
+        .review-item:first-child { padding-top: 0; }
+        .review-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .review-left { display: flex; align-items: center; gap: 0.6rem; }
+        .review-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #1e2433;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #c9cfdb;
+            border: 1px solid #2a3a4f;
+        }
+        .review-nickname { color: #fff; font-weight: 600; font-size: 0.88rem; }
+        .review-stars    { color: #00CFE8; font-size: 0.85rem; letter-spacing: 0.1rem; }
+        .review-date     { color: #6b7385; font-size: 0.72rem; }
+        .review-comment  { color: #c9cfdb; font-size: 0.85rem; line-height: 1.6; margin-bottom: 0.5rem; }
+        .review-report   { color: #6b7385; font-size: 0.72rem; text-decoration: none; }
+        .review-report:hover { color: #f87171; }
+        .star-filled { color: #00CFE8; }
+        .star-empty  { color: #2a3040; }
+
+        /* ===== 빈 상태 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: #8b93a7;
+        }
+    </style>
+</head>
+
+<div layout:fragment="content" class="container py-5 mt-5" style="max-width: 760px;">
+
+    <!-- 뒤로가기 + 헤더 -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a th:href="@{/my/dashboard}" class="text-secondary text-decoration-none small">← 대시보드로</a>
+        <h4 class="fw-bold text-white mb-0">
+            받은 후기
+            <span class="text-mint ms-2" th:text="${'(' + page.reviewCount + '개)'}"></span>
+        </h4>
+    </div>
+
+    <!-- 평점 요약 -->
+    <div class="rating-summary mb-4" th:if="${page.reviewCount > 0}">
+        <div>
+            <div class="rating-score"
+                 th:text="${page.averageRating != null ? #numbers.formatDecimal(page.averageRating, 1, 1) : '0.0'}">4.8</div>
+            <div class="rating-count mt-1">평균 별점</div>
+        </div>
+        <div>
+            <div class="review-stars fs-5">
+                <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                    <span th:class="${page.averageRating != null and i <= page.averageRating.intValue()} ? 'star-filled' : 'star-empty'">★</span>
+                </th:block>
+            </div>
+            <div class="rating-count mt-1">총 <span th:text="${page.reviewCount}">0</span>개의 후기</div>
+        </div>
+    </div>
+
+    <!-- 후기 목록 -->
+    <div class="card-dark p-4">
+        <div class="section-header">
+            <span class="section-header-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </span>
+            <h5 class="section-title">전체 후기</h5>
+        </div>
+
+        <div th:if="${page.reviews == null or page.reviews.isEmpty()}" class="empty-state">
+            <div class="fs-1 mb-3">💬</div>
+            <p class="mb-0 small">아직 작성된 후기가 없어요.</p>
+        </div>
+
+        <div th:unless="${page.reviews == null or page.reviews.isEmpty()}">
+            <div th:each="review : ${page.reviews}" class="review-item">
+                <div class="review-header">
+                    <div class="review-left">
+                        <div class="review-avatar">
+                            <span th:text="${#strings.substring(review.reviewerNickname, 0, 1)}">닉</span>
+                        </div>
+                        <span class="review-nickname" th:text="${review.reviewerNickname}">닉네임</span>
+                        <span class="review-stars">
+                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                <span th:class="${i <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
+                            </th:block>
+                        </span>
+                    </div>
+                    <span class="review-date"
+                          th:text="${review.createdAt != null ? #temporals.format(review.createdAt, 'yyyy.MM.dd') : ''}">2025.04.01</span>
+                </div>
+                <p class="review-comment" th:text="${review.comment}">후기 내용</p>
+                <a href="#" class="review-report">🚩 부적절한 후기 신고하기</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+</html>
