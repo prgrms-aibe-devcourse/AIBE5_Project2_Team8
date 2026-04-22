@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,6 +52,14 @@ public class TossPaymentController {
             @RequestParam int amount) {
         // 다시 돌아갈 채팅창 URL
         String chatURL = redirectToChat(orderId);
+
+        // 파라미터 최소 검증: 잘못된 값은 Toss API/DB 조회 전에 차단
+        // amount가 0이어도 검증 실패인 이유: Toss Payments API는 0원 결제를 지원하지 않음
+        if (!StringUtils.hasText(paymentKey) || !StringUtils.hasText(orderId) || amount <= 0) {
+            log.warn("Toss success 파라미터 검증 실패: orderId={}, amount={}", orderId, amount);
+            orderService.recordPaymentFailure(orderId, null);
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
+        }
 
         if (secretKey == null || secretKey.isBlank()) {
             orderService.recordPaymentFailure(orderId, "서버 설정 오류로 결제 결과를 처리하지 못했습니다.");
@@ -127,6 +136,7 @@ public class TossPaymentController {
         return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
     }
 
+    // Toss 콜백 후 돌아갈 채팅방 URL 계산 (주문 조회 실패 시 "/"으로 폴백)
     private String redirectToChat(String tossOrderId) {
         if (tossOrderId == null || tossOrderId.isBlank()) {
             return "/";
