@@ -18,14 +18,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
 // 토스페이먼츠 테스트 결제:
 // - 결제 인증 성공 리다이렉트 후, 서버에서 결제 승인(confirm) API를 호출합니다.
 // - 시크릿 키는 서버에서만 사용합니다(브라우저로 내려가면 안 됨).
+// - 실제 HTTP 호출은 `TossPaymentConfig#tossRestClient`에서 생성된 공용 빈을 사용합니다.
+//   (baseUrl, 타임아웃, Basic 인증 헤더가 자동 구성되어 있음)
 @Controller
 @RequestMapping("/orders/payment/toss")
 @RequiredArgsConstructor
@@ -34,7 +34,9 @@ public class TossPaymentController {
     private final ObjectMapper objectMapper;
     private final OrderService orderService;
     private final OrderRepository orderRepository;
+    private final RestClient tossRestClient;
 
+    // 시크릿 키 설정 여부 가드용으로만 사용 (실제 인증 헤더는 tossRestClient에서 자동 주입)
     @Value("${toss.payments.secret-key:}")
     private String secretKey;
 
@@ -62,20 +64,15 @@ public class TossPaymentController {
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         }
 
-        // Basic 인증: {secretKey}: 를 Base64 인코딩
-        String authHeader = "Basic " + Base64.getEncoder()
-                .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
-
         Map<String, Object> body = new HashMap<>();
         body.put("paymentKey", paymentKey);
         body.put("orderId", orderId);
         body.put("amount", amount);
 
         try {
-            String json = RestClient.create()
+            String json = tossRestClient
                     .post()
-                    .uri("https://api.tosspayments.com/v1/payments/confirm") // <- 토스 서버로 승인 요청
-                    .header(HttpHeaders.AUTHORIZATION, authHeader)
+                    .uri("/v1/payments/confirm") // <- 토스 서버로 승인 요청 (baseUrl은 빈에서 설정)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
