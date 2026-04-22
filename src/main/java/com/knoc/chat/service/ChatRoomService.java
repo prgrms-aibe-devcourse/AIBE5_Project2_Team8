@@ -22,9 +22,9 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final MemberRepository memberRepository;
 
-    public ChatRoom createChatRoom(Principal principal, Long seniorId) {
+    public ChatRoom createChatRoom(String email, Long seniorId) {
 
-        Member junior = memberRepository.findByEmail(principal.getName())
+        Member junior = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         Member senior = memberRepository.findById(seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));

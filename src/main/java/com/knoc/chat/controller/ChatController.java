@@ -30,6 +30,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("/chat")
 @RequiredArgsConstructor
+@Transactional
 public class ChatController {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -43,6 +44,13 @@ public class ChatController {
             map.put(chatRoom.getId(), chatMessageRepository.findFirstByChatRoomOrderByCreatedAtDesc(chatRoom));
         }
         return map;
+    }
+
+    private void verifyParticipant(ChatRoom chatRoom, Member currentMember){
+        if(!chatRoom.getJunior().getId().equals(currentMember.getId()) &&
+                !chatRoom.getSenior().getId().equals(currentMember.getId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
     }
 
     @GetMapping("/rooms")
@@ -64,7 +72,7 @@ public class ChatController {
 
     @PostMapping("/rooms")
     public String createChatRoom(Principal principal, @RequestParam Long seniorId) {
-        ChatRoom chatRoom = chatRoomService.createChatRoom(principal, seniorId);
+        ChatRoom chatRoom = chatRoomService.createChatRoom(principal.getName(), seniorId);
 
         return "redirect:/chat/" + chatRoom.getId();
     }
@@ -80,10 +88,7 @@ public class ChatController {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 3. 참여자 여부 검증
-        if(!chatRoom.getJunior().getId().equals(currentMember.getId()) &&
-                !chatRoom.getSenior().getId().equals(currentMember.getId())) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
+        verifyParticipant(chatRoom, currentMember);
 
         // 4. 내 채팅장 목록 (사이드바)
         List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
@@ -105,7 +110,6 @@ public class ChatController {
     }
 
     // Handshake에서 Principal 넘겨받음
-    @Transactional
     @MessageMapping("/{roomId}/send")
     public void send(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
         // 1. 채팅방 조회
@@ -116,7 +120,10 @@ public class ChatController {
         Member sender = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 3. ChatMessage 엔티티 생성 & 저장
+        // 3. 참여자 여부 검증
+        verifyParticipant(chatRoom, sender);
+
+        // 4. ChatMessage 엔티티 생성 & 저장
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .sender(sender)
@@ -125,10 +132,10 @@ public class ChatController {
                 .build();
         chatMessageRepository.save(message);
 
-        // 4. Response DTO 생성
+        // 5. Response DTO 생성
         ChatMessageResponse response = new ChatMessageResponse(sender.getNickname(), message.getContent(), message.getCreatedAt(), message.getMessageType());
 
-        // 5. 수신자/발신자 양쪽에 전송
+        // 6. 수신자/발신자 양쪽에 전송
         String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
             ? chatRoom.getSenior().getEmail()
                 : chatRoom.getJunior().getEmail();
