@@ -127,5 +127,36 @@ public class DashboardService {
                 .aiInsights(null)
                 .build();
     }
+    public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
+        SeniorProfile profile = seniorProfileRepository.findByMemberId(member.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
+
+        Page<ReviewFeedback> reviewPage = reviewFeedbackRepository
+                .findBySeniorProfile_IdOrderByCreatedAtDesc(
+                        profile.getId(), PageRequest.of(pageNumber, 10));
+
+        List<SeniorDashBoardDto.ReviewSummeryDto> reviews = reviewPage.getContent().stream()
+                .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
+                        .reviewId(r.getId())
+                        .reviewerNickname(r.getJunior().getNickname())
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .toList();
+
+        return SeniorReviewPageDto.builder()
+                .nickname(member.getNickname())
+                .averageRating(profile.getAvgRating())
+                .reviewCount(profile.getTotalReviewCount())
+                .reviews(reviews)
+                .currentPage(reviewPage.getNumber())
+                .totalPages(reviewPage.getTotalPages())
+                .hasPrevious(reviewPage.hasPrevious())
+                .hasNext(reviewPage.hasNext())
+                .build();
+    }
 }
