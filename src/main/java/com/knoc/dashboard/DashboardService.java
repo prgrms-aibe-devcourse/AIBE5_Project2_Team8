@@ -15,9 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+=======
+>>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -128,13 +131,18 @@ public class DashboardService {
                 .build();
     }
 
+<<<<<<< HEAD
     public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
+=======
+    public SeniorReviewPageDto getSeniorReviews(String email) {
+>>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         SeniorProfile profile = seniorProfileRepository.findByMemberId(member.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
 
+<<<<<<< HEAD
         Page<ReviewFeedback> reviewPage = reviewFeedbackRepository
                 .findBySeniorProfile_IdOrderByCreatedAtDesc(
                         profile.getId(), PageRequest.of(pageNumber, 10));
@@ -148,16 +156,32 @@ public class DashboardService {
                         .createdAt(r.getCreatedAt())
                         .build())
                 .toList();
+=======
+        List<SeniorDashBoardDto.ReviewSummeryDto> reviews =
+                reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(profile.getId())
+                        .stream()
+                        .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
+                                .reviewId(r.getId())
+                                .reviewerNickname(r.getJunior().getNickname())
+                                .rating(r.getRating())
+                                .comment(r.getComment())
+                                .createdAt(r.getCreatedAt())
+                                .build())
+                        .toList();
+>>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
 
         return SeniorReviewPageDto.builder()
                 .nickname(member.getNickname())
                 .averageRating(profile.getAvgRating())
                 .reviewCount(profile.getTotalReviewCount())
                 .reviews(reviews)
+<<<<<<< HEAD
                 .currentPage(reviewPage.getNumber())
                 .totalPages(reviewPage.getTotalPages())
                 .hasPrevious(reviewPage.hasPrevious())
                 .hasNext(reviewPage.hasNext())
+=======
+>>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
                 .build();
     }
 }
