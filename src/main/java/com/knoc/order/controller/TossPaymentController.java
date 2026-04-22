@@ -6,6 +6,7 @@ import com.knoc.global.exception.BusinessException;
 import com.knoc.order.repository.OrderRepository;
 import com.knoc.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +27,7 @@ import java.util.Map;
 // - 시크릿 키는 서버에서만 사용합니다(브라우저로 내려가면 안 됨).
 // - 실제 HTTP 호출은 `TossPaymentConfig#tossRestClient`에서 생성된 공용 빈을 사용합니다.
 //   (baseUrl, 타임아웃, Basic 인증 헤더가 자동 구성되어 있음)
+@Slf4j
 @Controller
 @RequestMapping("/orders/payment/toss")
 @RequiredArgsConstructor
@@ -93,15 +95,17 @@ public class TossPaymentController {
                     .header(HttpHeaders.LOCATION, chatURL)
                     .build();
         } catch (RestClientResponseException e) {
-            orderService.recordPaymentFailure(orderId,
-                    parseTossErrorMessage(e.getResponseBodyAsString()));
+            log.warn("Toss 결제 승인 실패 응답: orderId={}, body={}", orderId, e.getResponseBodyAsString());
+            orderService.recordPaymentFailure(orderId, null); // null -> MessageType.PAYMENT_FAILED 기본 템플릿
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         } catch (BusinessException e) {
             // confirm은 성공했는데 DB 반영이 실패한 케이스도 채팅 메시지로 남김
+            log.warn("결제 DB 반영 실패: orderId={}, code={}", orderId, e.getMessage());
             orderService.recordPaymentFailure(orderId, e.getMessage());
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         } catch (Exception e) {
-            orderService.recordPaymentFailure(orderId, e.getMessage());
+            log.warn("Toss confirm 처리 중 예기치 못한 오류: orderId={}", orderId, e);
+            orderService.recordPaymentFailure(orderId, null);
             return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         }
     }
@@ -115,31 +119,12 @@ public class TossPaymentController {
         // 다시 돌아갈 채팅창 URL
         String chatURL = redirectToChat(orderId);
 
-        String reason = (message == null || message.isBlank()) ? null : message;
-        if (code != null && !code.isBlank()) {
-            reason = (reason == null) ? code : reason + " (" + code + ")";
-        }
         // 실패/취소도 채팅에 시스템 메시지로 남김
-        orderService.recordPaymentFailure(orderId, reason);
+        log.warn("Toss 결제 실패 콜백: orderId={}, code={}, message={}", orderId, code, message);
+        orderService.recordPaymentFailure(orderId, null);
 
         // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
         return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
-    }
-
-    private String parseTossErrorMessage(String responseBody) {
-        if (responseBody == null || responseBody.isBlank()) {
-            return "결제 승인 요청이 거절되었습니다.";
-        }
-        try {
-            JsonNode n = objectMapper.readTree(responseBody);
-            String msg = n.path("message").asText(null);
-            if (msg != null && !msg.isBlank()) {
-                return msg;
-            }
-        } catch (Exception ignored) {
-            // 파싱 실패 시 원문 반환
-        }
-        return responseBody;
     }
 
     private String redirectToChat(String tossOrderId) {

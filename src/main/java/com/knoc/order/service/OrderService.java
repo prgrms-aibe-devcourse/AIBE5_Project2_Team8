@@ -278,8 +278,9 @@ public class OrderService {
             return;
         }
 
-        // 결제 실패에 대한 로그
-        log.warn("결제 실패 처리: orderId={}, reason={}", order.getId(), reason);
+        // 채팅방에 실패 메시지가 실제로 발행되는 시점의 정상 플로우 로그
+        // (에러 발생 자체는 호출부 컨트롤러에서 WARN으로 별도 기록됨)
+        log.info("PAYMENT_FAILED 이벤트 발행: orderId={}, reason={}", order.getId(), reason);
 
         // 결제 실패 시스템 이벤트 발행
         eventPublisher.publishEvent(new ChatSystemEvent(
