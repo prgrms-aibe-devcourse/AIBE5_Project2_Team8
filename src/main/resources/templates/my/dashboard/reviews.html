@@ -122,7 +122,7 @@
         <div>
             <div class="review-stars fs-5">
                 <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                    <span th:class="${page.averageRating != null and i <= page.averageRating.intValue()} ? 'star-filled' : 'star-empty'">★</span>
+                    <span th:class="${page.averageRating != null and (i - 0.5) <= page.averageRating} ? 'star-filled' : 'star-empty'">★</span>
                 </th:block>
             </div>
             <div class="rating-count mt-1">총 <span th:text="${page.reviewCount}">0</span>개의 후기</div>
@@ -155,7 +155,7 @@
                         <span class="review-nickname" th:text="${review.reviewerNickname}">닉네임</span>
                         <span class="review-stars">
                             <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                <span th:class="${i <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
+                                <span th:class="${(i - 0.5) <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
                             </th:block>
                         </span>
                     </div>
