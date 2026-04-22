@@ -27,19 +27,24 @@ public class ChatMessageService {
 
     @Transactional
     public void sendMessage(Long roomId, Long senderId, String content) {
+        // 1. 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
-
-        boolean isParticipant = chatRoom.getSenior().getId().equals(senderId) ||
-                chatRoom.getJunior().getId().equals(senderId);
-        if(!isParticipant) throw new BusinessException(ErrorCode.ACCESS_DENIED);
 
         if(chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
             throw new BusinessException(ErrorCode.CHATROOM_ALREADY_CLOSED);
         }
+
+        // 2. 참여자 여부 검증
+        boolean isParticipant = chatRoom.getSenior().getId().equals(senderId) ||
+                chatRoom.getJunior().getId().equals(senderId);
+        if(!isParticipant) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+
+        // 3. 발신자 조회
         Member sender = memberRepository.findById(senderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
+        // 4. ChatMessage 엔티티 생성 & 저장
         ChatMessage chatMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .sender(sender)
@@ -50,14 +55,16 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
+        // 5. Response DTO 생성
         ChatMessageResponse responsePayload = new ChatMessageResponse(
+                savedMessage.getId(),
                 sender.getNickname(),
                 savedMessage.getContent(),
                 savedMessage.getCreatedAt(),
                 savedMessage.getMessageType()
         );
 
-        // 1:1 Queue 전송
+        // 6. 수신자/발신자 양쪽에 1:1 queue 전송
         String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
                 ? chatRoom.getSenior().getEmail()
                 : chatRoom.getJunior().getEmail();

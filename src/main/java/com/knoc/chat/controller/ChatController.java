@@ -7,6 +7,7 @@ import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
+import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 public class ChatController {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ChatMessageService chatMessageService;
     private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
 
@@ -119,47 +120,10 @@ public class ChatController {
     // Handshake에서 Principal 넘겨받음
     @MessageMapping("/{roomId}/send")
     public void send(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
-        // 1. 채팅방 조회
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
-
-        if (chatRoom.getStatus().name().equals("CLOSED")) {
-            throw new BusinessException(ErrorCode.CHATROOM_ALREADY_CLOSED);
-        }
-
-        // 2. 발신자 조회 (Principal에서 이메일 추출)
+        // 발신자 조회 (Principal에서 이메일 추출)
         Member sender = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-
-        // 3. 참여자 여부 검증
-        verifyParticipant(chatRoom, sender);
-
-        // 4. ChatMessage 엔티티 생성 & 저장
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(sender)
-                .content(request.getContent())
-                .messageType(MessageType.USER)
-                .build();
-        chatMessageRepository.save(message);
-
-        // 5. Response DTO 생성
-        ChatMessageResponse response = ChatMessageResponse.builder()
-                .id(message.getId())
-                .senderNickname(sender.getNickname())
-                .content(message.getContent())
-                .createdAt(message.getCreatedAt())
-                .messageType(message.getMessageType())
-                .build();
-
-        // 6. 수신자/발신자 양쪽에 전송
-        String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
-            ? chatRoom.getSenior().getEmail()
-                : chatRoom.getJunior().getEmail();
-
-        simpMessagingTemplate.convertAndSendToUser(receiverEmail, "/queue/chat", response);
-        simpMessagingTemplate.convertAndSendToUser(sender.getEmail(), "/queue/chat", response);
-
+        chatMessageService.sendMessage(roomId, sender.getId(), request.getContent());
     }
 
     @GetMapping("/{roomId}/messages")
