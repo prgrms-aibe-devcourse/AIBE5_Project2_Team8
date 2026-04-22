@@ -14,17 +14,6 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     List<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     org.springframework.data.domain.Page<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId, org.springframework.data.domain.Pageable pageable);
 
-=======
->>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-=======
-    org.springframework.data.domain.Page<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId, org.springframework.data.domain.Pageable pageable);
-
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-=======
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
 }

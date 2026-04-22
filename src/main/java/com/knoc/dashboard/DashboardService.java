@@ -15,21 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-=======
->>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-=======
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-=======
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -140,86 +128,4 @@ public class DashboardService {
                 .build();
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
-=======
-    public SeniorReviewPageDto getSeniorReviews(String email) {
->>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-=======
-    public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-=======
-    public SeniorReviewPageDto getSeniorReviews(String email) {
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-
-        SeniorProfile profile = seniorProfileRepository.findByMemberId(member.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-        Page<ReviewFeedback> reviewPage = reviewFeedbackRepository
-                .findBySeniorProfile_IdOrderByCreatedAtDesc(
-                        profile.getId(), PageRequest.of(pageNumber, 10));
-
-        List<SeniorDashBoardDto.ReviewSummeryDto> reviews = reviewPage.getContent().stream()
-                .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
-                        .reviewId(r.getId())
-                        .reviewerNickname(r.getJunior().getNickname())
-                        .rating(r.getRating())
-                        .comment(r.getComment())
-                        .createdAt(r.getCreatedAt())
-                        .build())
-                .toList();
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-        List<SeniorDashBoardDto.ReviewSummeryDto> reviews =
-                reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(profile.getId())
-                        .stream()
-                        .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
-                                .reviewId(r.getId())
-                                .reviewerNickname(r.getJunior().getNickname())
-                                .rating(r.getRating())
-                                .comment(r.getComment())
-                                .createdAt(r.getCreatedAt())
-                                .build())
-                        .toList();
-<<<<<<< HEAD
->>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-=======
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-=======
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-
-        return SeniorReviewPageDto.builder()
-                .nickname(member.getNickname())
-                .averageRating(profile.getAvgRating())
-                .reviewCount(profile.getTotalReviewCount())
-                .reviews(reviews)
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-                .currentPage(reviewPage.getNumber())
-                .totalPages(reviewPage.getTotalPages())
-                .hasPrevious(reviewPage.hasPrevious())
-                .hasNext(reviewPage.hasNext())
-<<<<<<< HEAD
-=======
->>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-=======
->>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
-=======
->>>>>>> 7edd79d (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
-                .build();
-    }
 }
