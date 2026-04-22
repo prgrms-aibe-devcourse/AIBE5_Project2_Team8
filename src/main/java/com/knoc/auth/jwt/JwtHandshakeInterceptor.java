@@ -19,6 +19,12 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
+    /** WebSocket 핸드셰이크 인터셉터
+     * 연결 수립 전 쿠키에서 JWT를 추출해 검증하고,
+     * 인증 정보를 attributes에 저장하여 Principal로 사용할 수 있게 함
+     * 검증 실패 시 false 반환 → 연결 거부
+     */
+
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
 
@@ -56,6 +62,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     @Override
     public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, @Nullable Exception exception) {
-
+        // 핸드셰이크 완료 후 별도 처리 없음
     }
 }

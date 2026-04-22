@@ -7,6 +7,8 @@ import com.knoc.member.MemberRepository;
 import com.knoc.order.dto.OrderRequest;
 import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.service.OrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name="Order-Controller",description = "멘토링 주문 및 결제 관리 API")
 @RestController // JSON 데이터를 주고받는 API 전용 컨트롤러
 @RequiredArgsConstructor
 @RequestMapping("/orders")
@@ -21,6 +24,7 @@ public class OrderController {
     private final OrderService orderService;
     private final MemberRepository memberRepository;
 
+    @Operation(summary = "멘토링 주문 요청", description = "시니어가 멘토링 주문을 생성합니다. 요청 중복을 방지하기 위한 Idempotency-Key가 필요합니다.")
     @PostMapping("/request")
     @PreAuthorize("hasRole('SENIOR')") // 시니어만 결제 요청 가능
     public ResponseEntity<OrderResponse> requestOrder(@AuthenticationPrincipal UserDetails userDetails,
@@ -38,6 +42,7 @@ public class OrderController {
         return ResponseEntity.ok(orderResponse);
     }
 
+    @Operation(summary = "멘토링 결제 준비", description = "주니어가 주문ID를 바탕으로 결제를 준비합니다.")
     @PostMapping("/{orderId}/pay")
     @PreAuthorize("hasRole('USER')")  // 주니어 결제 가능
     public ResponseEntity<OrderResponse> requestPay(@AuthenticationPrincipal UserDetails userDetails,
