@@ -12,7 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,8 +29,8 @@ public class ChatEventListener {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomRepository chatRoomRepository;
 
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // DB 커밋이 완료된 후 실행
+    @Transactional(propagation = Propagation.REQUIRES_NEW) // 새 트랜잭션을 열어서 시스템 메시지를 DB에  저장
     public void handleChatEventSystem(ChatSystemEvent event) {
         log.info("[System Event Received] Room ID: {}, Type: {}", event.roomId(), event.type());
         ChatRoom chatRoom = chatRoomRepository.findById(event.roomId())
