@@ -55,7 +55,7 @@ public class ChatMessageService {
                 "messageId", savedMessage.getId(),
                 "type", savedMessage.getMessageType().name(),
                 "content", savedMessage.getContent(),
-                "senderId", savedMessage.getSender()
+                "senderId", savedMessage.getSender().getId()
         );
         messagingTemplate.convertAndSend("/topic/chat" + roomId, responsePayload);
     }
