@@ -71,20 +71,27 @@ public class ChatController {
 
     @GetMapping("/{roomId}")
     public String room(@PathVariable("roomId") Long selectedRoomId, Model model, Principal principal) {
+        // 1. 채팅방 존재 여부 검증
         ChatRoom chatRoom = chatRoomRepository.findById(selectedRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
-        List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtAsc(chatRoom);
 
+        // 2. 현재 로그인 유저 조회
         Member currentMember = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
-
+        // 3. 참여자 여부 검증
         if(!chatRoom.getJunior().getId().equals(currentMember.getId()) &&
-        !chatRoom.getSenior().getId().equals(currentMember.getId())) {
+                !chatRoom.getSenior().getId().equals(currentMember.getId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
+        // 4. 내 채팅장 목록 (사이드바)
+        List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
+
+        // 5. 과거 메시지 전체 조회
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtAsc(chatRoom);
+
+        // 6. 사이드바 미리보기용 최신 메시지 Map
         Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
 
         model.addAttribute("selectedRoomId", selectedRoomId);
@@ -101,12 +108,15 @@ public class ChatController {
     @Transactional
     @MessageMapping("/{roomId}/send")
     public void send(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
+        // 1. 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
 
+        // 2. 발신자 조회 (Principal에서 이메일 추출)
         Member sender = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
+        // 3. ChatMessage 엔티티 생성 & 저장
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .sender(sender)
@@ -115,8 +125,10 @@ public class ChatController {
                 .build();
         chatMessageRepository.save(message);
 
+        // 4. Response DTO 생성
         ChatMessageResponse response = new ChatMessageResponse(sender.getNickname(), message.getContent(), message.getCreatedAt(), message.getMessageType());
 
+        // 5. 수신자/발신자 양쪽에 전송
         String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
             ? chatRoom.getSenior().getEmail()
                 : chatRoom.getJunior().getEmail();
