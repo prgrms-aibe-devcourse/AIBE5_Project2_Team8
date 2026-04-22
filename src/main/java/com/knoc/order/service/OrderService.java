@@ -204,12 +204,14 @@ public class OrderService {
         }
         // SETTLED, CANCELLED 상태는 preparePayment()에서 ORDER_CANNOT_BE_PAID 에러로 이미 걸러짐
 
-        // Toss 승인은 이미 완료된 상태이므로, 여기서 불일치가 잡히면 돈이 묶인 상태다.
-        // verifyPaymentAmount가 사전에 있지만, 이 분기는
+        // 이 분기는:
         //   (a) Toss 응답 totalAmount가 우리가 보낸 amount와 다른 극희소 케이스
         //   (b) confirmPayment가 다른 경로에서 단독 호출된 경우
-        // 를 대비한 최후 방어선이며, 도달 시 즉시 운영 알람이 필요한 상황이다.
-        // TODO: 이 분기 진입 시 자동 환불(Toss cancel API) 트리거 연동
+        // 를 잡아내기 위한 최후 방어선. 도달 시 에러 로그 + 예외로 상위에 알림.
+        //
+        // 본 프로젝트는 Toss 테스트 키로만 동작하므로 실제 환불 API 호출은 불필요함
+        // 운영 전환 시에는 이 분기에서 돈이 묶이는 상황이므로
+        // POST https://api.tosspayments.com/v1/payments/{paymentKey}/cancel 연동 필요함
         if (order.getAmount() != confirmedAmount) {
             log.error("결제 사후 금액 불일치(승인 완료 상태): orderId={}, orderNumber={}, expected={}, confirmed={}",
                     order.getId(), order.getOrderNumber(), order.getAmount(), confirmedAmount);
