@@ -1,8 +1,12 @@
 package com.knoc.settlement.repository;
 
+import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.settlement.entity.ReviewFeedback;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,Long> {
@@ -16,4 +20,8 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     org.springframework.data.domain.Page<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId, org.springframework.data.domain.Pageable pageable);
 
+    List<ReviewFeedback> findAllByOrderByCreatedAtDesc();
+
+    @Query("SELECT r.seniorProfile FROM ReviewFeedback r WHERE r.createdAt >= :startOfMonth GROUP BY r.seniorProfile ORDER BY COUNT(r) DESC")
+    List<SeniorProfile> findTop3ActiveSeniorsThisMonth(@Param("startOfMonth") LocalDateTime startOfMonth, org.springframework.data.domain.Pageable pageable);
 }
