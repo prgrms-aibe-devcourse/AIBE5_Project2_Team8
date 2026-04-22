@@ -138,7 +138,7 @@ public class TossPaymentController {
 
     // Toss 콜백 후 돌아갈 채팅방 URL 계산 (주문 조회 실패 시 "/"으로 폴백)
     private String redirectToChat(String tossOrderId) {
-        if (tossOrderId == null || tossOrderId.isBlank()) {
+        if (!StringUtils.hasText(tossOrderId)) {
             return "/";
         }
         return orderRepository.findByOrderNumber(tossOrderId)
