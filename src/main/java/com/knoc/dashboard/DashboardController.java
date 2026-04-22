@@ -33,5 +33,10 @@ public class DashboardController {
         }
     }
 
-
+    @Operation(summary = "받은 후기 전체 조회", description = "시니어가 받은 후기 전체 목록을 반환합니다.")
+    @GetMapping("/reviews")
+    public String reviews(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        model.addAttribute("page", dashboardService.getSeniorReviews(userDetails.getUsername()));
+        return "my/dashboard/reviews";
+    }
 }
