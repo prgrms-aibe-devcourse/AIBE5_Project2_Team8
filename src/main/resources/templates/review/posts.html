@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+<head>
+    <title>멘토링 후기 | Knoc.</title>
+    <style>
+        /* ===== 공통 카드 ===== */
+        .card-dark {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.25rem;
+        }
+
+        /* ===== 페이지 배지 ===== */
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background-color: rgba(0, 207, 232, 0.08);
+            border: 1px solid rgba(0, 207, 232, 0.2);
+            border-radius: 999px;
+            padding: 0.35rem 1rem;
+            font-size: 0.82rem;
+            color: #00CFE8;
+            font-weight: 500;
+        }
+
+        /* ===== 필터 탭 ===== */
+        .filter-tab-bar {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #2a2f40;
+            margin-bottom: 1.25rem;
+        }
+        .filter-tab {
+            padding: 0.65rem 1rem;
+            font-size: 0.88rem;
+            color: #8b93a7;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            transition: color .15s, border-color .15s;
+        }
+        .filter-tab.active {
+            color: #00CFE8;
+            border-bottom-color: #00CFE8;
+        }
+        .filter-tab:hover:not(.active) { color: #c9cfdb; }
+        .tab-count {
+            background-color: rgba(0, 207, 232, 0.12);
+            color: #00CFE8;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.1rem 0.55rem;
+            border-radius: 999px;
+        }
+
+        /* ===== 후기 카드 ===== */
+        .review-card {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.1rem;
+            padding: 1.5rem 1.75rem;
+            transition: border-color .2s, background .2s;
+        }
+        .review-card:hover {
+            border-color: #00CFE8;
+            background-color: #1a2030;
+        }
+
+        .reviewer-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .av-blue   { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .av-green  { background: linear-gradient(135deg, #10b981, #059669); }
+        .av-purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .av-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        .reviewer-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.15rem;
+        }
+        .reviewer-meta {
+            font-size: 0.78rem;
+            color: #6b7385;
+        }
+        .reviewer-meta .sep { margin: 0 0.3rem; }
+
+        .star-row { display: flex; gap: 2px; }
+        .star-filled { font-size: 0.9rem; color: #facc15; }
+        .star-empty  { font-size: 0.9rem; color: #2a3040; }
+
+        .review-body {
+            font-size: 0.88rem;
+            color: #c9cfdb;
+            line-height: 1.75;
+            margin: 0;
+        }
+
+        /* ===== 사이드바 ===== */
+        .sidebar-card {
+            background-color: #161b27;
+            border: 1px solid #2a2f40;
+            border-radius: 1.1rem;
+            padding: 1.25rem 1.5rem;
+        }
+        .sidebar-section-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #8b93a7;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+        .senior-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.75rem 0.65rem;
+            border-radius: 0.9rem;
+            border: 1px solid transparent;
+            transition: background .18s, border-color .18s;
+            cursor: pointer;
+        }
+        .senior-item:hover {
+            background-color: #1a2133;
+            border-color: rgba(0, 207, 232, 0.18);
+        }
+        .senior-rank {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #00CFE8;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .senior-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .sa-0 { background: linear-gradient(135deg, #1a3350, #1a7a8a); }
+        .sa-1 { background: linear-gradient(135deg, #2a1a50, #4a3080); }
+        .sa-2 { background: linear-gradient(135deg, #1a3828, #1a6845); }
+        .senior-info { flex: 1; min-width: 0; }
+        .senior-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .senior-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #facc15;
+            margin-top: 0.15rem;
+        }
+        .senior-rating .rating-val { color: #c9cfdb; font-weight: 500; }
+
+        /* ===== CTA ===== */
+        .cta-sidebar-card {
+            background: linear-gradient(135deg, rgba(0,207,232,0.07) 0%, rgba(14,165,183,0.04) 100%);
+            border: 1px solid rgba(0, 207, 232, 0.2);
+            border-radius: 1.1rem;
+            padding: 1.25rem 1.5rem;
+        }
+        .cta-sidebar-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.4rem;
+        }
+        .cta-sidebar-desc {
+            font-size: 0.8rem;
+            color: #8b93a7;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .btn-mint {
+            background-color: #00CFE8 !important;
+            color: #0b0f1a !important;
+            border: none !important;
+            font-weight: 700 !important;
+        }
+        .btn-mint:hover { background-color: #33d9ed !important; }
+        .text-mint { color: #00CFE8 !important; }
+    </style>
+</head>
+
+<div layout:fragment="content" class="container py-5 mt-5" style="max-width: 1080px;">
+
+    <div class="row g-4">
+
+        <!-- ==================== MAIN ==================== -->
+        <div class="col-lg-8">
+
+            <!-- 헤더 -->
+            <div class="mb-4">
+                <div class="hero-pill mb-3">
+                    <span aria-hidden="true">✨</span>
+                    <span>실무자와의 생생한 이야기</span>
+                </div>
+                <h2 class="fw-bold text-white mb-2">성장의 기록이 모이는 곳</h2>
+                <p class="text-secondary mb-0">멘토링을 통해 성장한 주니어들의 생생한 후기를 확인해보세요.</p>
+            </div>
+
+            <!-- 필터 탭 -->
+            <div class="filter-tab-bar">
+                <a href="#" class="filter-tab active">
+                    전체
+                    <span class="tab-count" th:text="${totalCount != null ? totalCount : 4}">4</span>
+                </a>
+            </div>
+
+            <!-- 후기 목록 -->
+            <div class="d-flex flex-column gap-3">
+
+                <!-- ── 동적 렌더링 ── -->
+                <div th:each="review : ${reviews}" class="review-card">
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="reviewer-avatar"
+                                 th:text="${#strings.substring(review.juniorName, 0, 1)}">J</div>
+                            <div>
+                                <div class="reviewer-name" th:text="${review.juniorName}">주OO 개발자</div>
+                                <div class="reviewer-meta">
+                                    <span th:text="${review.seniorName}">김훈식 시니어</span>
+                                    <span class="sep">·</span>
+                                    <span th:text="${review.mentoringType}">React 코드 리뷰</span>
+                                    <span class="sep">·</span>
+                                    <span th:text="${review.timeAgo}">2일 전</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="star-row mt-1">
+                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                <span th:class="${(i - 0.5) <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
+                            </th:block>
+                        </div>
+                    </div>
+                    <p class="review-body" th:text="${review.content}"></p>
+                    <div class="d-flex justify-content-end mt-3">
+                        <a th:href="@{/senior/{id}(id=${review.seniorProfileId})}"
+                           class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                           style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;">
+                            멘토 프로필 보기 →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ── 정적 fallback ── -->
+                <th:block th:if="${reviews == null or reviews.isEmpty()}">
+
+                    <div class="review-card">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="reviewer-avatar av-blue">JY</div>
+                                <div>
+                                    <div class="reviewer-name">주OO 개발자</div>
+                                    <div class="reviewer-meta">
+                                        <span>김훈식 시니어</span><span class="sep">·</span>
+                                        <span>React 코드 리뷰</span><span class="sep">·</span>
+                                        <span>2일 전</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="star-row mt-1">
+                                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                            </div>
+                        </div>
+                        <p class="review-body">useEffect 의존성 배열 문제로 머리를 싸매고 있었는데, 30분 세션으로 해결됐어요. 단순히 코드 수정을 알려주는 게 아니라 왜 그런지 맥락까지 설명해주셔서 비슷한 문제를 스스로 해결할 수 있게 됐습니다.</p>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="reviewer-avatar av-purple">KH</div>
+                                <div>
+                                    <div class="reviewer-name">김OO 개발자</div>
+                                    <div class="reviewer-meta">
+                                        <span>박현우 시니어</span><span class="sep">·</span>
+                                        <span>Fullstack 번형</span><span class="sep">·</span>
+                                        <span>1주 전</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="star-row mt-1">
+                                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                            </div>
+                        </div>
+                        <p class="review-body">취업 준비 중 포트폴리오 코드 리뷰를 받았는데, 면접에서 실제로 이 코드 리뷰 경험을 이야기했더니 면접관이 굉장히 좋은 반응을 보여주셨어요. 덕분에 최종 합격했습니다!</p>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="reviewer-avatar av-green">LJ</div>
+                                <div>
+                                    <div class="reviewer-name">이OO 주니어</div>
+                                    <div class="reviewer-meta">
+                                        <span>이민준 시니어</span><span class="sep">·</span>
+                                        <span>Node.js 아키텍처</span><span class="sep">·</span>
+                                        <span>2주 전</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="star-row mt-1">
+                                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star empty">★</span>
+                            </div>
+                        </div>
+                        <p class="review-body">실무에서 Node.js 백엔드 구조를 어떻게 잡아야 할지 막막했는데, 시니어님이 직접 카카오에서 쓰시던 패턴을 예시로 들어주셔서 큰 도움이 되었습니다. 다음 시간이 있으면 조금 더 길게 하면 좋겠어요.</p>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="reviewer-avatar av-orange">PJ</div>
+                                <div>
+                                    <div class="reviewer-name">박OO 신입</div>
+                                    <div class="reviewer-meta">
+                                        <span>최이연 시니어</span><span class="sep">·</span>
+                                        <span>TypeScript 도입</span><span class="sep">·</span>
+                                        <span>3주 전</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="star-row mt-1">
+                                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                            </div>
+                        </div>
+                        <p class="review-body">회사 레거시 JS 코드를 TS로 마이그레이션했는데, 도입 전략부터 타입 정의 패턴까지 꼼꼼하게 알려주셨어요. 막혔던 작업이 이제는 재미있어졌습니다.</p>
+                    </div>
+
+                </th:block>
+            </div>
+        </div>
+
+        <!-- ==================== SIDEBAR ==================== -->
+        <div class="col-lg-4">
+            <div class="d-flex flex-column gap-3" style="position:sticky; top:80px;">
+
+                <!-- 이달의 활발한 시니어 -->
+                <div class="sidebar-card">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span style="font-size:1rem;">🏆</span>
+                        <span class="sidebar-section-title mb-0">이달의 활발한 시니어</span>
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+
+                        <!-- 동적 -->
+                        <a th:each="senior, stat : ${topSeniors}"
+                           th:href="@{/senior/{id}(id=${senior.seniorProfileId})}"
+                           class="senior-item text-decoration-none">
+                            <span class="senior-rank" th:text="${stat.index + 1}">1</span>
+                            <div class="senior-avatar"
+                                 th:classappend="'sa-' + ${stat.index % 3}"
+                                 th:text="${#strings.substring(senior.name, 0, 1)}">K</div>
+                            <div class="senior-info">
+                                <span class="senior-name" th:text="${senior.name}">김훈식 시니어</span>
+                                <div class="senior-rating">
+                                    <span>★</span>
+                                    <span class="rating-val" th:text="${#numbers.formatDecimal(senior.rating, 1, 1)}">4.9</span>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- 정적 fallback -->
+                        <th:block th:if="${topSeniors == null or topSeniors.isEmpty()}">
+                            <a href="#" class="senior-item text-decoration-none">
+                                <span class="senior-rank">1</span>
+                                <div class="senior-avatar">K</div>
+                                <div class="senior-info">
+                                    <span class="senior-name">김훈식 시니어</span>
+                                    <div class="senior-rating"><span>★</span><span class="rating-val">4.9</span></div>
+                                </div>
+                            </a>
+                            <a href="#" class="senior-item text-decoration-none">
+                                <span class="senior-rank">2</span>
+                                <div class="senior-avatar">L</div>
+                                <div class="senior-info">
+                                    <span class="senior-name">이민준 시니어</span>
+                                    <div class="senior-rating"><span>★</span><span class="rating-val">4.8</span></div>
+                                </div>
+                            </a>
+                            <a href="#" class="senior-item text-decoration-none">
+                                <span class="senior-rank">3</span>
+                                <div class="senior-avatar">P</div>
+                                <div class="senior-info">
+                                    <span class="senior-name">박현우 시니어</span>
+                                    <div class="senior-rating"><span>★</span><span class="rating-val">4.9</span></div>
+                                </div>
+                            </a>
+                        </th:block>
+                    </div>
+                </div>
+
+                <!-- 멘토 찾기 CTA -->
+                <div class="cta-sidebar-card">
+                    <div class="cta-sidebar-title">나에게 맞는 멘토를 찾아보세요</div>
+                    <p class="cta-sidebar-desc">나의 성장을 이끌어줄 현업 시니어 개발자를 지금 만나보세요.</p>
+                    <a th:href="@{/}" class="btn btn-mint rounded-pill w-100 fw-bold">멘토 찾으러 가기</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+</html>
