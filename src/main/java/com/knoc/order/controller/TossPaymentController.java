@@ -3,6 +3,7 @@ package com.knoc.order.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knoc.global.exception.BusinessException;
+import com.knoc.order.repository.OrderRepository;
 import com.knoc.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ public class TossPaymentController {
 
     private final ObjectMapper objectMapper;
     private final OrderService orderService;
+    private final OrderRepository orderRepository;
 
     @Value("${toss.payments.secret-key:}")
     private String secretKey;
@@ -43,11 +45,13 @@ public class TossPaymentController {
             @RequestParam String paymentKey,
             @RequestParam String orderId,
             @RequestParam int amount) {
+        // 다시 돌아갈 채팅창 URL
+        String chatURL = redirectToChat(orderId);
+
         if (secretKey == null || secretKey.isBlank()) {
             orderService.recordPaymentFailure(orderId, "서버 설정 오류로 결제 결과를 처리하지 못했습니다.");
             // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
-            // (채팅 URL이 정해지면 여기 Location("/")만 채팅방 URL로 바꾸면 됨)
-            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         }
 
         // Toss confirm 호출 전 사전 금액 검증 (돈 묶이기 전에 차단) + 이미 PAID면 멱등 허용
@@ -55,7 +59,7 @@ public class TossPaymentController {
             orderService.verifyPaymentAmount(orderId, amount);
         } catch (BusinessException e) {
             orderService.recordPaymentFailure(orderId, e.getMessage());
-            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         }
 
         // Basic 인증: {secretKey}: 를 Base64 인코딩
@@ -88,21 +92,20 @@ public class TossPaymentController {
             orderService.confirmPayment(orderId, confirmedAmount);
 
             // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
-            // (채팅 URL이 정해지면 여기 Location("/")만 채팅방 URL로 바꾸면 됨)
             return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, "/")
+                    .header(HttpHeaders.LOCATION, chatURL)
                     .build();
         } catch (RestClientResponseException e) {
             orderService.recordPaymentFailure(orderId,
                     parseTossErrorMessage(e.getResponseBodyAsString()));
-            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         } catch (BusinessException e) {
             // confirm은 성공했는데 DB 반영이 실패한 케이스도 채팅 메시지로 남김
             orderService.recordPaymentFailure(orderId, e.getMessage());
-            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         } catch (Exception e) {
             orderService.recordPaymentFailure(orderId, e.getMessage());
-            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+            return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
         }
     }
 
@@ -112,6 +115,9 @@ public class TossPaymentController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String message,
             @RequestParam(required = false) String orderId) {
+        // 다시 돌아갈 채팅창 URL
+        String chatURL = redirectToChat(orderId);
+
         String reason = (message == null || message.isBlank()) ? null : message;
         if (code != null && !code.isBlank()) {
             reason = (reason == null) ? code : reason + " (" + code + ")";
@@ -120,8 +126,7 @@ public class TossPaymentController {
         orderService.recordPaymentFailure(orderId, reason);
 
         // 토스 리다이렉트 착지 응답은 필요하지만, 결과 화면을 보여주지 않고 채팅방 시스템 메시지로 전달하기 때문에 302로 이동.
-        // (채팅 URL이 정해지면 여기 Location("/")만 채팅방 URL로 바꾸면 됨)
-        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/").build();
+        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, chatURL).build();
     }
 
     private String parseTossErrorMessage(String responseBody) {
@@ -138,5 +143,14 @@ public class TossPaymentController {
             // 파싱 실패 시 원문 반환
         }
         return responseBody;
+    }
+
+    private String redirectToChat(String tossOrderId) {
+        if (tossOrderId == null || tossOrderId.isBlank()) {
+            return "/";
+        }
+        return orderRepository.findByOrderNumber(tossOrderId)
+                .map(o -> "/chat/" + o.getChatRoom().getId())
+                .orElse("/");
     }
 }
