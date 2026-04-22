@@ -51,6 +51,7 @@ public class ChatMessageService {
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         ChatMessageResponse responsePayload = new ChatMessageResponse(
+                message.getId(),
                 sender.getNickname(),
                 savedMessage.getContent(),
                 savedMessage.getCreatedAt(),
