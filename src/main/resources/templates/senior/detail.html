@@ -7,7 +7,7 @@
     <style>
         /* 메인 페이지(index)와 완벽히 통일된 컬러 팔레트 */
         .card-dark { background-color: #161b27; border: 1px solid #2a2f40; }
-        .card-inner-dark { background-color: #1e1e1e; border: 1px solid #333; }
+        .card-inner-dark { background-color: #262c38; border: 1px solid rgba(255, 255, 255, 0.08); }
         .text-mint { color: #00CFE8 !important; }
         .bg-mint { background-color: #00CFE8 !important; color: #161b27 !important; }
         .border-mint { border-color: #00CFE8 !important; }
@@ -20,14 +20,14 @@
 <div layout:fragment="content" class="container py-5 mt-5">
 
     <div class="card card-dark p-4 p-md-5 rounded-4 mb-4 position-relative overflow-hidden">
-        <div class="d-flex flex-column flex-md-row gap-4 align-items-md-center position-relative z-1">
-            <div class="position-relative" style="width: 120px; height: 120px; flex-shrink: 0;">
+        <div class="d-flex flex-column flex-md-row gap-4 align-items-md-start position-relative z-1">
+            <div class="position-relative" style="width: 150px; height: 150px; flex-shrink: 0;">
                 <img th:if="${senior.profileImageUrl != null and !senior.profileImageUrl.isEmpty()}"
                      th:src="${senior.profileImageUrl}"
                      alt="시니어 프로필" class="w-100 h-100 rounded-circle object-fit-cover shadow" style="border: 2px solid #2a2f40;">
                 <div th:unless="${senior.profileImageUrl != null and !senior.profileImageUrl.isEmpty()}"
                      class="w-100 h-100 rounded-circle shadow d-flex align-items-center justify-content-center"
-                     style="border: 2px solid #2a2f40; background-color: #2a2f40; font-size: 3.5rem; line-height: 1;">
+                     style="border: 2px solid #2a2f40; background-color: #2a2f40; font-size: 4.5rem; line-height: 1;">
                     👤
                 </div>
             </div>
@@ -38,9 +38,9 @@
 
                     <div class="d-flex align-items-center w-50">
                         <h2 class="fw-bold text-white mb-0 me-3" th:text="${senior.nickname}">정백엔드</h2>
-                        <span class="badge border border-mint text-mint bg-transparent px-2 py-1 rounded-pill">
-            <i class="bi bi-shield-check me-1"></i> 현직자 인증완료
-        </span>
+                        <span class="badge border border-mint text-mint bg-transparent px-2 py-2 rounded-pill fw-semibold d-inline-flex align-items-center">
+                            <i class="bi bi-shield-check me-2"></i> 현직자 인증완료
+                        </span>
                     </div>
 
                     <div class="d-flex align-items-center w-50 ps-4">
@@ -71,7 +71,8 @@
                 </p>
 
                 <div class="d-flex flex-wrap gap-2 mb-4">
-                    <span class="badge bg-secondary px-3 py-2 rounded-pill fw-normal"
+                    <span class="badge px-3 py-2 rounded-pill fw-medium text-white"
+                          style="background-color: #1e2a3c; border: 1px solid rgba(255,255,255,0.08);"
                           th:each="skill : ${senior.skills}" th:text="${skill}">Spring Boot</span>
                 </div>
 

@@ -37,7 +37,7 @@ import java.util.Optional;
 //
 @Slf4j
 @Service
-@Transactional
+@Transactional(readOnly = true) // 클래스 기본값: 읽기 전용 (쓰기 메서드에만 @Transactional 명시)
 @RequiredArgsConstructor
 public class OrderService {
     private final OrderRepository orderRepository;
@@ -51,8 +51,12 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
-        // 0. 멱등키 검증 (비어있거나 너무 짧은 경우에 대한 에러 처리)
-        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
+        // 0. 멱등키 검증 (비어있거나 너무 짧거나 너무 긴 경우에 대한 에러 처리)
+        // Toss 제약: orderId 6~64자
+        // idempotencyKey가 60자 초과면 orderNumber가 64자 초과이므로 에러.
+        if (!StringUtils.hasText(idempotencyKey)
+                || idempotencyKey.trim().length() < 10
+                || idempotencyKey.trim().length() > 60) { // "ORD-" prefix 4자 여유
             throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
         }
 
@@ -110,25 +114,18 @@ public class OrderService {
 
     // 결제창 호출 전 단계(사전 검증/조회)
     // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
-    public OrderResponse preparePayment(Long orderId, String idempotencyKey, Long juniorId) {
+    public OrderResponse preparePayment(Long orderId, Long juniorId) {
         // 입력 검증
-        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.trim().length() < 10) {
-            throw new BusinessException(ErrorCode.INVALID_IDEMPOTENCY_KEY);
-        }
         if (juniorId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 주문 조회
-        if (orderId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
         // 주니어 검증
         if (order.getJunior() == null || order.getJunior().getId() == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
         if (!order.getJunior().getId().equals(juniorId)) {
             throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
@@ -156,12 +153,12 @@ public class OrderService {
     public void verifyPaymentAmount(String tossOrderId, int amount) {
         // 음수 방어 (쿼리 변조로 음수 전달 가능)
         if (amount < 0) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
         }
 
         // OrderId가 없거나 빈 값이면 에러
-        if (tossOrderId == null || tossOrderId.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (!StringUtils.hasText(tossOrderId)) {
+            throw new BusinessException(ErrorCode.ORDER_INVALID_ORDER_NUMBER);
         }
 
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
@@ -188,9 +185,10 @@ public class OrderService {
     // NOTE: verifyPaymentAmount에서 이미 동일한 입력/조회 체크가 수행될 수 있지만,
     // confirmPayment도 단독 호출 가능한 public 엔트리포인트이므로 방어적으로 재검증/재조회를 수행함
     // (defense-in-depth, 쿼리 비용은 UNIQUE 인덱스 조회라 무시 가능)
+    @Transactional
     public Optional<OrderResponse> confirmPayment(String tossOrderId, long confirmedAmount) {
-        if (tossOrderId == null || tossOrderId.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (!StringUtils.hasText(tossOrderId)) {
+            throw new BusinessException(ErrorCode.ORDER_INVALID_ORDER_NUMBER);
         }
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
         if (found.isEmpty()) {
@@ -255,8 +253,9 @@ public class OrderService {
     // 주문이 존재하면 채팅방에 시스템 메시지를 저장함
     // 주문이 없으면(예: TEST-...) 아무 것도 하지 않음
     // 주문 상태는 기본적으로 변경하지 않음(PENDING 유지)
+    @Transactional
     public void recordPaymentFailure(String tossOrderId, String reason) {
-        if (tossOrderId == null || tossOrderId.isBlank()) {
+        if (!StringUtils.hasText(tossOrderId)) {
             return; // 토스 fail 콜백에서 orderId가 없을 수 있어 조용히 무시
         }
         Optional<Order> found = orderRepository.findByOrderNumber(tossOrderId);
@@ -278,8 +277,9 @@ public class OrderService {
             return;
         }
 
-        // 결제 실패에 대한 로그
-        log.warn("결제 실패 처리: orderId={}, reason={}", order.getId(), reason);
+        // 채팅방에 실패 메시지가 실제로 발행되는 시점의 정상 플로우 로그
+        // (에러 발생 자체는 호출부 컨트롤러에서 WARN으로 별도 기록됨)
+        log.info("PAYMENT_FAILED 이벤트 발행: orderId={}, reason={}", order.getId(), reason);
 
         // 결제 실패 시스템 이벤트 발행
         eventPublisher.publishEvent(new ChatSystemEvent(

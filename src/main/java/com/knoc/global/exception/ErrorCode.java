@@ -22,6 +22,8 @@ public enum ErrorCode {
     // 채팅 관련 (Chat)
     CHATROOM_NOT_FOUND(404, "존재하지 않는 채팅방입니다."),
     CHATROOM_ALREADY_EXISTS(400, "이미 존재하는 채팅방입니다."),
+    CHATROOM_ALREADY_CLOSED(400, "마감된 채팅방에는 메시지를 보낼 수 없습니다."),
+
 
     // 주문 관련 (Order)
     ORDER_NOT_FOUND(404, "존재하지 않는 주문입니다."),
@@ -31,6 +33,8 @@ public enum ErrorCode {
     ORDER_PAYMENT_CONFLICT(409, "동시에 결제가 시도되어 처리에 실패했습니다. 다시 시도해주세요."),
     ORDER_PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 주문 금액과 일치하지 않습니다."),
     INVALID_IDEMPOTENCY_KEY(400, "유효하지 않은 멱등성 키입니다."),
+    ORDER_INVALID_AMOUNT(400, "유효하지 않은 결제 금액입니다."),
+    ORDER_INVALID_ORDER_NUMBER(400, "유효하지 않은 주문번호입니다."),
 
     // 리뷰 관련 (Review)
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),

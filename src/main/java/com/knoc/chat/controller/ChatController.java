@@ -111,6 +111,7 @@ public class ChatController {
         model.addAttribute("selectedRoom", chatRoom);
         model.addAttribute("firstMessageId", firstMessageId);
         model.addAttribute("latestMessages", latestMessages);
+        model.addAttribute("roomStatus", chatRoom.getStatus().name());
 
         return "chat/chatrooms";
     }
@@ -121,6 +122,10 @@ public class ChatController {
         // 1. 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
+
+        if (chatRoom.getStatus().name().equals("CLOSED")) {
+            throw new BusinessException(ErrorCode.CHATROOM_ALREADY_CLOSED);
+        }
 
         // 2. 발신자 조회 (Principal에서 이메일 추출)
         Member sender = memberRepository.findByEmail(principal.getName())

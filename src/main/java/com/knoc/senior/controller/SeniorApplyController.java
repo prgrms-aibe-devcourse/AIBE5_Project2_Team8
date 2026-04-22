@@ -33,8 +33,8 @@ public class SeniorApplyController {
 
     @Operation(summary = "시니어 지원 안내 페이지", description = "시니어 지원을 위한 안내 페이지를 보여줍니다.")
     @GetMapping("/apply")
-    @PreAuthorize("hasRole('USER')")
     public String apply() {
+        // 비로그인/주니어/시니어 모두 접근 가능한 공개 안내 페이지
         return "senior/apply";
     }
 
