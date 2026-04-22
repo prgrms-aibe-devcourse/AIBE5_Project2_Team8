@@ -360,6 +360,7 @@ class DashboardServiceTest {
         given(review2.getComment()).willReturn("리뷰가 꼼꼼했어요.");
         given(review2.getCreatedAt()).willReturn(LocalDateTime.of(2025, 3, 20, 9, 0));
 
+<<<<<<< HEAD
         PageRequest pageable = PageRequest.of(0, 10);
         Page<ReviewFeedback> reviewPage = new PageImpl<>(List.of(review1, review2), pageable, 2);
         given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L, pageable))
@@ -367,6 +368,13 @@ class DashboardServiceTest {
 
         // when
         SeniorReviewPageDto result = dashboardService.getSeniorReviews(email, 0);
+=======
+        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L))
+                .willReturn(List.of(review1, review2));
+
+        // when
+        SeniorReviewPageDto result = dashboardService.getSeniorReviews(email);
+>>>>>>> ca75529 (feat: service test코드 추가)
 
         // then
         assertThat(result.getNickname()).isEqualTo("백엔드고수");
@@ -379,11 +387,14 @@ class DashboardServiceTest {
         assertThat(first.getRating()).isEqualTo(5);
         assertThat(first.getComment()).isEqualTo("정말 도움이 됐어요!");
         assertThat(first.getCreatedAt()).isEqualTo(LocalDateTime.of(2025, 4, 10, 12, 0));
+<<<<<<< HEAD
 
         assertThat(result.getCurrentPage()).isZero();
         assertThat(result.getTotalPages()).isEqualTo(1);
         assertThat(result.isHasPrevious()).isFalse();
         assertThat(result.isHasNext()).isFalse();
+=======
+>>>>>>> ca75529 (feat: service test코드 추가)
     }
 
     @Test
@@ -403,6 +414,7 @@ class DashboardServiceTest {
         given(profile.getTotalReviewCount()).willReturn(0);
         given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.of(profile));
 
+<<<<<<< HEAD
         PageRequest pageable = PageRequest.of(0, 10);
         Page<ReviewFeedback> emptyPage = new PageImpl<>(List.of(), pageable, 0);
         given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L, pageable))
@@ -410,11 +422,21 @@ class DashboardServiceTest {
 
         // when
         SeniorReviewPageDto result = dashboardService.getSeniorReviews(email, 0);
+=======
+        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L))
+                .willReturn(List.of());
+
+        // when
+        SeniorReviewPageDto result = dashboardService.getSeniorReviews(email);
+>>>>>>> ca75529 (feat: service test코드 추가)
 
         // then
         assertThat(result.getReviews()).isEmpty();
         assertThat(result.getReviewCount()).isZero();
+<<<<<<< HEAD
         assertThat(result.getTotalPages()).isZero();
+=======
+>>>>>>> ca75529 (feat: service test코드 추가)
     }
 
     @Test
@@ -424,7 +446,11 @@ class DashboardServiceTest {
         given(memberRepository.findByEmail("none@knoc.com")).willReturn(Optional.empty());
 
         // when & then
+<<<<<<< HEAD
         assertThatThrownBy(() -> dashboardService.getSeniorReviews("none@knoc.com", 0))
+=======
+        assertThatThrownBy(() -> dashboardService.getSeniorReviews("none@knoc.com"))
+>>>>>>> ca75529 (feat: service test코드 추가)
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.MEMBER_NOT_FOUND.getMessage());
     }
@@ -441,7 +467,11 @@ class DashboardServiceTest {
         given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.empty());
 
         // when & then
+<<<<<<< HEAD
         assertThatThrownBy(() -> dashboardService.getSeniorReviews(email, 0))
+=======
+        assertThatThrownBy(() -> dashboardService.getSeniorReviews(email))
+>>>>>>> ca75529 (feat: service test코드 추가)
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.SENIOR_PROFILE_NOT_FOUND.getMessage());
     }
