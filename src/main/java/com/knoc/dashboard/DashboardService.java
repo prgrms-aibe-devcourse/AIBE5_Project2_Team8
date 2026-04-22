@@ -16,11 +16,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 =======
 >>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
+=======
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -132,10 +138,14 @@ public class DashboardService {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
 =======
     public SeniorReviewPageDto getSeniorReviews(String email) {
 >>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
+=======
+    public SeniorReviewPageDto getSeniorReviews(String email, int pageNumber) {
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
@@ -143,6 +153,9 @@ public class DashboardService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
         Page<ReviewFeedback> reviewPage = reviewFeedbackRepository
                 .findBySeniorProfile_IdOrderByCreatedAtDesc(
                         profile.getId(), PageRequest.of(pageNumber, 10));
@@ -156,6 +169,7 @@ public class DashboardService {
                         .createdAt(r.getCreatedAt())
                         .build())
                 .toList();
+<<<<<<< HEAD
 =======
         List<SeniorDashBoardDto.ReviewSummeryDto> reviews =
                 reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(profile.getId())
@@ -169,6 +183,8 @@ public class DashboardService {
                                 .build())
                         .toList();
 >>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
+=======
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
 
         return SeniorReviewPageDto.builder()
                 .nickname(member.getNickname())
@@ -176,12 +192,18 @@ public class DashboardService {
                 .reviewCount(profile.getTotalReviewCount())
                 .reviews(reviews)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
                 .currentPage(reviewPage.getNumber())
                 .totalPages(reviewPage.getTotalPages())
                 .hasPrevious(reviewPage.hasPrevious())
                 .hasNext(reviewPage.hasNext())
+<<<<<<< HEAD
 =======
 >>>>>>> ec1b409 (feat: 시니어가 자신의 리뷰 목록 조회를 위한 dto,service)
+=======
+>>>>>>> 0f24020 (feat: reviews 페이지 Pageable기능 추가)
                 .build();
     }
 }
