@@ -57,7 +57,6 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.PENDING;
     }
 
-
     // 상태 변경 가능 여부 확인 및 상태 전환
     public void updateStatus(OrderStatus toStatus) {
         validateTransition(this.status, toStatus);
@@ -69,7 +68,7 @@ public class Order extends BaseEntity {
 
         switch (from) {
             case PENDING -> // 결제 대기 중에는 결재 완료 또는 취소만 가능
-                isPossible = (to == OrderStatus.PAID || to ==  OrderStatus.CANCELLED);
+                isPossible = (to == OrderStatus.PAID || to == OrderStatus.CANCELLED);
             case PAID -> // 결재 완료 중에는 정산 완료 또는 취소만 가능
                 isPossible = (to == OrderStatus.SETTLED || to == OrderStatus.CANCELLED);
             // SETTLED, CANCELLED(정산 완료, 취소)에서는 변경 불가능 -> isPossible = false

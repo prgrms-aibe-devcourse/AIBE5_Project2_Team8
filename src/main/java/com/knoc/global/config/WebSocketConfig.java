@@ -1,4 +1,4 @@
-package com.knoc.global.config;
+package com.knoc.global.config; // 1. 팀원의 글로벌 패키지 위치로 통일합니다.
 
 import com.knoc.auth.jwt.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
                 .addInterceptors(jwtHandshakeInterceptor)
-                .withSockJS(); // SockJS 폴백
+                .withSockJS();
     }
 }

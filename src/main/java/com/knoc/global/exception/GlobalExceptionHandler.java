@@ -44,7 +44,6 @@ public class GlobalExceptionHandler {
 
     // [서버 오류 로깅 및 처리]
     // - 위에서 처리하지 못한 그 외 모든 예외(NullPointer 등)를 처리합니다.
-    // - 404 에러는 CustomErrorController가 담당하도록 다시 던지며, 500 에러는 상세 로그를 남깁니다.
     @ExceptionHandler(Exception.class)
     public Object handleAllException(Exception e, HttpServletRequest request) throws Exception {
 
