@@ -35,26 +35,24 @@ function renderSystemMessage(data) {
     switch (data.type) {
         case 'PAYMENT_REQUESTED': {
             cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '🪙';
-
-            // 정규식 파싱 대신 서버에서 준 amount 숫자 직접 사용
-            // 값이 없을 경우를 대비해 기본값 0 처리
             const amount = data.amount ? data.amount.toLocaleString() : '0';
-
-            // referenceId에 escapeHTML 적용
             buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${escapeHTML(String(data.referenceId))}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
             break;
         }
         case 'PAYMENT_COMPLETED':
         case 'WORKSPACE_READY': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
-            // roomId에 escapeHTML 적용
             buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(data.roomId))}">&lt;/&gt; 상세 리뷰 요청서 작성</button>`;
             break;
         }
         case 'REPORT_COMPLETED': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '✅';
-            // referenceId에 escapeHTML 적용
             buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${escapeHTML(String(data.referenceId))}">✔️ 구매 확정 및 리뷰 남기기</button>`;
+            break;
+        }
+        // ROOM_CLOSE 타입 추가
+        case 'ROOM_CLOSE': {
+            cardClass = 'type-default'; headerColorClass = 'text-gray'; headerIcon = '🔒';
             break;
         }
         default: {
@@ -80,7 +78,6 @@ function renderSystemMessage(data) {
 // ==========================================
 // 3. 이벤트 바인딩: 액션 버튼 클릭 처리 (이벤트 위임)
 // ==========================================
-// 컨테이너가 존재할 때만 이벤트를 등록하여 에러 방지
 if (chatContainer) {
     chatContainer.addEventListener('click', function(e) {
         const target = e.target.closest('.sys-action-btn');
@@ -107,9 +104,27 @@ if (chatContainer) {
 }
 
 // ==========================================
-// 4. STOMP 수신: 소켓 연결 및 구독
+// 4. UI 제어: 채팅방 마감 시 입력창 배너로 교체
 // ==========================================
-// 방 번호와 토큰이 모두 있을 때만 통신을 시작하여 무의미한 서버 에러 로그 방지
+function disableChatUI() {
+    const inputArea = document.getElementById('dynamic-input-area');
+    if (inputArea) {
+        // 기존 입력창을 지우고 알약 형태의 배너 삽입
+        inputArea.innerHTML = `
+            <div class="read-only-banner">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span>멘토링이 완료되어 읽기 전용 상태로 전환되었습니다.</span>
+            </div>
+        `;
+    }
+}
+
+// ==========================================
+// 5. STOMP 수신: 소켓 연결 및 구독
+// ==========================================
 if (ROOM_ID && JWT_TOKEN) {
     const socket = new SockJS(`/ws`);
     const stompClient = Stomp.over(socket);
@@ -123,8 +138,23 @@ if (ROOM_ID && JWT_TOKEN) {
         stompClient.subscribe(`/topic/chat/${ROOM_ID}`, function (message) {
             const data = JSON.parse(message.body);
 
+            // 실시간 마감 이벤트 감지
+            if (data.type === 'ROOM_CLOSE') {
+                renderSystemMessage(data); // 1. 채팅창에 "마감되었습니다" 시스템 메시지 카드 출력
+                disableChatUI();           // 2. 하단 입력창을 알약 배너로 교체
+
+                // 3. 소켓 연결 안전하게 종료
+                stompClient.disconnect(function() {
+                    console.log("🔒 채팅방 마감: 소켓 연결이 안전하게 종료되었습니다.");
+                });
+                return; // 이후 로직(일반 렌더링)을 타지 않도록 함수 종료
+            }
+
+            // 일반 시스템 메시지 렌더링
             if (data.type !== 'USER') {
                 renderSystemMessage(data);
+            } else {
+                // TODO: 일반 유저 채팅 메시지 렌더링 로직 (추후 구현)
             }
         });
     }, function (error) {
