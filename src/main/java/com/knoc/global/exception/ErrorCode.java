@@ -18,6 +18,11 @@ public enum ErrorCode {
 
     // 회원 관련 (Member)
     MEMBER_NOT_FOUND(404, "존재하지 않는 회원입니다."),
+    NICKNAME_ALREADY_EXISTS(409, "이미 사용중인 닉네임입니다."),
+    EMAIL_ALREADY_EXISTS(409, "이미 사용중인 이메일입니다."),
+
+    // 파일 관련 (File)
+    FILE_UPLOAD_ERROR(500, "파일 업로드 중 서버 오류가 발생했습니다."),
 
     // 채팅 관련 (Chat)
     CHATROOM_NOT_FOUND(404, "존재하지 않는 채팅방입니다."),
