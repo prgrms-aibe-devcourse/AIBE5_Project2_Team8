@@ -267,14 +267,36 @@ if (messageInput) {
 
 // 시스템 알림 버튼 클릭 이벤트 (이벤트 위임)
 if (chatContainer) {
-    chatContainer.addEventListener('click', function(e) {
+    chatContainer.addEventListener('click', async function(e) {
         const target = e.target.closest('.sys-action-btn');
         if (!target) return;
 
         if (target.classList.contains('action-pay')) {
             const orderId = target.getAttribute('data-order-id');
-            console.log(`[결제 요청] 주문 ID: ${orderId}`);
-            // TODO: 결제 모듈 호출
+            if (!orderId) return;
+
+            // 모달을 먼저 열고
+            // openPaymentDetailModal();
+            // setPaymentDetailLoading(true);
+
+            // GET /orders/{orderId}/prepare 호출해서 데이터 채우기
+            try {
+                const res = await fetch(`/orders/${orderId}/prepare`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {'Accept': 'application/json'}
+                })
+                if (!res.ok) throw new Error(await res.text().catch(() => ''));
+                const data = await res.json();
+                console.log(`prepare data`, data);
+                // data로 모달 내용 채우기
+                // fillPaymentDetailModal(data);
+            } catch (err) {
+                console.error(`[prepare 실패]`, err);
+                // setPaymentDetailError(`결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.`);
+            } finally {
+                // setPaymentDetailLoading(false);
+            }
         } else if (target.classList.contains('action-review')) {
             const roomId = target.getAttribute('data-room-id');
             console.log(`[리뷰 폼 이동] 방 번호: ${roomId}`);
