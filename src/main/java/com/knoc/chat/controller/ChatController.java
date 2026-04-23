@@ -7,6 +7,11 @@ import com.knoc.chat.dto.ChatRoomListDto;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
+import com.knoc.member.Member;
+import com.knoc.order.entity.Order;
+import com.knoc.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -25,6 +30,7 @@ public class ChatController {
 
     private final ChatMessageService chatMessageService;
     private final ChatRoomService chatRoomService;
+    private final OrderRepository orderRepository;
 
 
     @GetMapping("/rooms")
