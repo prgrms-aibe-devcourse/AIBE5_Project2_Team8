@@ -61,7 +61,7 @@ public class ChatMessageServiceTest {
         given(junior.getId()).willReturn(10L);
         given(junior.getEmail()).willReturn(senderEmail);
         given(junior.getNickname()).willReturn("주니어닉네임");
-        
+
         given(senior.getEmail()).willReturn("senior@test.com");
 
         // 2. ChatRoom 생성 (ID 주입)
