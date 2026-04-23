@@ -231,14 +231,28 @@
 
         <!-- 시니어 카드 목록 -->
         <div class="row g-4" th:unless="${#lists.isEmpty(seniors)}">
+
+            <style>
+                .senior-card {
+                    cursor: pointer;
+                    border: 1px solid #333;
+                    transition: all 0.2s ease;
+                }
+                .senior-card:hover {
+                    border-color: #00CFE8 !important;
+                }
+                .senior-card:hover .btn-profile {
+                    background-color: #00CFE8 !important;
+                    border-color: #00CFE8 !important;
+                    color: #161b27 !important; /* 버튼 글자색을 어둡게 해 가독성 향상 */
+                }
+            </style>
+
             <div class="col-lg-4 col-md-6" th:each="senior : ${seniors}">
-                <div class="card card-dark h-100 text-white p-3 rounded-4"
-                     style="transition: border-color .2s;"
-                     onmouseover="this.style.borderColor='#00CFE8'"
-                     onmouseout="this.style.borderColor='#333'">
+                <div class="card card-dark h-100 text-white p-3 rounded-4 senior-card"
+                     th:onclick="'location.href=\'' + @{/senior/{id}(id=${senior.id})} + '\''">
                     <div class="card-body">
 
-                        <!-- 프로필 이미지 + 이름 -->
                         <div class="d-flex align-items-center gap-3 mb-3">
                             <img th:src="${senior.profileImageUrl != null ? senior.profileImageUrl : '/images/default-profile.png'}"
                                  alt="프로필"
@@ -256,17 +270,14 @@
                             </span>
                         </div>
 
-                        <!-- 직군 -->
                         <p class="text-mint small fw-semibold mb-2" th:text="${senior.position}">직군</p>
 
-                        <!-- 기술 스택 -->
                         <div class="mb-3 d-flex flex-wrap gap-1">
                             <span class="badge bg-secondary"
                                   th:each="skill : ${senior.skills}"
                                   th:text="${skill}"></span>
                         </div>
 
-                        <!-- 상세 소개 (최대 2줄) -->
                         <p class="text-light small"
                            style="min-height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;"
                            th:text="${senior.introduction}"></p>
@@ -277,7 +288,7 @@
                             ₩ <span th:text="${#numbers.formatInteger(senior.pricePerReview, 0, 'COMMA')}">0</span>
                         </span>
                         <a th:href="@{/senior/{id}(id=${senior.id})}"
-                           class="btn btn-outline-light rounded-pill btn-sm px-3">멘토링 신청</a>
+                           class="btn btn-outline-light rounded-pill btn-sm px-3 btn-profile">프로필 상세 보기</a>
                     </div>
                 </div>
             </div>
