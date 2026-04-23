@@ -31,7 +31,7 @@ public class ChatMessage {
     private Member sender;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "message_type", nullable = false)
+    @Column(name = "message_type", nullable = false, length = 64)
     private MessageType messageType;
 
     @Column(nullable = false, columnDefinition = "TEXT")
