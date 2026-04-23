@@ -7,6 +7,8 @@ import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.member.Member;
+import com.knoc.order.entity.Order;
+import com.knoc.order.repository.OrderRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +36,8 @@ class ChatEventListenerTest {
     private ChatMessageRepository chatMessageRepository;
     @Mock
     private ChatRoomRepository chatRoomRepository;
+    @Mock
+    private OrderRepository orderRepository;
 
     @ParameterizedTest
     @EnumSource(value = MessageType.class, names = {
@@ -58,6 +62,12 @@ class ChatEventListenerTest {
         given(room.getSenior()).willReturn(senior);
         given(junior.getEmail()).willReturn("junior@test.com");
         given(senior.getEmail()).willReturn("senior@test.com");
+
+        if (systemMessageType == MessageType.PAYMENT_REQUESTED) {
+            Order order = mock(Order.class);
+            given(orderRepository.findById(12345L)).willReturn(Optional.of(order));
+            given(order.getAmount()).willReturn(30000);
+        }
 
         // when
         chatEventListener.handleChatEventSystem(event);
