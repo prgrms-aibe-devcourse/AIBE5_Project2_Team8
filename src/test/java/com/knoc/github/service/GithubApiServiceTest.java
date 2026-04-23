@@ -20,6 +20,8 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.matchesPattern;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -231,11 +233,16 @@ class GithubApiServiceTest {
 
     private void enqueuePr(String title, String state, boolean merged,
                            int changedFiles, int additions, int deletions) throws Exception {
-        mockServer.expect(requestTo(BASE_URL + "/repos/owner/repo/pulls/42")
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/7"))
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/3"))
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/1"))
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/999")))
+        mockServer.expect(request -> {
+                    String uri = request.getURI().toString();
+                    assertTrue(
+                            uri.equals(BASE_URL + "/repos/owner/repo/pulls/42") ||
+                                    uri.equals(BASE_URL + "/repos/owner/repo/pulls/7")  ||
+                                    uri.equals(BASE_URL + "/repos/owner/repo/pulls/3")  ||
+                                    uri.equals(BASE_URL + "/repos/owner/repo/pulls/1")  ||
+                                    uri.equals(BASE_URL + "/repos/owner/repo/pulls/999")
+                    );
+                })
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(om.writeValueAsString(Map.of(
                         "title", title,
@@ -248,15 +255,11 @@ class GithubApiServiceTest {
     }
 
     private void enqueueFiles(int page, List<Map<String, Object>> files) throws Exception {
-        mockServer.expect(requestTo(
-                        BASE_URL + "/repos/owner/repo/pulls/42/files?per_page=100&page=" + page)
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/7/files?per_page=100&page=" + page))
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/3/files?per_page=100&page=" + page))
-                        .or(requestTo(BASE_URL + "/repos/owner/repo/pulls/1/files?per_page=100&page=" + page)))
+        mockServer.expect(requestTo(matchesPattern(
+                        BASE_URL + "/repos/owner/repo/pulls/\\d+/files\\?per_page=100&page=" + page)))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(om.writeValueAsString(files), MediaType.APPLICATION_JSON));
     }
-
     private Map<String, Object> fileJson(String filename, String status,
                                          int additions, int deletions, String patch) {
         var map = new java.util.HashMap<String, Object>();
