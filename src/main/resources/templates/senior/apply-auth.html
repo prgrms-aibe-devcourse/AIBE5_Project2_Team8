@@ -211,7 +211,10 @@
 
             fetch('/senior/verify/confirm', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
                 body: new URLSearchParams({ inputCode: code })
             })
                 .then(response => {

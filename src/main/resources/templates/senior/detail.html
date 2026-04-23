@@ -143,9 +143,9 @@
                     결제 전 시니어와 1:1 채팅을 통해 본인의 고민을 나누고 리뷰 가능 여부를 먼저 조율해보세요.
                 </p>
 
-                <form th:action="@{|/chats/start/${senior.id}|}" method="post" class="w-100">
-                    <button type="submit" class="btn btn-outline-light rounded-pill w-100 py-3 fw-bold fs-6 shadow-sm mb-3 d-inline-flex align-items-center justify-content-center gap-3">
-                        <i class="bi bi-chat"></i>
+                <form th:action="@{/chat/rooms}" method="post" class="w-100">
+                    <input type="hidden" name="seniorId" th:value="${senior.memberId}"/>
+                    <button type="submit" class="btn btn-outline-light rounded-pill w-100 py-3 fw-bold fs-6 shadow-sm mb-3">
                         1:1 채팅으로 조율하기
                     </button>
                 </form>

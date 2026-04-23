@@ -34,7 +34,7 @@ public class ChatRoomService {
 
         Optional<ChatRoom> existing =  chatRoomRepository.findByJuniorAndSenior(junior, senior);
         if(existing.isPresent()) {
-            throw new BusinessException(ErrorCode.CHATROOM_ALREADY_EXISTS);
+            return existing.get();
         }
 
         ChatRoom newChatRoom = ChatRoom.builder()

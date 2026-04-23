@@ -7,12 +7,14 @@ import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
+import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -23,9 +25,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/chat")
@@ -34,7 +35,7 @@ import java.util.Map;
 public class ChatController {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ChatMessageService chatMessageService;
     private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
 
@@ -93,8 +94,13 @@ public class ChatController {
         // 4. 내 채팅장 목록 (사이드바)
         List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
 
-        // 5. 과거 메시지 전체 조회
-        List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtAsc(chatRoom);
+        // 5. 과거 메시지 20개만 조회 & 오름차순 정렬
+        List<ChatMessage> messages = chatMessageRepository
+                .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, Long.MAX_VALUE, PageRequest.of(0, 20));
+
+        Collections.reverse(messages);
+
+        Long firstMessageId = messages.isEmpty() ? Long.MAX_VALUE : messages.get(0).getId();
 
         // 6. 사이드바 미리보기용 최신 메시지 Map
         Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
@@ -104,6 +110,7 @@ public class ChatController {
         model.addAttribute("currentNickname", currentMember.getNickname());
         model.addAttribute("rooms", chatRooms);
         model.addAttribute("selectedRoom", chatRoom);
+        model.addAttribute("firstMessageId", firstMessageId);
         model.addAttribute("latestMessages", latestMessages);
         model.addAttribute("roomStatus", chatRoom.getStatus().name());
 
@@ -113,40 +120,34 @@ public class ChatController {
     // Handshake에서 Principal 넘겨받음
     @MessageMapping("/{roomId}/send")
     public void send(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
-        // 1. 채팅방 조회
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
-
-        if (chatRoom.getStatus().name().equals("CLOSED")) {
-            throw new BusinessException(ErrorCode.CHATROOM_ALREADY_CLOSED);
-        }
-
-        // 2. 발신자 조회 (Principal에서 이메일 추출)
+        // 발신자 조회 (Principal에서 이메일 추출)
         Member sender = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        chatMessageService.sendMessage(roomId, sender.getId(), request.getContent());
+    }
 
-        // 3. 참여자 여부 검증
-        verifyParticipant(chatRoom, sender);
+    @GetMapping("/{roomId}/messages")
+    @ResponseBody
+    public List<ChatMessageResponse> getMessages(@PathVariable("roomId") Long roomId, @RequestParam Long before, Principal principal) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
+        Member currentMember = memberRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        verifyParticipant(chatRoom, currentMember);
 
-        // 4. ChatMessage 엔티티 생성 & 저장
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(sender)
-                .content(request.getContent())
-                .messageType(MessageType.USER)
-                .build();
-        chatMessageRepository.save(message);
+        List<ChatMessage> messages = chatMessageRepository
+                .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, before, PageRequest.of(0, 20));
 
-        // 5. Response DTO 생성
-        ChatMessageResponse response = new ChatMessageResponse(sender.getNickname(), message.getContent(), message.getCreatedAt(), message.getMessageType());
+        Collections.reverse(messages);
 
-        // 6. 수신자/발신자 양쪽에 전송
-        String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
-            ? chatRoom.getSenior().getEmail()
-                : chatRoom.getJunior().getEmail();
-
-        simpMessagingTemplate.convertAndSendToUser(receiverEmail, "/queue/chat", response);
-        simpMessagingTemplate.convertAndSendToUser(sender.getEmail(), "/queue/chat", response);
-
+        return messages.stream()
+                .map(m -> ChatMessageResponse.builder()
+                        .id(m.getId())
+                        .senderNickname(m.getSender().getNickname())
+                        .content(m.getContent())
+                        .createdAt(m.getCreatedAt())
+                        .messageType(m.getMessageType())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

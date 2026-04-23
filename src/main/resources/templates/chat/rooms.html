@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      layout:decorate="~{layout/default_layout}">
+
+<head>
+    <title>채팅 목록</title>
+</head>
+
+<th:block layout:fragment="head-extra">
+    <style>
+        .rooms-wrapper {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .rooms-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .room-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            text-decoration: none;
+            transition: background-color 0.2s, border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .room-item:hover {
+            background-color: #252525;
+            border-color: #00CFE8;
+        }
+
+        .room-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #00CFE8;
+            color: #121212;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .room-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .room-name {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+        }
+
+        .room-preview {
+            font-size: 0.82rem;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .room-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.3rem;
+            flex-shrink: 0;
+        }
+
+        .room-time {
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .room-status {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            background-color: #1a3a2a;
+            color: #00e676;
+        }
+
+        .room-status.closed {
+            background-color: #2a2a2a;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: #555;
+        }
+
+        .empty-state p {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+    </style>
+</th:block>
+
+<main layout:fragment="content">
+    <div class="rooms-wrapper">
+        <div class="rooms-title">💬 채팅 목록</div>
+
+        <!-- 채팅방 없을 때 -->
+        <div th:if="${#lists.isEmpty(rooms)}" class="empty-state">
+            <p>아직 참여 중인 채팅방이 없어요.</p>
+            <a th:href="@{/}" class="btn btn-mint rounded-pill px-4">시니어 둘러보기</a>
+        </div>
+
+        <!-- 채팅방 목록 -->
+        <th:block th:each="room : ${rooms}">
+            <a th:href="@{/chat/{id}(id=${room.id})}" class="room-item">
+
+                <!-- 아바타: 상대방 닉네임 첫 글자 -->
+                <div class="room-avatar"
+                     th:with="opponent=${#authentication.name == room.junior.email ? room.senior : room.junior}"
+                     th:text="${#strings.substring(opponent.nickname, 0, 1)}">
+                </div>
+
+                <!-- 채팅방 정보 -->
+                <div class="room-info"
+                     th:with="opponent=${#authentication.name == room.junior.email ? room.senior : room.junior}">
+                    <div class="room-name" th:text="${opponent.nickname}"></div>
+                    <div class="room-preview"
+                         th:if="${latestMessages[room.id] != null}"
+                         th:text="${latestMessages[room.id].content}">
+                    </div>
+                    <div class="room-preview" th:if="${latestMessages[room.id] == null}">
+                        아직 메시지가 없어요
+                    </div>
+                </div>
+
+                <!-- 시간 + 상태 -->
+                <div class="room-meta">
+                    <span class="room-time"
+                          th:if="${latestMessages[room.id] != null}"
+                          th:text="${#temporals.format(latestMessages[room.id].createdAt, 'MM/dd HH:mm')}">
+                    </span>
+                    <span th:class="${room.status.name() == 'ACTIVE'} ? 'room-status' : 'room-status closed'"
+                          th:text="${room.status.name() == 'ACTIVE'} ? '활성' : '종료'">
+                    </span>
+                </div>
+
+            </a>
+        </th:block>
+
+    </div>
+</main>
+
+</html>
