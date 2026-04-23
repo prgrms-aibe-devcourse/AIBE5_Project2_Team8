@@ -45,6 +45,10 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
     REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
 
+    // GitHub 관련 (Github)
+    GITHUB_PR_NOT_FOUND(404, "존재하지 않는 PR이거나 접근 권한이 없습니다."),
+    EXTERNAL_API_ERROR(502, "외부 API 서버 오류가 발생했습니다."),
+
     // 이메일 관련 (Auth)
     ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),
     EXPIRED_VERIFICATION_CODE(400, "인증번호 유효기간이 지났습니다."),
