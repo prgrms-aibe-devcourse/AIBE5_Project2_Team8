@@ -3,7 +3,14 @@ package com.knoc.global.config; // 1. 팀원의 글로벌 패키지 위치로 �
 import com.knoc.auth.jwt.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -37,5 +44,26 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(jwtHandshakeInterceptor)
                 .withSockJS();
+    }
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(new ChannelInterceptor() {
+            @Override
+            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+
+                // ✅ CONNECT에만 한정하지 않고, 세션에 인증 객체가 있다면 항상 달아줍니다!
+                if (accessor != null && accessor.getSessionAttributes() != null) {
+                    Object principal = accessor.getSessionAttributes().get("principal");
+
+                    if (principal instanceof java.security.Principal) {
+                        // STOMP 세션의 공식 유저로 등록!
+                        accessor.setUser((java.security.Principal) principal);
+                    }
+                }
+
+                return message;
+            }
+        });
     }
 }
