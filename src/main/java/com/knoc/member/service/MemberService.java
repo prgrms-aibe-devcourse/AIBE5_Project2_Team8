@@ -36,10 +36,11 @@ public class MemberService {
     @Transactional
     public void registerMember(SignUpDto dto) {
         if(memberRepository.existsByEmail(dto.getEmail())) {
-            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new IllegalArgumentException("이미 사용중인 이메일입니다.");
+
         }
         if(memberRepository.existsByNickname(dto.getNickname())) {
-            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+            throw new IllegalArgumentException("이미 사용중인 닉네임입니다.");
         }
 
         // 엔티티 생성 및 암호화된 비밀번호 저장
