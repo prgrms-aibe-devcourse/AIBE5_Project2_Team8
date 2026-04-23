@@ -33,7 +33,7 @@ public class GithubApiService {
     public GithubPrMetadata fetchPrMetadata(String prUrl) {
         Matcher matcher = PR_URL_PATTERN.matcher(prUrl.trim());
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("올바른 GitHub PR URL 형식이 아닙니다");
+            throw new BusinessException(ErrorCode.GITHUB_INVALID_PR_URL);
         }
 
         String owner     = matcher.group(1);

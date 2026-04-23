@@ -48,6 +48,7 @@ public enum ErrorCode {
     // GitHub 관련 (Github)
     GITHUB_PR_NOT_FOUND(404, "존재하지 않는 PR이거나 접근 권한이 없습니다."),
     EXTERNAL_API_ERROR(502, "외부 API 서버 오류가 발생했습니다."),
+    GITHUB_INVALID_PR_URL(400, "올바른 GitHub PR URL 형식이 아닙니다."),
 
     // 이메일 관련 (Auth)
     ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),

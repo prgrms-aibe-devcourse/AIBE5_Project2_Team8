@@ -177,12 +177,13 @@ class GithubApiServiceTest {
     // ===== URL 파싱 =====
 
     @Test
-    @DisplayName("PR URL 형식이 잘못되면 IllegalArgumentException을 던진다")
+    @DisplayName("PR URL 형식이 잘못되면 GITHUB_INVALID_PR_URL을 던진다")
     void fetchPrMetadata_invalidUrl() {
         assertThatThrownBy(() ->
                 service.fetchPrMetadata("https://github.com/owner/repo/issues/42"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("올바른 GitHub PR URL 형식이 아닙니다");
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.GITHUB_INVALID_PR_URL));
     }
 
     // ===== 오류 처리 =====
