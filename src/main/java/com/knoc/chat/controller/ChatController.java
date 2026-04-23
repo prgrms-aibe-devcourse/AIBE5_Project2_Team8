@@ -2,70 +2,39 @@ package com.knoc.chat.controller;
 
 import com.knoc.chat.dto.ChatMessageRequest;
 import com.knoc.chat.dto.ChatMessageResponse;
-import com.knoc.chat.entity.ChatMessage;
+import com.knoc.chat.dto.ChatRoomDetailDto;
+import com.knoc.chat.dto.ChatRoomListDto;
 import com.knoc.chat.entity.ChatRoom;
-import com.knoc.chat.entity.MessageType;
-import com.knoc.chat.repository.ChatMessageRepository;
-import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
-import com.knoc.global.exception.BusinessException;
-import com.knoc.global.exception.ErrorCode;
-import com.knoc.member.Member;
-import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/chat")
 @RequiredArgsConstructor
-@Transactional
 public class ChatController {
-    private final ChatRoomRepository chatRoomRepository;
-    private final ChatMessageRepository chatMessageRepository;
+
     private final ChatMessageService chatMessageService;
-    private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
 
-    private Map<Long, ChatMessage> buildLatestMessages(List<ChatRoom> chatRooms) {
-        Map<Long, ChatMessage> map = new HashMap<>();
-        for (ChatRoom chatRoom : chatRooms) {
-            map.put(chatRoom.getId(), chatMessageRepository.findFirstByChatRoomOrderByCreatedAtDesc(chatRoom));
-        }
-        return map;
-    }
-
-    private void verifyParticipant(ChatRoom chatRoom, Member currentMember){
-        if(!chatRoom.getJunior().getId().equals(currentMember.getId()) &&
-                !chatRoom.getSenior().getId().equals(currentMember.getId())) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
-    }
 
     @GetMapping("/rooms")
     public String rooms(Model model, Principal principal) {
-        Member user = memberRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(user, user);
-        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
-        String currentNickname = user.getNickname();
+        ChatRoomListDto dto = chatRoomService.getChatRoomListDto(principal.getName());
 
-        model.addAttribute("rooms", chatRooms);
-        model.addAttribute("latestMessages", latestMessages);
-        model.addAttribute("currentNickname", currentNickname);
+        model.addAttribute("rooms", dto.rooms());
+        model.addAttribute("latestMessages", dto.latestMessages());
+        model.addAttribute("currentNickname", dto.currentNickname());
         model.addAttribute("selectedRoomId", null);
 
         return "chat/chatrooms";
@@ -79,75 +48,30 @@ public class ChatController {
     }
 
     @GetMapping("/{roomId}")
-    public String room(@PathVariable("roomId") Long selectedRoomId, Model model, Principal principal) {
-        // 1. 채팅방 존재 여부 검증
-        ChatRoom chatRoom = chatRoomRepository.findById(selectedRoomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
+    public String room(@PathVariable("roomId") Long roomId, Model model, Principal principal) {
+        ChatRoomDetailDto dto = chatRoomService.getRoomDetailInfo(roomId, principal.getName());
 
-        // 2. 현재 로그인 유저 조회
-        Member currentMember = memberRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-
-        // 3. 참여자 여부 검증
-        verifyParticipant(chatRoom, currentMember);
-
-        // 4. 내 채팅장 목록 (사이드바)
-        List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
-
-        // 5. 과거 메시지 20개만 조회 & 오름차순 정렬
-        List<ChatMessage> messages = chatMessageRepository
-                .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, Long.MAX_VALUE, PageRequest.of(0, 20));
-
-        Collections.reverse(messages);
-
-        Long firstMessageId = messages.isEmpty() ? Long.MAX_VALUE : messages.get(0).getId();
-
-        // 6. 사이드바 미리보기용 최신 메시지 Map
-        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
-
-        model.addAttribute("selectedRoomId", selectedRoomId);
-        model.addAttribute("messages", messages);
-        model.addAttribute("currentNickname", currentMember.getNickname());
-        model.addAttribute("rooms", chatRooms);
-        model.addAttribute("selectedRoom", chatRoom);
-        model.addAttribute("firstMessageId", firstMessageId);
-        model.addAttribute("latestMessages", latestMessages);
-        model.addAttribute("roomStatus", chatRoom.getStatus().name());
+        model.addAttribute("selectedRoomId", dto.selectedRoomId());
+        model.addAttribute("messages", dto.messages());
+        model.addAttribute("currentNickname", dto.currentNickname());
+        model.addAttribute("rooms", dto.rooms());
+        model.addAttribute("selectedRoom", dto.selectedRoom());
+        model.addAttribute("firstMessageId", dto.firstMessageId());
+        model.addAttribute("latestMessages", dto.latestMessages());
+        model.addAttribute("roomStatus", dto.roomStatus());
 
         return "chat/chatrooms";
     }
 
-    // Handshake에서 Principal 넘겨받음
     @MessageMapping("/{roomId}/send")
     public void send(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
-        // 발신자 조회 (Principal에서 이메일 추출)
-        Member sender = memberRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        chatMessageService.sendMessage(roomId, sender.getId(), request.getContent());
+        // Principal(이메일)만 넘기고 유저 찾는 로직도 Service로 이동하면 더 깔끔해집니다!
+        chatMessageService.sendMessage(roomId, principal.getName(), request.getContent());
     }
 
     @GetMapping("/{roomId}/messages")
     @ResponseBody
     public List<ChatMessageResponse> getMessages(@PathVariable("roomId") Long roomId, @RequestParam Long before, Principal principal) {
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
-        Member currentMember = memberRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        verifyParticipant(chatRoom, currentMember);
-
-        List<ChatMessage> messages = chatMessageRepository
-                .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, before, PageRequest.of(0, 20));
-
-        Collections.reverse(messages);
-
-        return messages.stream()
-                .map(m -> ChatMessageResponse.builder()
-                        .id(m.getId())
-                        .senderNickname(m.getSender().getNickname())
-                        .content(m.getContent())
-                        .createdAt(m.getCreatedAt())
-                        .messageType(m.getMessageType())
-                        .build())
-                .collect(Collectors.toList());
+        return chatMessageService.getPreviousMessages(roomId, before, principal.getName());
     }
 }
