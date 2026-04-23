@@ -415,14 +415,32 @@
                 th:attr="data-first-message-id=${firstMessageId}">
                     <th:block th:each="msg : ${messages}">
 
-                        <div th:if="${msg.messageType.name() != 'USER'}" class="system-message-card">
+                        <div th:if="${msg.messageType.name() != 'USER'}"
+                             th:classappend="${msg.messageType.name() == 'PAYMENT_REQUESTED'} ? ' type-payment' : ' type-default'"
+                             class="system-message-card">
+
+                            <div class="sys-header text-yellow" th:if="${msg.messageType.name() == 'PAYMENT_REQUESTED'}">
+                                <span style="margin-right: 6px;">🪙</span> 시스템 알림
+                            </div>
                             <div class="sys-header text-gray" th:if="${msg.messageType.name() == 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔒</span> 시스템 알림
                             </div>
-                            <div class="sys-header text-gray" th:if="${msg.messageType.name() != 'ROOM_CLOSE'}">
+                            <div class="sys-header text-gray"
+                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔔</span> 시스템 알림
                             </div>
-                            <div class="sys-body" th:text="${msg.content}"></div>
+
+                            <div class="sys-body" th:utext="${#strings.replace(#strings.escapeXml(msg.content), T(java.lang.System).lineSeparator(), '&lt;br&gt;')}"></div>
+
+                            <!-- PAYMENT_REQUESTED: 주니어에게만 결제 버튼 노출 -->
+                            <div class="sys-footer"
+                                 th:if="${msg.messageType.name() == 'PAYMENT_REQUESTED' and !isSenior and msg.referenceId != null}">
+                                <button type="button"
+                                        class="sys-action-btn btn-yellow action-pay"
+                                        th:attr="data-order-id=${msg.referenceId}"
+                                        th:text="|🛡️ 에스크로 안전 결제 ₩${#numbers.formatInteger(orderAmounts[__${msg.referenceId}__] ?: 0, 0, 'COMMA')}|">
+                                </button>
+                            </div>
                         </div>
 
                         <div th:if="${msg.messageType.name() == 'USER'}" th:class="${msg.sender.nickname == currentNickname} ? 'msg-right' : 'msg-left'">
