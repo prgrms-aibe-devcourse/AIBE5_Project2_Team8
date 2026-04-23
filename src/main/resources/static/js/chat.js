@@ -339,7 +339,7 @@ if (chatContainer && ROOM_ID) {
 
 // 금액 하한/상한. 서버 정책과 일치시킬 것 (서버가 1차 검증, 프런트는 UX용 사전 필터).
 const MIN_PAYMENT_AMOUNT = 1000;
-const MAX_PAYMENT_AMOUNT = 10_000_000;
+const MAX_PAYMENT_AMOUNT = 1_000_000;
 
 // 헤더의 '결제 요청하기' 버튼 숨기기.
 // PAYMENT_REQUESTED 이벤트 수신 또는 API 응답 성공 시 호출되어, 한 채팅방당 한 번만 결제 요청하도록 강제.
