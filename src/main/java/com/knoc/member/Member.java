@@ -45,4 +45,11 @@ public class Member extends BaseEntity {
     public void promoteToSenior(){
         this.role = MemberRole.SENIOR;
     }
+
+    public void updateProfile(String nickname, String profileImageUrl) {
+        this.nickname = nickname;
+        if (profileImageUrl != null && !profileImageUrl.isBlank()) {
+            this.profileImageUrl = profileImageUrl;
+        }
+    }
 }

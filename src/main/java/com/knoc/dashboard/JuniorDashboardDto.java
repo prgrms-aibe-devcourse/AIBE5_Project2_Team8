@@ -11,16 +11,18 @@ public class JuniorDashboardDto {
 
     private final Long id;
     private final String nickname;
+    private final String profileImageUrl;
     private final long pendingCount;
     private final long inProgressCount;
     private final long completedCount;
     private final List<OrderSummaryDto> orders;
 
     @Builder
-    public JuniorDashboardDto(Long id, String nickname, long pendingCount, long inProgressCount,
+    public JuniorDashboardDto(Long id, String nickname, String profileImageUrl, long pendingCount, long inProgressCount,
                                long completedCount, List<OrderSummaryDto> orders) {
         this.id = id;
         this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
         this.pendingCount = pendingCount;
         this.inProgressCount = inProgressCount;
         this.completedCount = completedCount;
