@@ -43,7 +43,7 @@ public class OrderController {
     }
 
     @Operation(summary = "멘토링 결제 준비", description = "주니어가 주문ID를 바탕으로 결제를 준비합니다.")
-    @GETMapping("/{orderId}/prepare")
+    @GetMapping("/{orderId}/prepare")
     @PreAuthorize("hasRole('USER')")  // 주니어 결제 가능
     public ResponseEntity<OrderResponse> requestPay(@AuthenticationPrincipal UserDetails userDetails,
                                                     @PathVariable Long orderId) {
