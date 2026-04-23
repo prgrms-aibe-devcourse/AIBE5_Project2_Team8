@@ -11,14 +11,18 @@ import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
+import com.knoc.order.entity.Order;
+import com.knoc.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +34,7 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomService chatRoomService;
+    private final OrderRepository orderRepository;
 
     @Transactional
     public void sendMessage(Long roomId, String email, String content) {
@@ -60,13 +65,15 @@ public class ChatMessageService {
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         // 5. Response DTO 생성
-        ChatMessageResponse responsePayload = new ChatMessageResponse(
-                savedMessage.getId(),
-                sender.getNickname(),
-                savedMessage.getContent(),
-                savedMessage.getCreatedAt(),
-                savedMessage.getMessageType()
-        );
+        ChatMessageResponse responsePayload = ChatMessageResponse.builder()
+                .id(savedMessage.getId())
+                .senderNickname(sender.getNickname())
+                .content(savedMessage.getContent())
+                .createdAt(savedMessage.getCreatedAt())
+                .messageType(savedMessage.getMessageType())
+                .referenceId(savedMessage.getReferenceId()) // USER 메시지는 null
+                // amount는 생략 -> null (PAYMENT_REQUESTED에서만 의미 있음)
+        .build();
 
         // 6. 수신자/발신자 양쪽에 1:1 queue 전송
         String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
@@ -89,13 +96,28 @@ public class ChatMessageService {
                 .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, before, PageRequest.of(0, 20));
         Collections.reverse(messages);
 
+
+        // 이번 페이지에 포함된 PAYMENT_REQUESTED 메시지들의 orderId만 모아 한 번에 금액 조회
+        List<Long> orderIds = messages.stream()
+                .filter(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED && m.getReferenceId() != null)
+                .map(ChatMessage::getReferenceId)
+                .toList();
+
+        Map<Long, Integer> amountByOrderId = orderIds.isEmpty()
+                ? Collections.emptyMap()
+                : orderRepository.findAllById(orderIds).stream()
+                .collect(Collectors.toMap(Order::getId, Order::getAmount));
+
         return messages.stream()
                 .map(m -> ChatMessageResponse.builder()
                         .id(m.getId())
-                        .senderNickname(m.getSender().getNickname())
+                        .senderNickname(m.getSender() != null ? m.getSender().getNickname() : "SYSTEM")
                         .content(m.getContent())
                         .createdAt(m.getCreatedAt())
                         .messageType(m.getMessageType())
+                        .referenceId(m.getReferenceId())
+                        .amount(m.getMessageType() == MessageType.PAYMENT_REQUESTED
+                                ? amountByOrderId.get(m.getReferenceId()) : null)
                         .build())
                 .collect(Collectors.toList());
     }

@@ -20,14 +20,22 @@ public class ChatMessageResponse {
     // 전송 시간
     private LocalDateTime createdAt;
 
-    // USER
+    // USER / PAYMENT_REQUESTED / ...
     private MessageType messageType;
 
-    public ChatMessageResponse(Long id, String senderNickname, String content, LocalDateTime createdAt, MessageType messageType) {
+    // 시스템 메시지가 참조하는 외부 엔티티 PK (예: Order.id) USER 메시지면 null
+    private Long referenceId;
+
+    // PAYMENT_REQUESTED 같은 금액 기반 시스템 메시지에서 결제 버튼 렌더링에 사용. 그 외엔 null
+    private Integer amount;
+
+    public ChatMessageResponse(Long id, String senderNickname, String content, LocalDateTime createdAt, MessageType messageType, Long referenceId, Integer amount) {
         this.id = id;
         this.senderNickname = senderNickname;
         this.content = content;
         this.createdAt = createdAt;
         this.messageType = messageType;
+        this.referenceId = referenceId;
+        this.amount = amount;
     }
 }
