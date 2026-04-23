@@ -51,6 +51,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
 
     }
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // /ws 로 시작하는 웹소켓 연결 요청은 HTTP 단계에서 토큰 검사를 하지 않도록 예외 처리
+        return path.startsWith("/ws");
+    }
 
     // 쿠키 배열에서 원하는 쿠키를 가져옴
     private String getCookieValue(HttpServletRequest request, String cookieName) {
