@@ -13,6 +13,7 @@ import java.util.Map;
 public class SeniorDashBoardDto {
     private final Long id;
     private final String nickname;
+    private final String profileImageUrl;
     private final long pendingCount;
     private final long inProgressCount;
     private final long completedCount;
@@ -32,9 +33,10 @@ public class SeniorDashBoardDto {
     private final List<String> aiInsights;
 
     @Builder
-    public SeniorDashBoardDto(Long id, String nickname, long pendingCount, long inProgressCount, long completedCount, String company, int careerYears, String linkedinUrl, List<String> skills, BigDecimal averageRating, int reviewCount, Map<Integer, Integer> ratingDistribution, List<OrderSummaryDto> orders, List<ReviewSummeryDto> reviews, List<String> aiInsights) {
+    public SeniorDashBoardDto(Long id, String nickname, String profileImageUrl, long pendingCount, long inProgressCount, long completedCount, String company, int careerYears, String linkedinUrl, List<String> skills, BigDecimal averageRating, int reviewCount, Map<Integer, Integer> ratingDistribution, List<OrderSummaryDto> orders, List<ReviewSummeryDto> reviews, List<String> aiInsights) {
         this.id = id;
         this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
         this.pendingCount = pendingCount;
         this.inProgressCount = inProgressCount;
         this.completedCount = completedCount;
