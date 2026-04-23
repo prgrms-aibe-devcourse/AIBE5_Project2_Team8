@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout/default_layout}">
 <head>
     <title>시니어 상세 프로필 | Knoc.</title>
@@ -98,33 +99,6 @@
     <div class="row g-4">
 
         <div class="col-lg-8 d-flex flex-column gap-4">
-
-            <div class="card card-dark p-4 p-md-5 rounded-4">
-                <h5 class="fw-bold text-white mb-4 d-flex align-items-center gap-2">
-                    <span class="badge bg-mint text-dark">AI</span> 멘토링 인사이트
-                </h5>
-                <div class="d-flex flex-column gap-3">
-                    <div class="card-inner-dark p-4 rounded-4 d-flex gap-3 align-items-start">
-                        <i class="bi bi-circle-fill dot-pink mt-1" style="font-size: 8px;"></i>
-                        <p class="text-light mb-0 lh-lg">
-                            <strong class="text-white">에러 처리</strong> 관련 멘토링 요청이 최근 3주간 40% 증가했어요. 관련 아티클을 작성하면 매칭률이 높아질 수 있어요.
-                        </p>
-                    </div>
-                    <div class="card-inner-dark p-4 rounded-4 d-flex gap-3 align-items-start">
-                        <i class="bi bi-circle-fill dot-blue mt-1" style="font-size: 8px;"></i>
-                        <p class="text-light mb-0 lh-lg">
-                            후기에서 <strong class="text-white">'설명이 친절함'</strong> 태그가 가장 많이 달렸어요. 이 강점을 프로필에 강조해보세요.
-                        </p>
-                    </div>
-                    <div class="card-inner-dark p-4 rounded-4 d-flex gap-3 align-items-start">
-                        <i class="bi bi-circle-fill dot-yellow mt-1" style="font-size: 8px;"></i>
-                        <p class="text-light mb-0 lh-lg">
-                            평균 리뷰 응답 시간이 <strong class="text-white">1.2일</strong>로 상위 10% 시니어 수준이에요.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             <div class="card card-dark p-4 p-md-5 rounded-4">
                 <h5 class="fw-bold text-white mb-4 d-flex align-items-center gap-2">
                     상세 소개
@@ -143,12 +117,24 @@
                     결제 전 시니어와 1:1 채팅을 통해 본인의 고민을 나누고 리뷰 가능 여부를 먼저 조율해보세요.
                 </p>
 
-                <form th:action="@{/chat/rooms}" method="post" class="w-100">
+                <form th:action="@{/chat/rooms}" method="post" class="w-100" sec:authorize="hasRole('USER')">
                     <input type="hidden" name="seniorId" th:value="${senior.memberId}"/>
                     <button type="submit" class="btn btn-outline-light rounded-pill w-100 py-3 fw-bold fs-6 shadow-sm mb-3">
                         1:1 채팅으로 조율하기
                     </button>
                 </form>
+
+                <div class="w-100" sec:authorize="hasRole('SENIOR')">
+                    <button type="button" class="btn btn-secondary rounded-pill w-100 py-3 fw-bold fs-6 shadow-sm mb-3" style="opacity: 0.6; cursor: not-allowed;" disabled>
+                        주니어 회원만 신청 가능합니다
+                    </button>
+                </div>
+
+                <div class="w-100" sec:authorize="isAnonymous()">
+                    <a th:href="@{/login}" class="btn btn-outline-secondary rounded-pill w-100 py-3 fw-bold fs-6 shadow-sm mb-3">
+                        로그인 후 이용 가능합니다
+                    </a>
+                </div>
 
                 <div class="text-secondary small d-flex flex-column align-items-center gap-1 mt-2">
                     <span class="text-mint">채팅은 100% 무료입니다</span>
