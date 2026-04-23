@@ -204,6 +204,32 @@
         .status-connected    { background-color: #1a3a2a; color: #00e676; }
         .status-disconnected { background-color: #3a1a1a; color: #ff5252; }
 
+        /* 시니어 전용 '결제 요청하기' 버튼 (헤더 우측, 결제 테마의 옐로우~오렌지 그라데이션) */
+        .btn-request-payment {
+            margin-left: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #1a1a1a;
+            border: none;
+            border-radius: 8px;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+            transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+        .btn-request-payment:hover {
+            filter: brightness(1.05);
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.45);
+        }
+        .btn-request-payment:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 4px rgba(245, 158, 11, 0.4);
+        }
+
         /* 메시지 목록 */
         .chat-messages {
             flex: 1;
@@ -408,6 +434,22 @@
                     <div class="chat-header-avatar" th:text="${#strings.substring(opponent.nickname, 0, 1)}"></div>
                     <div class="chat-header-name" th:text="${opponent.nickname}"></div>
                     <span id="connectionStatus" class="connection-status status-disconnected">연결 중...</span>
+
+                    <!--
+                        시니어 전용 '결제 요청하기' 버튼.
+                        - ACTIVE 상태의 채팅방에서만 노출
+                        - 해당 채팅방에 이미 결제 요청(Order)이 있으면 서버가 아예 렌더하지 않음 (hasPaymentRequest=true)
+                        - 초기 렌더 이후 시니어가 버튼을 눌러 PAYMENT_REQUESTED 시스템 메시지가 수신되면
+                          chat.js가 이 버튼을 즉시 숨긴다 (display: none)
+                    -->
+                    <button type="button"
+                            id="requestPaymentBtn"
+                            class="btn-request-payment"
+                            th:if="${isSenior and selectedRoom.status.name() == 'ACTIVE' and !hasPaymentRequest}"
+                            onclick="openPaymentRequestModal()">
+                        <span>💳</span>
+                        <span>결제 요청하기</span>
+                    </button>
                 </div>
 
                 <!-- 메시지 목록 -->
@@ -487,14 +529,18 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 
-    <!-- Thymeleaf 모델 값을 window.*로 주입. 실제 STOMP 연결/렌더링/페이지네이션은 chat.js가 전담한다. -->
+    <!--
+        Thymeleaf 모델 값을 window.*로 주입. 실제 STOMP 연결/렌더링/페이지네이션은 chat.js가 전담한다.
+        /*[[${expr}]]*/ defaultValue 문법은 Thymeleaf의 "JavaScript inlining" 공식 표기법으로,
+        - 런타임: 서버가 /*[[...]]*/ 와 뒤의 placeholder 전체를 실제 값으로 치환
+    -->
     <script th:inline="javascript">
-        window.ROOM_ID = [[${selectedRoomId}]];
-        window.CURRENT_NICKNAME = [[${currentNickname}]];
-        window.ROOM_STATUS = [[${roomStatus}]];
-        window.IS_SENIOR = [[${isSenior}]];
-        window.JUNIOR_ID = [[${juniorId}]];
-        window.FIRST_MESSAGE_ID = [[${firstMessageId}]];
+        window.ROOM_ID = /*[[${selectedRoomId}]]*/ null;
+        window.CURRENT_NICKNAME = /*[[${currentNickname}]]*/ '';
+        window.ROOM_STATUS = /*[[${roomStatus}]]*/ 'ACTIVE';
+        window.IS_SENIOR = /*[[${isSenior}]]*/ false;
+        window.JUNIOR_ID = /*[[${juniorId}]]*/ null;
+        window.FIRST_MESSAGE_ID = /*[[${firstMessageId}]]*/ null;
     </script>
 
     <script src="/js/chat.js"></script>

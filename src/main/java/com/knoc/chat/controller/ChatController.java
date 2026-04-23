@@ -77,6 +77,9 @@ public class ChatController {
         // 8. 이번 화면에 뿌릴 PAYMENT_REQUESTED 메시지들의 금액 맵 구성
         Map<Long, Integer> orderAmounts = buildOrderAmounts(messages);
 
+        // 9. 해당 채팅방에 이미 결제 요청(Order)이 있었는지 (시니어 헤더 버튼 초기 노출 제어)
+        boolean hasPaymentRequest = orderRepository.existsByChatRoom_Id(selectedRoomId);
+
         model.addAttribute("selectedRoomId", dto.selectedRoomId());
         model.addAttribute("messages", dto.messages());
         model.addAttribute("currentNickname", dto.currentNickname());
@@ -88,6 +91,7 @@ public class ChatController {
         model.addAttribute("isSenior", isSenior);
         model.addAttribute("juniorId", juniorId);
         model.addAttribute("orderAmounts", orderAmounts);
+        model.addAttribute("hasPaymentRequest", hasPaymentRequest);
 
         return "chat/chatrooms";
     }

@@ -1,16 +1,15 @@
 // ==========================================
 // 1. 초기 세팅 및 변수 준비 (HTML에서 주입받음)
 // ==========================================
-const ROOM_ID = typeof window !== 'undefined' && window.ROOM_ID ? window.ROOM_ID : null;
-const JWT_TOKEN = typeof window !== 'undefined' && window.JWT_TOKEN ? window.JWT_TOKEN : null;
-const CURRENT_NICKNAME = typeof window !== 'undefined' && window.CURRENT_NICKNAME ? window.CURRENT_NICKNAME : null;
-const ROOM_STATUS = typeof window !== 'undefined' && window.ROOM_STATUS ? window.ROOM_STATUS : 'ACTIVE';
+const ROOM_ID = window.ROOM_ID ?? null;
+const CURRENT_NICKNAME = window.CURRENT_NICKNAME ?? null;
+const ROOM_STATUS = window.ROOM_STATUS ?? 'ACTIVE';
 // 현재 사용자가 이 채팅방의 시니어인지 (PAYMENT_REQUESTED 결제 버튼 노출 분기용)
-const IS_SENIOR = typeof window !== 'undefined' && window.IS_SENIOR === true;
+const IS_SENIOR = window.IS_SENIOR === true;
 // 주니어 ID (시니어 전용 '결제 요청하기' 모달에서 /orders/request 호출 시 사용)
-const JUNIOR_ID = typeof window !== 'undefined' && window.JUNIOR_ID ? window.JUNIOR_ID : null;
+const JUNIOR_ID = window.JUNIOR_ID ?? null;
 // 초기 로딩 메시지들의 가장 오래된 id (위로 스크롤해 과거 메시지를 불러올 때 커서로 사용)
-const FIRST_MESSAGE_ID = typeof window !== 'undefined' && window.FIRST_MESSAGE_ID ? window.FIRST_MESSAGE_ID : null;
+const FIRST_MESSAGE_ID = window.FIRST_MESSAGE_ID ?? null;
 
 const chatContainer = document.getElementById('messageList');
 let stompClient = null;
@@ -49,7 +48,11 @@ function renderSystemMessage(data, options = {}) {
 
     let cardClass = ''; let headerColorClass = ''; let headerIcon = ''; let buttonHtml = '';
 
-    switch (data.messageType || data.type) {
+    // String()으로 감싸 IDE의 type narrowing을 차단한다.
+    // (호출부의 `type !== 'USER'` 같은 조건으로 인해 WebStorm이 일부 case를 도달 불가로 오판하는 것을 방지)
+    const msgType = String(data.messageType || data.type || '');
+
+    switch (msgType) {
         case 'PAYMENT_REQUESTED': {
             cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '🪙';
             // 결제 버튼은 주니어에게만 노출 (결제 행위자는 주니어)
@@ -175,7 +178,9 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
-    const connectHeaders = JWT_TOKEN ? { Authorization: `Bearer ${JWT_TOKEN}` } : {};
+    // 인증은 Spring Security 세션 쿠키 기반이므로 별도 헤더가 필요 없다.
+    // 향후 JWT 도입 시 여기서 Authorization 헤더를 주입한다.
+    const connectHeaders = {};
 
     stompClient.connect(connectHeaders, function () {
         console.log('✅ STOMP 서버 연결 완료');
@@ -188,9 +193,10 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
         // 💡 1:1 큐 구독 방식으로 통신
         stompClient.subscribe('/user/queue/chat', function (message) {
             const data = JSON.parse(message.body);
+            const type = data.messageType || data.type;
 
             // 실시간 마감 이벤트 감지
-            if (data.messageType === 'ROOM_CLOSE' || data.type === 'ROOM_CLOSE') {
+            if (type === 'ROOM_CLOSE') {
                 renderSystemMessage(data);
                 disableChatUI();
 
@@ -204,8 +210,15 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
                 return;
             }
 
+            // 결제 요청이 발행되면(이벤트 수신) 헤더의 '결제 요청하기' 버튼을 즉시 숨긴다.
+            // - 시니어 본인: 자신이 방금 요청한 결과로 버튼이 사라짐
+            // - 주니어: 헤더에 버튼 자체가 렌더되지 않지만 방어적으로 동일 처리
+            if (type === 'PAYMENT_REQUESTED') {
+                hideRequestPaymentButton();
+            }
+
             // 메시지 타입 분기 (유저 vs 시스템)
-            if (data.messageType === 'USER' || data.type === 'USER') {
+            if (type === 'USER') {
                 renderUserMessage(data);
             } else {
                 renderSystemMessage(data);
@@ -286,7 +299,10 @@ if (chatContainer && ROOM_ID) {
         fetch(`/chat/${ROOM_ID}/messages?before=${paginationCursor}`)
             .then(res => res.json())
             .then(messages => {
-                if (!messages || messages.length === 0) return;
+                if (!messages || messages.length === 0) {
+                    paginationCursor = null;
+                    return;
+                }
 
                 const prevHeight = chatContainer.scrollHeight;
 
@@ -308,8 +324,26 @@ if (chatContainer && ROOM_ID) {
 
                 // 다음 페이지네이션 커서: 이번 배치의 가장 오래된 메시지 id
                 paginationCursor = messages[0].id;
+                if (messages.length < 20) paginationCursor = null;
             })
             .catch(err => console.error('과거 메시지 로딩 실패:', err))
             .finally(() => { isLoadingOlder = false; });
     });
+}
+
+// ==========================================
+// 8. 시니어 '결제 요청하기' 버튼 제어
+// ==========================================
+
+// 헤더의 '결제 요청하기' 버튼 숨기기.
+// PAYMENT_REQUESTED 이벤트 수신 시 호출되어, 한 채팅방당 한 번만 결제 요청하도록 강제한다.
+function hideRequestPaymentButton() {
+    const btn = document.getElementById('requestPaymentBtn');
+    if (btn) btn.style.display = 'none';
+}
+
+// 결제 금액 입력 모달 오픈.
+// TODO: 8단계에서 실제 모달 UI/POST /orders/request 호출 로직으로 교체 예정.
+function openPaymentRequestModal() {
+    console.log('[결제 요청하기 클릭] 모달 오픈은 8단계에서 구현 예정');
 }
