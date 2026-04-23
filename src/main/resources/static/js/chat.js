@@ -5,6 +5,12 @@ const ROOM_ID = typeof window !== 'undefined' && window.ROOM_ID ? window.ROOM_ID
 const JWT_TOKEN = typeof window !== 'undefined' && window.JWT_TOKEN ? window.JWT_TOKEN : null;
 const CURRENT_NICKNAME = typeof window !== 'undefined' && window.CURRENT_NICKNAME ? window.CURRENT_NICKNAME : null;
 const ROOM_STATUS = typeof window !== 'undefined' && window.ROOM_STATUS ? window.ROOM_STATUS : 'ACTIVE';
+// 현재 사용자가 이 채팅방의 시니어인지 (PAYMENT_REQUESTED 결제 버튼 노출 분기용)
+const IS_SENIOR = typeof window !== 'undefined' && window.IS_SENIOR === true;
+// 주니어 ID (시니어 전용 '결제 요청하기' 모달에서 /orders/request 호출 시 사용)
+const JUNIOR_ID = typeof window !== 'undefined' && window.JUNIOR_ID ? window.JUNIOR_ID : null;
+// 초기 로딩 메시지들의 가장 오래된 id (위로 스크롤해 과거 메시지를 불러올 때 커서로 사용)
+const FIRST_MESSAGE_ID = typeof window !== 'undefined' && window.FIRST_MESSAGE_ID ? window.FIRST_MESSAGE_ID : null;
 
 const chatContainer = document.getElementById('messageList');
 let stompClient = null;
@@ -32,7 +38,7 @@ function formatTime(dateStr) {
 // ==========================================
 // 2. DOM 렌더링: 시스템 메시지 카드
 // ==========================================
-function renderSystemMessage(data) {
+function renderSystemMessage(data, options = {}) {
     if (!chatContainer) return;
 
     const systemWrap = document.createElement('div');
@@ -46,8 +52,11 @@ function renderSystemMessage(data) {
     switch (data.messageType || data.type) {
         case 'PAYMENT_REQUESTED': {
             cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '🪙';
-            const amount = data.amount ? data.amount.toLocaleString() : '0';
-            buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${escapeHTML(String(data.referenceId))}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
+            // 결제 버튼은 주니어에게만 노출 (결제 행위자는 주니어)
+            if (!IS_SENIOR && data.referenceId) {
+                const amount = data.amount ? data.amount.toLocaleString() : '0';
+                buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${escapeHTML(String(data.referenceId))}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
+            }
             break;
         }
         case 'PAYMENT_COMPLETED':
@@ -81,14 +90,18 @@ function renderSystemMessage(data) {
         </div>
     `;
 
-    chatContainer.appendChild(systemWrap);
-    scrollToBottom();
+    if (options.prepend) {
+        chatContainer.prepend(systemWrap);
+    } else {
+        chatContainer.appendChild(systemWrap);
+        scrollToBottom();
+    }
 }
 
 // ==========================================
 // 3. DOM 렌더링: 일반 유저 메시지
 // ==========================================
-function renderUserMessage(msg) {
+function renderUserMessage(msg, options = {}) {
     if (!chatContainer) return;
 
     const wrapper = document.createElement('div');
@@ -110,10 +123,14 @@ function renderUserMessage(msg) {
     wrapper.appendChild(sender);
     wrapper.appendChild(bubble);
     wrapper.appendChild(time);
-    chatContainer.appendChild(wrapper);
 
-    updateSidebarPreview(msg.content);
-    scrollToBottom();
+    if (options.prepend) {
+        chatContainer.prepend(wrapper);
+    } else {
+        chatContainer.appendChild(wrapper);
+        updateSidebarPreview(msg.content);
+        scrollToBottom();
+    }
 }
 
 // 사이드바 미리보기 실시간 업데이트
@@ -200,6 +217,11 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
 
     }, function (error) {
         console.error('❌ STOMP 연결 실패:', error);
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.textContent = '연결 끊김';
+            statusEl.className = 'connection-status status-disconnected';
+        }
     });
 } else if (ROOM_STATUS === 'CLOSED') {
     console.warn("🔒 이미 마감된 채팅방입니다. 소켓 연결을 차단합니다.");
@@ -247,5 +269,47 @@ if (chatContainer) {
                 // TODO: 서버로 구매 확정 API 호출
             }
         }
+    });
+}
+
+// ==========================================
+// 7. 페이지네이션: 스크롤 업 시 과거 메시지 로딩
+// ==========================================
+let paginationCursor = FIRST_MESSAGE_ID;
+let isLoadingOlder = false;
+
+if (chatContainer && ROOM_ID) {
+    chatContainer.addEventListener('scroll', function () {
+        if (chatContainer.scrollTop !== 0 || isLoadingOlder || !paginationCursor) return;
+
+        isLoadingOlder = true;
+        fetch(`/chat/${ROOM_ID}/messages?before=${paginationCursor}`)
+            .then(res => res.json())
+            .then(messages => {
+                if (!messages || messages.length === 0) return;
+
+                const prevHeight = chatContainer.scrollHeight;
+
+                // API는 오래된 → 최신 순으로 반환한다.
+                // prepend를 반복하면 나중에 prepend한 것이 위로 가므로,
+                // 최신 → 오래된 순(역순)으로 prepend 해야 DOM상 오래된 메시지가 가장 위에 온다.
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    const type = msg.messageType || msg.type;
+                    if (type === 'USER') {
+                        renderUserMessage(msg, { prepend: true });
+                    } else {
+                        renderSystemMessage(msg, { prepend: true });
+                    }
+                }
+
+                // 스크롤 위치 복원 (사용자가 보던 메시지가 계속 같은 위치에 있도록)
+                chatContainer.scrollTop = chatContainer.scrollHeight - prevHeight;
+
+                // 다음 페이지네이션 커서: 이번 배치의 가장 오래된 메시지 id
+                paginationCursor = messages[0].id;
+            })
+            .catch(err => console.error('과거 메시지 로딩 실패:', err))
+            .finally(() => { isLoadingOlder = false; });
     });
 }
