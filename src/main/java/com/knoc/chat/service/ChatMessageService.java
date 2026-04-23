@@ -60,13 +60,15 @@ public class ChatMessageService {
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         // 5. Response DTO 생성
-        ChatMessageResponse responsePayload = new ChatMessageResponse(
-                savedMessage.getId(),
-                sender.getNickname(),
-                savedMessage.getContent(),
-                savedMessage.getCreatedAt(),
-                savedMessage.getMessageType()
-        );
+        ChatMessageResponse responsePayload = ChatMessageResponse.builder()
+                .id(savedMessage.getId())
+                .senderNickname(sender.getNickname())
+                .content(savedMessage.getContent())
+                .createdAt(savedMessage.getCreatedAt())
+                .messageType(savedMessage.getMessageType())
+                .referenceId(savedMessage.getReferenceId()) // USER 메시지는 null
+                // amount는 생략 -> null (PAYMENT_REQUESTED에서만 의미 있음)
+        .build();
 
         // 6. 수신자/발신자 양쪽에 1:1 queue 전송
         String receiverEmail = sender.getId().equals(chatRoom.getJunior().getId())
