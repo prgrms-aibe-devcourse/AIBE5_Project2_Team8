@@ -475,12 +475,48 @@
             border: 1px solid #00CFE8;
         }
 
+        /* PAYMENT_REQUESTED 카드: 레퍼런스(다크 + 오렌지) 톤으로 오버라이드 */
+        .system-message-card.type-payment {
+            max-width: 88%;
+            background: linear-gradient(165deg, #222226 0%, #18181c 100%);
+            border: 1px solid rgba(245, 158, 11, 0.55);
+            border-radius: 18px;
+            padding: 1.35rem 1.4rem;
+            box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+        }
+
+        .system-message-card.type-payment .sys-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            color: #fbbf24;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+        .system-message-card.type-payment .sys-header span:first-child {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(245, 158, 11, 0.14);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0 !important;
+        }
+
         .sys-header { font-weight: bold; margin-bottom: 8px; }
         .text-yellow { color: #f59e0b; }
         .text-blue { color: #3b82f6; }
         .text-gray { color: #9ca3af; }
 
-        .sys-body { font-size: 0.9rem; margin-bottom: 10px; color: #fff; }
+        .sys-body {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #fff;
+            white-space: pre-line; /* \n 줄바꿈을 그대로 표시 */
+        }
 
         .sys-action-btn {
             padding: 8px 16px;
@@ -494,6 +530,17 @@
         .btn-yellow { background-color: #f59e0b; color: #fff; }
         .btn-blue { background-color: #3b82f6; color: #fff; }
         .btn-cyan { background-color: #06b6d4; color: #fff; }
+
+        .system-message-card.type-payment .sys-action-btn.action-pay {
+            width: 100%;
+            margin-top: 0.4rem;
+            padding: 0.95rem 1.2rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #141414;
+            font-weight: 800;
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.42);
+        }
 
         .chat-readonly-banner {
             display: flex;
@@ -643,7 +690,7 @@
                              class="system-message-card">
 
                             <div class="sys-header text-yellow" th:if="${msg.messageType.name() == 'PAYMENT_REQUESTED'}">
-                                <span style="margin-right: 6px;">🪙</span> 시스템 알림
+                                <span style="margin-right: 6px;">!</span> 시스템 알림
                             </div>
                             <div class="sys-header text-gray" th:if="${msg.messageType.name() == 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔒</span> 시스템 알림
@@ -653,7 +700,8 @@
                                 <span style="margin-right: 6px;">🔔</span> 시스템 알림
                             </div>
 
-                            <div class="sys-body" th:utext="${#strings.replace(#strings.escapeXml(msg.content), T(java.lang.System).lineSeparator(), '&lt;br&gt;')}"></div>
+                            <div class="sys-body"
+                                 th:text="${#strings.replace(msg.content, '\\\\n', '\n')}"></div>
 
                             <!-- PAYMENT_REQUESTED: 주니어에게만 결제 버튼 노출 -->
                             <div class="sys-footer"
@@ -661,7 +709,7 @@
                                 <button type="button"
                                         class="sys-action-btn btn-yellow action-pay"
                                         th:attr="data-order-id=${msg.referenceId}"
-                                        th:text="|🛡️ 에스크로 안전 결제 ₩${#numbers.formatInteger(orderAmounts[__${msg.referenceId}__] ?: 0, 0, 'COMMA')}|">
+                                        th:text="|🛡️ 에스크로 안전 결제 ₩${#numbers.formatInteger(orderAmounts[msg.referenceId] ?: 0, 0, 'COMMA')}|">
                                 </button>
                             </div>
                         </div>

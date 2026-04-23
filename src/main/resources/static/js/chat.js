@@ -45,8 +45,10 @@ function renderSystemMessage(data, options = {}) {
     const systemWrap = document.createElement('div');
     systemWrap.className = 'message-row system';
 
+    // 시스템 메시지는 텍스트로 출력하고, CSS(pre-line)로 줄바꿈을 처리한다.
+    // (서버가 "\\n"로 보낸 케이스도 실제 개행으로 통일)
     const safeContent = escapeHTML(data.content || data.customContent);
-    const formattedText = safeContent.replace(/\n/g, '<br>');
+    const formattedText = safeContent.replace(/\\n/g, '\n');
 
     let cardClass = ''; let headerColorClass = ''; let headerIcon = ''; let buttonHtml = '';
 
@@ -56,7 +58,7 @@ function renderSystemMessage(data, options = {}) {
 
     switch (msgType) {
         case 'PAYMENT_REQUESTED': {
-            cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '🪙';
+            cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '!';
             // 결제 버튼은 주니어에게만 노출 (결제 행위자는 주니어)
             if (!IS_SENIOR && data.referenceId) {
                 const amount = data.amount ? data.amount.toLocaleString() : '0';
@@ -337,7 +339,7 @@ if (chatContainer && ROOM_ID) {
 // 8. 시니어 '결제 요청하기' 버튼 / 모달 제어
 // ==========================================
 
-// 금액 하한/상한. 서버 정책과 일치시킬 것 (서버가 1차 검증, 프런트는 UX용 사전 필터).
+// 금액 하한/상한 (천원 ~ 백만원)
 const MIN_PAYMENT_AMOUNT = 1000;
 const MAX_PAYMENT_AMOUNT = 1_000_000;
 
