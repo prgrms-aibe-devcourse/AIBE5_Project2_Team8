@@ -33,6 +33,20 @@ public class ChatController {
     private final OrderRepository orderRepository;
 
 
+    // 메시지 목록에서 PAYMENT_REQUESTED 타입만 골라 (orderId, amount) 맵을 구성한다.
+    // Thymeleaf 첫 렌더링과 페이지네이션 응답 양쪽에서 결제 버튼 금액 표시에 사용.
+    private Map<Long, Integer> buildOrderAmounts(List<ChatMessage> messages) {
+        List<Long> paymentOrderIds = messages.stream()
+                .filter(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED && m.getReferenceId() != null)
+                .map(ChatMessage::getReferenceId)
+                .toList();
+
+        if (paymentOrderIds.isEmpty()) return Collections.emptyMap();
+
+        return orderRepository.findAllById(paymentOrderIds).stream()
+                .collect(Collectors.toMap(Order::getId, Order::getAmount));
+    }
+
     @GetMapping("/rooms")
     public String rooms(Model model, Principal principal) {
 
@@ -56,6 +70,12 @@ public class ChatController {
     @GetMapping("/{roomId}")
     public String room(@PathVariable("roomId") Long roomId, Model model, Principal principal) {
         ChatRoomDetailDto dto = chatRoomService.getRoomDetailInfo(roomId, principal.getName());
+        // 7. 현재 사용자의 역할 및 상대 주니어 ID 계산
+        boolean isSenior = chatRoom.getSenior().getId().equals(currentMember.getId());
+        Long juniorId = chatRoom.getJunior().getId();
+
+        // 8. 이번 화면에 뿌릴 PAYMENT_REQUESTED 메시지들의 금액 맵 구성
+        Map<Long, Integer> orderAmounts = buildOrderAmounts(messages);
 
         model.addAttribute("selectedRoomId", dto.selectedRoomId());
         model.addAttribute("messages", dto.messages());
@@ -65,6 +85,9 @@ public class ChatController {
         model.addAttribute("firstMessageId", dto.firstMessageId());
         model.addAttribute("latestMessages", dto.latestMessages());
         model.addAttribute("roomStatus", dto.roomStatus());
+        model.addAttribute("isSenior", isSenior);
+        model.addAttribute("juniorId", juniorId);
+        model.addAttribute("orderAmounts", orderAmounts);
 
         return "chat/chatrooms";
     }
