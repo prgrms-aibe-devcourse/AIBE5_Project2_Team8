@@ -7,11 +7,9 @@ import com.knoc.chat.dto.ChatRoomListDto;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
-import com.knoc.global.exception.BusinessException;
-import com.knoc.global.exception.ErrorCode;
-import com.knoc.member.Member;
 import com.knoc.order.entity.Order;
 import com.knoc.order.repository.OrderRepository;
+import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -31,6 +29,7 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
     private final ChatRoomService chatRoomService;
     private final OrderRepository orderRepository;
+    private final SeniorProfileRepository seniorProfileRepository;
 
 
     // 메시지 목록에서 PAYMENT_REQUESTED 타입만 골라 (orderId, amount) 맵을 구성한다.
@@ -88,10 +87,17 @@ public class ChatController {
         model.addAttribute("firstMessageId", dto.firstMessageId());
         model.addAttribute("latestMessages", dto.latestMessages());
         model.addAttribute("roomStatus", dto.roomStatus());
+        // 10. 이 채팅방 시니어의 등록 리뷰 단가 (결제 요청 모달 placeholder용)
+        //     프로필 미등록/미설정 시 0 → 프런트에서 기본값으로 처리
+        int seniorPricePerReview = seniorProfileRepository.findByMemberId(chatRoom.getSenior().getId())
+                .map(p -> p.getPricePerReview())
+                .orElse(0);
+
         model.addAttribute("isSenior", isSenior);
         model.addAttribute("juniorId", juniorId);
         model.addAttribute("orderAmounts", orderAmounts);
         model.addAttribute("hasPaymentRequest", hasPaymentRequest);
+        model.addAttribute("seniorPricePerReview", seniorPricePerReview);
 
         return "chat/chatrooms";
     }

@@ -10,6 +10,8 @@ const IS_SENIOR = window.IS_SENIOR === true;
 const JUNIOR_ID = window.JUNIOR_ID ?? null;
 // 초기 로딩 메시지들의 가장 오래된 id (위로 스크롤해 과거 메시지를 불러올 때 커서로 사용)
 const FIRST_MESSAGE_ID = window.FIRST_MESSAGE_ID ?? null;
+// 해당 채팅방 시니어의 등록 리뷰 단가. 결제 요청 모달 placeholder 기본값으로 사용.
+const SENIOR_PRICE_PER_REVIEW = window.SENIOR_PRICE_PER_REVIEW ?? 0;
 
 const chatContainer = document.getElementById('messageList');
 let stompClient = null;
@@ -332,18 +334,194 @@ if (chatContainer && ROOM_ID) {
 }
 
 // ==========================================
-// 8. 시니어 '결제 요청하기' 버튼 제어
+// 8. 시니어 '결제 요청하기' 버튼 / 모달 제어
 // ==========================================
 
+// 금액 하한/상한. 서버 정책과 일치시킬 것 (서버가 1차 검증, 프런트는 UX용 사전 필터).
+const MIN_PAYMENT_AMOUNT = 1000;
+const MAX_PAYMENT_AMOUNT = 10_000_000;
+
 // 헤더의 '결제 요청하기' 버튼 숨기기.
-// PAYMENT_REQUESTED 이벤트 수신 시 호출되어, 한 채팅방당 한 번만 결제 요청하도록 강제한다.
+// PAYMENT_REQUESTED 이벤트 수신 또는 API 응답 성공 시 호출되어, 한 채팅방당 한 번만 결제 요청하도록 강제.
 function hideRequestPaymentButton() {
     const btn = document.getElementById('requestPaymentBtn');
     if (btn) btn.style.display = 'none';
 }
 
-// 결제 금액 입력 모달 오픈.
-// TODO: 8단계에서 실제 모달 UI/POST /orders/request 호출 로직으로 교체 예정.
+// --- 모달 open / close ---
+
 function openPaymentRequestModal() {
-    console.log('[결제 요청하기 클릭] 모달 오픈은 8단계에서 구현 예정');
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return;
+
+    const input = document.getElementById('paymentAmountInput');
+    if (input) {
+        input.value = '';
+        // 시니어가 프로필에 등록한 리뷰 단가를 placeholder로 제시 (0이면 '0')
+        input.placeholder = SENIOR_PRICE_PER_REVIEW > 0
+            ? formatAmountWithComma(SENIOR_PRICE_PER_REVIEW)
+            : '0';
+    }
+    setPaymentModalError('');
+    setPaymentSubmitLoading(false);
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
+    setTimeout(() => { if (input) input.focus(); }, 50);
 }
+
+function closePaymentRequestModal() {
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+// --- 금액 유틸 ---
+
+// 사용자 입력 문자열 → 숫자. 콤마/공백/기타 문자 제거. 빈값이면 null.
+function parseAmountInput(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '');
+    if (!digits) return null;
+    return parseInt(digits, 10);
+}
+
+function formatAmountWithComma(num) {
+    if (num == null || isNaN(num)) return '';
+    return Number(num).toLocaleString();
+}
+
+// --- 에러/로딩 상태 ---
+
+function setPaymentModalError(msg) {
+    const errEl = document.getElementById('paymentModalError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+function setPaymentSubmitLoading(loading) {
+    const submitBtn = document.getElementById('paymentSubmitBtn');
+    const cancelBtn = document.getElementById('paymentCancelBtn');
+    if (submitBtn) {
+        submitBtn.disabled = !!loading;
+        submitBtn.textContent = loading ? '요청 중...' : '결제 요청 보내기';
+    }
+    if (cancelBtn) cancelBtn.disabled = !!loading;
+}
+
+// --- Idempotency-Key 생성 ---
+// crypto.randomUUID는 최신 브라우저(2021~)에서 지원. HTTPS/localhost에서만 사용 가능.
+// 그 외 환경을 위한 RFC4122 v4 UUID fallback 제공.
+function generateIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+// --- API 호출: POST /orders/request ---
+
+async function submitPaymentRequest() {
+    const input = document.getElementById('paymentAmountInput');
+    const amount = parseAmountInput(input && input.value);
+
+    // 1차 유효성 검증
+    if (amount == null) return setPaymentModalError('금액을 입력해 주세요.');
+    if (amount < MIN_PAYMENT_AMOUNT) {
+        return setPaymentModalError(`최소 ${formatAmountWithComma(MIN_PAYMENT_AMOUNT)}원부터 요청할 수 있어요.`);
+    }
+    if (amount > MAX_PAYMENT_AMOUNT) {
+        return setPaymentModalError(`최대 ${formatAmountWithComma(MAX_PAYMENT_AMOUNT)}원까지 요청할 수 있어요.`);
+    }
+    if (!ROOM_ID || !JUNIOR_ID) {
+        return setPaymentModalError('채팅방 정보가 없어요. 페이지를 새로고침해 주세요.');
+    }
+
+    setPaymentModalError('');
+    setPaymentSubmitLoading(true);
+
+    try {
+        const res = await fetch('/orders/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': generateIdempotencyKey(),
+            },
+            credentials: 'same-origin', // JWT 쿠키(accessToken) 자동 포함
+            body: JSON.stringify({
+                chatRoomId: ROOM_ID,
+                juniorId: JUNIOR_ID,
+                amount: amount,
+            }),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(text || `서버 응답 오류 (${res.status})`);
+        }
+
+        // 낙관적 처리: PAYMENT_REQUESTED WebSocket 이벤트 도착 전에 버튼/모달 선제 정리.
+        // 시스템 메시지 렌더링은 구독 핸들러가 담당하므로 여기서는 건드리지 않는다.
+        hideRequestPaymentButton();
+        closePaymentRequestModal();
+    } catch (err) {
+        console.error('[결제 요청 실패]', err);
+        setPaymentModalError('결제 요청에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+        setPaymentSubmitLoading(false);
+    }
+}
+
+// --- 이벤트 바인딩 (IIFE로 스코프 격리) ---
+
+(function bindPaymentModalEvents() {
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return; // 주니어 화면 등 모달이 없는 경우
+
+    // 닫기 트리거: [data-pmt-close] (백드롭 + X 버튼)
+    modal.querySelectorAll('[data-pmt-close]').forEach((el) => {
+        el.addEventListener('click', closePaymentRequestModal);
+    });
+
+    const cancelBtn = document.getElementById('paymentCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', closePaymentRequestModal);
+
+    const submitBtn = document.getElementById('paymentSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', submitPaymentRequest);
+
+    // ESC로 닫기 (모달이 열려있을 때만)
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+            closePaymentRequestModal();
+        }
+    });
+
+    // 금액 입력: 실시간 콤마 포맷 + Enter 제출 (IME 조합 중 제외)
+    const input = document.getElementById('paymentAmountInput');
+    if (input) {
+        input.addEventListener('input', function () {
+            const num = parseAmountInput(input.value);
+            input.value = num == null ? '' : formatAmountWithComma(num);
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.isComposing) {
+                e.preventDefault();
+                submitPaymentRequest();
+            }
+        });
+    }
+})();
