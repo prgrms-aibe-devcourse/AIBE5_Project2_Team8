@@ -12,9 +12,14 @@ import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,9 +29,10 @@ public class ChatMessageService {
     private final MemberRepository memberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatRoomService chatRoomService;
 
     @Transactional
-    public void sendMessage(Long roomId, Long senderId, String content) {
+    public void sendMessage(Long roomId, String email, String content) {
         // 1. 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
@@ -35,14 +41,12 @@ public class ChatMessageService {
             throw new BusinessException(ErrorCode.CHATROOM_ALREADY_CLOSED);
         }
 
-        // 2. 참여자 여부 검증
-        boolean isParticipant = chatRoom.getSenior().getId().equals(senderId) ||
-                chatRoom.getJunior().getId().equals(senderId);
-        if(!isParticipant) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-
-        // 3. 발신자 조회
-        Member sender = memberRepository.findById(senderId)
+        // 2. 발신자 조회
+        Member sender = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 3. 참여자 여부 검증
+        chatRoomService.verifyParticipant(chatRoom, sender);
 
         // 4. ChatMessage 엔티티 생성 & 저장
         ChatMessage chatMessage = ChatMessage.builder()
@@ -71,5 +75,28 @@ public class ChatMessageService {
 
         messagingTemplate.convertAndSendToUser(receiverEmail, "/queue/chat", responsePayload);
         messagingTemplate.convertAndSendToUser(sender.getEmail(), "/queue/chat", responsePayload);
+    }
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getPreviousMessages(Long roomId, Long before, String email) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
+
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        chatRoomService.verifyParticipant(chatRoom, member);
+        List<ChatMessage> messages = chatMessageRepository
+                .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, before, PageRequest.of(0, 20));
+        Collections.reverse(messages);
+
+        return messages.stream()
+                .map(m -> ChatMessageResponse.builder()
+                        .id(m.getId())
+                        .senderNickname(m.getSender().getNickname())
+                        .content(m.getContent())
+                        .createdAt(m.getCreatedAt())
+                        .messageType(m.getMessageType())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

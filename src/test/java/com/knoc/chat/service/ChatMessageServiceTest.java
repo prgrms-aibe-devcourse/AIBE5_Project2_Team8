@@ -41,24 +41,27 @@ public class ChatMessageServiceTest {
     @Mock
     private SimpMessagingTemplate messagingTemplate;
 
+    // ✅ 추가됨: ChatMessageService가 이제 ChatRoomService를 의존하므로 Mock 등록 필수!
+    @Mock
+    private ChatRoomService chatRoomService;
+
     @Test
     @DisplayName("메시지를 전송하면 DB에 저장되고 1:1 큐 방식으로 양쪽 유저에게 발송된다.")
     void sendMessage_Success() {
         // given
         Long roomId = 1L;
-        Long senderId = 10L;
+        String senderEmail = "junior@test.com"; // ✅ 변경됨: senderId 대신 email 사용
         String content = "안녕하세요";
 
         // 1. 참여자(Junior, Senior) Mock 생성
         Member junior = mock(Member.class);
         Member senior = mock(Member.class);
 
-        // 💡 실제 로직에서 sender.getNickname()을 사용하므로 닉네임 스터빙 추가
-        given(junior.getId()).willReturn(senderId);
-        given(junior.getEmail()).willReturn("junior@test.com");
-        given(junior.getNickname()).willReturn("주니어닉네임"); // 추가됨
-
-        given(senior.getId()).willReturn(20L);
+        // 💡 실제 로직에서 sender.getNickname()과 getId()를 모두 사용하므로 스터빙 유지
+        given(junior.getId()).willReturn(10L);
+        given(junior.getEmail()).willReturn(senderEmail);
+        given(junior.getNickname()).willReturn("주니어닉네임");
+        
         given(senior.getEmail()).willReturn("senior@test.com");
 
         // 2. ChatRoom 생성 (ID 주입)
@@ -70,7 +73,8 @@ public class ChatMessageServiceTest {
 
         // 3. Mock Repository 설정
         given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(chatRoom));
-        given(memberRepository.findById(senderId)).willReturn(Optional.of(junior));
+        // 서비스 로직이 email로 회원을 찾도록 바뀌었으므로 findByEmail로 스터빙
+        given(memberRepository.findByEmail(senderEmail)).willReturn(Optional.of(junior));
 
         // 4. 저장된 메시지 Mock (로직에서 사용하는 필드만 스터빙)
         ChatMessage mockSavedMessage = mock(ChatMessage.class);
@@ -78,9 +82,13 @@ public class ChatMessageServiceTest {
         given(mockSavedMessage.getContent()).willReturn(content);
 
         // when
-        chatMessageService.sendMessage(roomId, senderId, content);
+        // 파라미터로 ID 대신 Email(senderEmail)을 전달
+        chatMessageService.sendMessage(roomId, senderEmail, content);
 
         // then
+        //  권한 검증 로직이 정상적으로 호출되었는지 확인
+        verify(chatRoomService).verifyParticipant(chatRoom, junior);
+
         verify(chatMessageRepository).save(any(ChatMessage.class));
         verify(messagingTemplate).convertAndSendToUser(eq("junior@test.com"), eq("/queue/chat"), any(ChatMessageResponse.class));
         verify(messagingTemplate).convertAndSendToUser(eq("senior@test.com"), eq("/queue/chat"), any(ChatMessageResponse.class));
