@@ -269,6 +269,37 @@ public class OrderService {
         return OrderResponse.from(savedOrder);
     }
 
+    // 주니어가 구매 확정 → PAID → SETTLED
+    @Transactional
+    public void settleOrder(Long orderId, Long juniorId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (!order.getJunior().getId().equals(juniorId)) {
+            throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
+        }
+        if (order.getStatus() != OrderStatus.PAID) {
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID);
+        }
+
+        order.updateStatus(OrderStatus.SETTLED);
+        orderRepository.save(order);
+        order.getChatRoom().close();
+
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                order.getChatRoom().getId(),
+                MessageType.PURCHASE_CONFIRMED,
+                null,
+                order.getId()
+        ));
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                order.getChatRoom().getId(),
+                MessageType.ROOM_CLOSE,
+                MessageType.ROOM_CLOSE.getTemplate(),
+                null
+        ));
+    }
+
     // 토스 결제 실패/취소 리다이렉트 후 호출
     // 주문이 존재하면 채팅방에 시스템 메시지를 저장함
     // 주문이 없으면(예: TEST-...) 아무 것도 하지 않음
