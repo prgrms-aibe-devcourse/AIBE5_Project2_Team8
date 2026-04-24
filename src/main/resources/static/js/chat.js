@@ -16,6 +16,11 @@ const SENIOR_PRICE_PER_REVIEW = window.SENIOR_PRICE_PER_REVIEW ?? 0;
 const chatContainer = document.getElementById('messageList');
 let stompClient = null;
 
+// 결제 상세 모달에서 결제 진행 시 사용할 현재 주문 정보
+// (GET /orders/{orderId}/prepare 응답으로 채워짐)
+let paymentDetailOrderId = null;     // Toss orderId로 사용할 orderNumber(예: "ORD-...")
+let paymentDetailAmount = 0;         // number
+
 // XSS 방어 함수
 function escapeHTML(str) {
     if (!str) return '';
@@ -66,10 +71,21 @@ function renderSystemMessage(data, options = {}) {
             }
             break;
         }
-        case 'PAYMENT_COMPLETED':
-        case 'WORKSPACE_READY': {
+        case 'PAYMENT_COMPLETED': {
+            // 결제 완료 메시지: 시니어/주니어 모두 "안내 카드"만 노출 (버튼 없음)
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
+            break;
+        }
+        case 'REVIEW_REQUESTED': {
+            // 상세 리뷰 요청서 작성 버튼은 REVIEW_REQUESTED일 때만 노출 (주니어 전용)
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
-            buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}">&lt;/&gt; 상세 리뷰 요청서 작성</button>`;
+            if (!IS_SENIOR) {
+                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}">📄 상세 리뷰 요청서 작성</button>`;
+            }
+            break;
+        }
+        case 'WORKSPACE_READY': {
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
             break;
         }
         case 'REPORT_COMPLETED': {
@@ -474,6 +490,9 @@ function setPaymentDetailError(msg) {
 function fillPaymentDetailModal(data) {
     if (!data) return;
 
+    paymentDetailOrderId = data.orderNumber || null;
+    paymentDetailAmount = Number(data.amount || 0);
+
     const nameEl = document.getElementById('paymentDetailSeniorName');
     const posEl = document.getElementById('paymentDetailSeniorPosition');
     const wrapEl = document.getElementById('paymentDetailSeniorAvatarWrap');
@@ -511,6 +530,40 @@ function fillPaymentDetailModal(data) {
     if (line) line.textContent = krw;
     if (total) total.textContent = krw;
     if (cta) cta.textContent = krw;
+}
+
+// --- 결제 상세 모달: 토스 결제 진행 ---
+
+async function startPaymentFromDetailModal() {
+    const btn = document.getElementById('paymentDetailSubmitBtn');
+    if (!btn) return;
+    if (btn.disabled) return;
+
+    // prepare에서 채워진 값이 없으면 방어
+    if (!paymentDetailOrderId || !paymentDetailAmount || paymentDetailAmount <= 0) {
+        setPaymentDetailError('결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+    }
+    if (typeof window.startTossPayment !== 'function') {
+        setPaymentDetailError('결제 모듈을 불러오지 못했어요. 페이지를 새로고침해 주세요.');
+        return;
+    }
+
+    // 연타 방지: 결제창 호출 직전에 비활성화 (이후에는 Toss가 리다이렉트하므로 보통 복구 불필요)
+    btn.disabled = true;
+
+    try {
+        await window.startTossPayment({
+            amount: paymentDetailAmount,
+            orderId: paymentDetailOrderId,
+            orderName: '1:1 맞춤 코드 리뷰 (에스크로)',
+            customerName: CURRENT_NICKNAME || '주니어',
+        });
+    } catch (e) {
+        console.error('[토스 결제창 호출 실패]', e);
+        btn.disabled = false;
+        setPaymentDetailError('결제 요청 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+    }
 }
 
 // --- 에러/로딩 상태 ---
@@ -647,6 +700,9 @@ async function submitPaymentRequest() {
     modal.querySelectorAll('[data-pmt-detail-close]').forEach(function (el) {
         el.addEventListener('click', closePaymentDetailModal);
     });
+
+    const submitBtn = document.getElementById('paymentDetailSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', startPaymentFromDetailModal);
 })();
 
 // ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)

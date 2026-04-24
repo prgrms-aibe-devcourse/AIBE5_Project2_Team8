@@ -103,17 +103,23 @@
                     <th:block th:each="msg : ${messages}">
 
                         <div th:if="${msg.messageType.name() != 'USER'}"
-                             th:classappend="${msg.messageType.name() == 'PAYMENT_REQUESTED'} ? ' type-payment' : ' type-default'"
+                             th:classappend="${
+                                msg.messageType.name() == 'PAYMENT_REQUESTED' ? ' type-payment' :
+                                (msg.messageType.name() == 'REVIEW_REQUESTED' ? ' type-review' : ' type-default')
+                             }"
                              class="system-message-card">
 
                             <div class="sys-header text-yellow" th:if="${msg.messageType.name() == 'PAYMENT_REQUESTED'}">
                                 <span style="margin-right: 6px;">!</span> 시스템 알림
                             </div>
+                            <div class="sys-header text-blue" th:if="${msg.messageType.name() == 'REVIEW_REQUESTED'}">
+                                <span style="margin-right: 6px;">📄</span> 시스템 알림
+                            </div>
                             <div class="sys-header text-gray" th:if="${msg.messageType.name() == 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔒</span> 시스템 알림
                             </div>
                             <div class="sys-header text-gray"
-                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
+                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'REVIEW_REQUESTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔔</span> 시스템 알림
                             </div>
 
@@ -127,6 +133,16 @@
                                         class="sys-action-btn btn-yellow action-pay"
                                         th:attr="data-order-id=${msg.referenceId}"
                                         th:text="|🛡️ 에스크로 안전 결제 ₩${#numbers.formatInteger(orderAmounts[msg.referenceId] ?: 0, 0, 'COMMA')}|">
+                                </button>
+                            </div>
+
+                            <!-- REVIEW_REQUESTED: 주니어에게만 '상세 리뷰 요청서 작성' 버튼 노출 -->
+                            <div class="sys-footer"
+                                 th:if="${msg.messageType.name() == 'REVIEW_REQUESTED' and !isSenior}">
+                                <button type="button"
+                                        class="sys-action-btn btn-blue action-review"
+                                        th:attr="data-room-id=${selectedRoomId}">
+                                    📄 상세 리뷰 요청서 작성
                                 </button>
                             </div>
                         </div>
