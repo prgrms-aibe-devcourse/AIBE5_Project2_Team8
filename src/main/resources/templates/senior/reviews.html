@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+<head>
+    <title>후기 전체 보기 | Knoc.</title>
+    <style>
+        .card-dark { background-color: #161b27; border: 1px solid #2a2f40; }
+        .card-inner-dark { background-color: #262c38; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .text-mint { color: #00CFE8 !important; }
+        .review-card {
+            background-color: #1c2233;
+            border: 1px solid #2a2f40;
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+        }
+        .review-card:hover {
+            border-color: rgba(0, 207, 232, 0.3);
+            transition: border-color 0.2s;
+        }
+    </style>
+</head>
+
+<div layout:fragment="content" class="container py-5 mt-5">
+
+    <!-- 헤더 -->
+    <div class="mb-5">
+        <a th:href="@{|/senior/${seniorId}|}" class="text-mint text-decoration-none small mb-3 d-inline-block">
+            ← 프로필로 돌아가기
+        </a>
+        <div class="d-flex align-items-center gap-3 mt-2">
+            <h3 class="fw-bold text-white mb-0" th:text="${seniorNickname} + '님이 받은 후기'">시니어 후기</h3>
+            <span class="badge px-3 py-2 rounded-pill text-white"
+                  style="background-color: #1e2a3c; border: 1px solid rgba(255,255,255,0.08);"
+                  th:text="'전체: ' + ${totalCount} + '개'">0개</span>
+        </div>
+        <div class="mt-2 d-flex align-items-center gap-2">
+            <span class="text-warning">⭐</span>
+            <span class="fw-bold text-white" th:text="${avgRating}">0.0</span>
+            <span class="text-secondary small">평균 평점</span>
+        </div>
+    </div>
+
+    <!-- 리뷰 없을 때 -->
+    <div th:if="${#lists.isEmpty(reviews)}" class="text-center py-5">
+        <p class="text-secondary">아직 등록된 후기가 없어요</p>
+    </div>
+
+    <!-- 리뷰 목록 -->
+    <div class="d-flex flex-column gap-3" th:unless="${#lists.isEmpty(reviews)}">
+        <div th:each="review : ${reviews}" class="review-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold text-white" th:text="${review.juniorNickname}"></span>
+                <span class="text-secondary small" th:text="${review.timeAgo}"></span>
+            </div>
+            <div class="text-warning mb-2">
+                <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                    <span th:classappend="${i <= review.rating} ? 'text-warning' : 'text-secondary'">★</span>
+                </th:block>
+            </div>
+            <p class="text-secondary lh-base mb-0" th:text="${review.comment}"></p>
+        </div>
+    </div>
+
+</div>
+</html>
