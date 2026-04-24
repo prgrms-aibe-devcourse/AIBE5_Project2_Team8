@@ -9,625 +9,7 @@
 </head>
 
 <th:block layout:fragment="head-extra">
-    <style>
-        /* 전체 2-pane 컨테이너 */
-        .chat-container {
-            display: flex;
-            height: calc(100vh - 72px);
-            margin-top: 72px; /* fixed-top navbar(72px) 아래로 컨테이너를 내려서 헤더가 가려지지 않도록 */
-            overflow: hidden;
-        }
-
-        /* ── 왼쪽 사이드바 ── */
-        .chat-sidebar {
-            width: 320px;
-            min-width: 320px;
-            border-right: 1px solid #2a2a2a;
-            display: flex;
-            flex-direction: column;
-            background-color: #161616;
-            transition: width 0.25s ease, min-width 0.25s ease;
-            overflow: hidden;
-        }
-
-        .chat-sidebar.collapsed {
-            width: 0;
-            min-width: 0;
-            border-right: none;
-        }
-
-        .sidebar-header {
-            padding: 1.25rem 1rem 1rem;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #fff;
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            white-space: nowrap;
-        }
-
-        .sidebar-toggle-btn {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            transition: color 0.15s;
-        }
-
-        .sidebar-toggle-btn:hover { color: #00CFE8; }
-
-        /* 사이드바 접혔을 때 펼치기 버튼 */
-        .sidebar-open-btn {
-            display: none;
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            padding: 0.75rem 0.5rem;
-            transition: color 0.15s;
-        }
-
-        .sidebar-open-btn:hover { color: #00CFE8; }
-        .sidebar-open-btn.visible { display: flex; align-items: center; }
-
-        .sidebar-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem;
-        }
-
-        .sidebar-list::-webkit-scrollbar { width: 3px; }
-        .sidebar-list::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
-
-        .room-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            border-radius: 10px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: background-color 0.15s;
-            margin-bottom: 0.25rem;
-        }
-
-        .room-item:hover { background-color: #222; }
-        .room-item.active { background-color: #1a2a2a; border: 1px solid #00CFE8; }
-
-        .room-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background-color: #00CFE8;
-            color: #121212;
-            font-weight: bold;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .room-info { flex: 1; overflow: hidden; }
-
-        .room-name {
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 0.15rem;
-        }
-
-        .room-preview {
-            font-size: 0.78rem;
-            color: #777;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .room-time {
-            font-size: 0.7rem;
-            color: #555;
-            flex-shrink: 0;
-        }
-
-        .sidebar-empty {
-            padding: 2rem 1rem;
-            text-align: center;
-            color: #555;
-            font-size: 0.85rem;
-        }
-
-        /* ── 오른쪽 채팅 패널 ── */
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* 방 미선택 빈 상태 */
-        .chat-empty {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #444;
-            gap: 0.75rem;
-        }
-
-        .chat-empty svg { opacity: 0.3; }
-        .chat-empty p { font-size: 0.9rem; }
-
-        /* 채팅방 헤더 */
-        .chat-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .chat-header-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: #00CFE8;
-            color: #121212;
-            font-weight: bold;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .chat-header-name {
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #fff;
-        }
-
-        .connection-status {
-            font-size: 0.7rem;
-            padding: 0.15rem 0.6rem;
-            border-radius: 999px;
-            margin-left: auto;
-        }
-
-        .status-connected    { background-color: #1a3a2a; color: #00e676; }
-        .status-disconnected { background-color: #3a1a1a; color: #ff5252; }
-
-        /* 시니어 전용 '결제 요청하기' 버튼 (헤더 우측, 결제 테마의 옐로우~오렌지 그라데이션) */
-        .btn-request-payment {
-            margin-left: 0.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            color: #1a1a1a;
-            border: none;
-            border-radius: 8px;
-            padding: 0.45rem 0.9rem;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
-            transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
-        }
-        .btn-request-payment:hover {
-            filter: brightness(1.05);
-            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.45);
-        }
-        .btn-request-payment:active {
-            transform: translateY(1px);
-            box-shadow: 0 1px 4px rgba(245, 158, 11, 0.4);
-        }
-
-        /* ====== 시니어 '결제 금액 설정' 모달 ====== */
-        .pmt-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 1100; /* fixed-top navbar(72px) 위로 올라오도록 */
-            align-items: center;
-            justify-content: center;
-        }
-        .pmt-modal.is-open { display: flex; }
-
-        .pmt-modal-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(3px);
-        }
-
-        .pmt-modal-card {
-            position: relative;
-            width: min(440px, calc(100% - 2rem));
-            background: #1e2130;
-            border: 1px solid #2a2d3e;
-            border-radius: 18px;
-            box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55);
-            padding: 1.75rem;
-            color: #fff;
-            animation: pmt-fade-in 0.18s ease-out;
-        }
-        @keyframes pmt-fade-in {
-            from { opacity: 0; transform: translateY(8px) scale(0.98); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        /* 헤더: 아이콘 박스 + 타이틀/서브타이틀 */
-        .pmt-modal-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.85rem;
-            margin-bottom: 1.4rem;
-        }
-        .pmt-modal-icon {
-            flex: 0 0 auto;
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: rgba(245, 158, 11, 0.12);
-            color: #f59e0b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .pmt-modal-titles { flex: 1 1 auto; min-width: 0; }
-        .pmt-modal-title {
-            margin: 0 0 0.2rem 0;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #fff;
-        }
-        .pmt-modal-subtitle {
-            margin: 0;
-            font-size: 0.78rem;
-            color: #9ca3af;
-            line-height: 1.4;
-        }
-
-        /* 바디: 라벨 + 금액 입력 */
-        .pmt-modal-body { margin-bottom: 1.25rem; }
-
-        .pmt-label {
-            display: block;
-            font-size: 0.8rem;
-            color: #d1d5db;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .pmt-amount-wrap {
-            display: flex;
-            align-items: center;
-            background: #14172099;
-            border: 1px solid #2a2d3e;
-            border-radius: 12px;
-            padding: 0.85rem 1rem;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        .pmt-amount-wrap:focus-within {
-            border-color: #f59e0b;
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
-        }
-        .pmt-amount-input {
-            flex: 1 1 auto;
-            min-width: 0;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #f59e0b;
-            font-size: 1.35rem;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            width: 100%;
-        }
-        /* placeholder는 살짝 더 연한 오렌지로 */
-        .pmt-amount-input::placeholder { color: rgba(245, 158, 11, 0.55); }
-        .pmt-currency-suffix {
-            flex: 0 0 auto;
-            margin-left: 0.5rem;
-            font-size: 0.9rem;
-            color: #9ca3af;
-            font-weight: 500;
-        }
-
-        .pmt-error {
-            margin: 0.75rem 0 0 0;
-            padding: 0.6rem 0.75rem;
-            font-size: 0.78rem;
-            background: rgba(255, 82, 82, 0.1);
-            border: 1px solid rgba(255, 82, 82, 0.35);
-            border-radius: 8px;
-            color: #ff7a7a;
-        }
-
-        /* 디바이더 + 푸터 */
-        .pmt-divider {
-            height: 1px;
-            background: #2a2d3e;
-            margin: 0.25rem 0 1rem 0;
-        }
-        .pmt-modal-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-        }
-        .pmt-btn {
-            cursor: pointer;
-            border: none;
-            font-weight: 700;
-            transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, background-color 0.1s ease, color 0.1s ease;
-        }
-        .pmt-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* 취소: 텍스트 버튼 */
-        .pmt-btn-text {
-            background: transparent;
-            color: #9ca3af;
-            padding: 0.6rem 1rem;
-            font-size: 0.85rem;
-            border-radius: 8px;
-        }
-        .pmt-btn-text:hover:not(:disabled) { color: #fff; }
-
-        /* 결제 요청: 오렌지 rounded-pill + 화살표 */
-        .pmt-btn-primary {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            color: #1a1a1a;
-            padding: 0.7rem 1.4rem;
-            font-size: 0.9rem;
-            border-radius: 999px;
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-        }
-        .pmt-btn-primary:hover:not(:disabled) {
-            filter: brightness(1.05);
-            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
-        }
-        .pmt-btn-primary:active:not(:disabled) {
-            transform: translateY(1px);
-        }
-        .pmt-btn-arrow {
-            font-size: 1.1rem;
-            line-height: 1;
-            font-weight: 700;
-            transform: translateY(-1px);
-        }
-
-        /* 결제 상세 모달: 시니어 프로필 (senior/detail.html 과 동일 — url 없을 때 👤) */
-        #paymentDetailSeniorAvatarWrap {
-            position: relative;
-            width: 48px;
-            height: 48px;
-            flex-shrink: 0;
-        }
-        #paymentDetailSeniorAvatarWrap .pmt-detail-avatar-img {
-            display: none;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #2a2f40;
-        }
-        #paymentDetailSeniorAvatarWrap .pmt-detail-avatar-fallback {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid #2a2f40;
-            background-color: #2a2f40;
-            font-size: 1.5rem;
-            line-height: 1;
-        }
-        #paymentDetailSeniorAvatarWrap.has-photo .pmt-detail-avatar-fallback {
-            display: none;
-        }
-        #paymentDetailSeniorAvatarWrap.has-photo .pmt-detail-avatar-img {
-            display: block;
-        }
-
-        /* 메시지 목록 */
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 1.25rem;
-        }
-
-        .chat-messages::-webkit-scrollbar { width: 4px; }
-        .chat-messages::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
-
-        .msg-left {
-            align-self: flex-start;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            max-width: 65%;
-        }
-
-        .msg-right {
-            align-self: flex-end;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            max-width: 65%;
-        }
-
-        .msg-bubble {
-            padding: 0.6rem 1rem;
-            border-radius: 16px;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            word-break: break-word;
-        }
-
-        .msg-left .msg-bubble {
-            background-color: #2a2a2a;
-            color: #fff;
-            border-bottom-left-radius: 4px;
-        }
-
-        .msg-right .msg-bubble {
-            background-color: #00CFE8;
-            color: #121212;
-            border-bottom-right-radius: 4px;
-        }
-
-        .msg-sender { font-size: 0.72rem; color: #777; margin-bottom: 0.2rem; }
-        .msg-time   { font-size: 0.68rem; color: #555; margin-top: 0.2rem; }
-        .msg-right .msg-time { text-align: right; }
-
-        /* ── 시스템 메시지 & 마감 배너 스타일 ── */
-        .system-message-card {
-            margin: 15px auto;
-            max-width: 80%;
-            background: #1a2a3a;
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #00CFE8;
-        }
-
-        /* PAYMENT_REQUESTED 카드: 레퍼런스(다크 + 오렌지) 톤으로 오버라이드 */
-        .system-message-card.type-payment {
-            max-width: 88%;
-            background: linear-gradient(165deg, #222226 0%, #18181c 100%);
-            border: 1px solid rgba(245, 158, 11, 0.55);
-            border-radius: 18px;
-            padding: 1.35rem 1.4rem;
-            box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
-        }
-
-        .system-message-card.type-payment .sys-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            color: #fbbf24;
-            margin-bottom: 1rem;
-            font-weight: 800;
-        }
-        .system-message-card.type-payment .sys-header span:first-child {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: rgba(245, 158, 11, 0.14);
-            border: 1px solid rgba(245, 158, 11, 0.35);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 0 !important;
-        }
-
-        .sys-header { font-weight: bold; margin-bottom: 8px; }
-        .text-yellow { color: #f59e0b; }
-        .text-blue { color: #3b82f6; }
-        .text-gray { color: #9ca3af; }
-
-        .sys-body {
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-            color: #fff;
-            white-space: pre-line; /* \n 줄바꿈을 그대로 표시 */
-        }
-
-        .sys-action-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .sys-action-btn:hover { opacity: 0.8; }
-        .btn-yellow { background-color: #f59e0b; color: #fff; }
-        .btn-blue { background-color: #3b82f6; color: #fff; }
-        .btn-cyan { background-color: #06b6d4; color: #fff; }
-
-        .system-message-card.type-payment .sys-action-btn.action-pay {
-            width: 100%;
-            margin-top: 0.4rem;
-            padding: 0.95rem 1.2rem;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            color: #141414;
-            font-weight: 800;
-            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.42);
-        }
-
-        .chat-readonly-banner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1.25rem;
-            background-color: #1e1e1e;
-            color: #ff5252;
-            border-top: 1px solid #2a2a2a;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        /* 입력창 */
-        .chat-input-area {
-            display: flex;
-            gap: 0.5rem;
-            padding: 1rem 1.25rem;
-            border-top: 1px solid #2a2a2a;
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            background-color: #1e1e1e;
-            border: 1px solid #333;
-            color: #fff;
-            border-radius: 8px;
-            padding: 0.7rem 1rem;
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .chat-input-area input:focus {
-            border-color: #00CFE8;
-            box-shadow: 0 0 0 0.15rem rgba(0, 207, 232, 0.2);
-        }
-
-        .chat-input-area input::placeholder { color: #555; }
-
-        .btn-send {
-            background-color: #00CFE8;
-            color: #121212;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            padding: 0.7rem 1.25rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .btn-send:hover { background-color: #00A6BA; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/chatrooms.css}">
 </th:block>
 
 <main layout:fragment="content">
@@ -860,65 +242,67 @@
                     <div class="pmt-modal-card" role="document">
 
                         <div class="pmt-modal-header" style="align-items:flex-start;">
-                            <div class="pmt-modal-titles" style="width:100%;">
-                                <a th:href="@{/chat/rooms}"
-                                   style="display:inline-flex; align-items:center; gap:6px; color:#9ca3af; font-size:0.78rem; text-decoration:none; margin-bottom:0.55rem;">
+                            <div class="pmt-modal-titles pmt-detail-hero" style="width:100%;">
+                                <a class="pmt-detail-back" th:href="@{/chat/{id}(id=${selectedRoomId})}">
                                     <span aria-hidden="true">←</span>
                                     <span>채팅방으로 돌아가기</span>
                                 </a>
-                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; color:#9ca3af; font-size:0.78rem; margin-bottom:0.35rem;">
-                                    <span aria-hidden="true">🛡️</span>
-                                    <span>Knoc. 안전 에스크로 결제</span>
+                                <div class="pmt-detail-hero-center">
+                                    <div class="pmt-detail-badge" aria-label="에스크로 결제">
+                                        <svg class="pmt-detail-badge-icon" xmlns="http://www.w3.org/2000/svg"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                        </svg>
+                                        <span>Knoc. 안전 에스크로 결제</span>
+                                    </div>
+                                    <h3 id="paymentDetailTitle" class="pmt-modal-title pmt-detail-title">결제 및 리뷰 시작</h3>
+                                    <p class="pmt-modal-subtitle pmt-detail-subtitle">
+                                        결제 대금은 리뷰가 완료될 때까지 Knoc.에서 안전하게 보관합니다.
+                                    </p>
                                 </div>
-                                <h3 id="paymentDetailTitle" class="pmt-modal-title" style="text-align:center;">결제 및 리뷰 시작</h3>
-                                <p class="pmt-modal-subtitle" style="text-align:center;">
-                                    결제 대금은 리뷰가 완료될 때까지 Knoc.에서 안전하게 보관합니다.
-                                </p>
                             </div>
                         </div>
 
                         <div class="pmt-modal-body">
-                            <div style="font-weight:800; color:#e5e7eb; margin:0 0 0.75rem 0;">주문 내역</div>
+                            <div class="pmt-detail-section-title">주문 내역</div>
 
-                            <!-- 시니어 정보 -->
-                            <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
-                                <!-- senior/detail.html 과 동일: url 있으면 img, 없으면 👤 원형 플레이스홀더 -->
-                                <div id="paymentDetailSeniorAvatarWrap">
-                                    <img id="paymentDetailSeniorAvatar" class="pmt-detail-avatar-img" alt="" width="48" height="48" />
-                                    <div class="pmt-detail-avatar-fallback" id="paymentDetailSeniorAvatarPlaceholder" aria-hidden="true">👤</div>
+                            <div class="pmt-detail-order-card">
+                                <div class="pmt-detail-order-profile">
+                                    <div id="paymentDetailSeniorAvatarWrap">
+                                        <img id="paymentDetailSeniorAvatar" class="pmt-detail-avatar-img" alt="" width="44" height="44" />
+                                        <div class="pmt-detail-avatar-fallback" id="paymentDetailSeniorAvatarPlaceholder" aria-hidden="true">👤</div>
+                                    </div>
+                                    <div class="pmt-detail-order-profile-text">
+                                        <div id="paymentDetailSeniorName" class="pmt-detail-senior-name">-</div>
+                                        <div id="paymentDetailSeniorPosition" class="pmt-detail-senior-position">-</div>
+                                    </div>
                                 </div>
-                                <div style="min-width:0;">
-                                    <div id="paymentDetailSeniorName" style="font-weight:900; color:#fff; line-height:1.1;">-</div>
-                                    <div id="paymentDetailSeniorPosition" style="color:#9ca3af; font-size:0.85rem; margin-top:0.2rem;">-</div>
+                                <div class="pmt-detail-order-divider" aria-hidden="true"></div>
+                                <div class="pmt-detail-order-row pmt-detail-order-row--line">
+                                    <span>1:1 맞춤 코드 리뷰 (에스크로)</span>
+                                    <strong id="paymentDetailLineAmount" class="pmt-detail-line-price">₩0</strong>
+                                </div>
+                                <div class="pmt-detail-order-row pmt-detail-order-row--fee">
+                                    <span class="pmt-detail-fee-label">안전 거래 수수료 (0%)</span>
+                                    <strong class="pmt-detail-fee-value">무료</strong>
+                                </div>
+                                <div class="pmt-detail-order-divider" aria-hidden="true"></div>
+                                <div class="pmt-detail-order-row pmt-detail-order-row--total">
+                                    <span>총 결제 금액</span>
+                                    <strong id="paymentDetailTotal" class="pmt-detail-total-price">₩0</strong>
                                 </div>
                             </div>
 
-                            <!-- 주문 요약 -->
-                            <div style="border:1px solid #2a2d3e; border-radius:12px; padding:12px;">
-                                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                                    <span style="color:#d1d5db;">1:1 맞춤 코드 리뷰 (에스크로)</span>
-                                    <strong id="paymentDetailLineAmount" style="color:#fbbf24;">₩0</strong>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                                    <span style="color:#d1d5db;">안전 결제 수수료 (0%)</span>
-                                    <strong style="color:#22c55e;">무료</strong>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; gap:12px; padding-top:10px; border-top:1px solid #2a2d3e;">
-                                    <span style="color:#fff; font-weight:900;">총 결제 금액</span>
-                                    <strong id="paymentDetailTotal" style="color:#fbbf24; font-size:1.05rem;">₩0</strong>
-                                </div>
-                            </div>
-
-                            <div id="paymentDetailEscrowInfo"
-                                 style="margin-top:12px; border:1px solid rgba(34,197,94,0.35); border-radius:12px; padding:12px; color:#c8f5d0; background:rgba(16, 185, 129, 0.06);">
-                                <div style="font-weight:900; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
-                                    <span aria-hidden="true">🛡️</span>
+                            <div id="paymentDetailEscrowInfo" class="pmt-detail-escrow">
+                                <div class="pmt-detail-escrow-title">
+                                    <span class="pmt-detail-escrow-icon" aria-hidden="true">🛡️</span>
                                     <span>100% 안전 에스크로 결제</span>
                                 </div>
-                                <div style="font-size:0.82rem; line-height:1.45; color:#d1fae5;">
+                                <p class="pmt-detail-escrow-body">
                                     결제하신 금액은 Knoc.에서 안전하게 보관하며, 시니어가 리뷰 리포트를 제출하고 주니어님이
-                                    <span style="font-weight:800;">'구매 확정'</span>을 진행해야만 시니어에게 대금이 지급됩니다.
-                                </div>
+                                    <span class="pmt-detail-escrow-em">'구매 확정'</span>을 진행해야만 시니어에게 대금이 지급됩니다.
+                                </p>
                             </div>
 
                             <div id="paymentDetailError" class="pmt-error" role="alert" style="display:none; margin-top:12px;"></div>
