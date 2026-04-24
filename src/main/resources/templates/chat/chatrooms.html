@@ -147,21 +147,26 @@
                     <button class="btn-send" onclick="sendMessage()">전송</button>
                 </div>
 
-                <div class="chat-input-area disabled" id="inputAreaDisabled" th:if="${selectedRoom.status.name() == 'CLOSED'}">
-                    <input type="text"
-                           id="messageInputDisabled"
-                           placeholder="마감된 멘토링입니다. 메시지 전송이 제한됩니다."
-                           disabled
-                           style="background-color: #2a2a2a; color: #777; cursor: not-allowed;" />
-                    <button class="btn-send" disabled style="background-color: #333; color: #555; cursor: not-allowed;">전송</button>
-                </div>
+                <div class="chat-input-area" th:if="${selectedRoom.status.name() == 'CLOSED'}"
+                     style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background-color: #121826; border-top: 1px solid #2a2f40;">
 
-                <div class="chat-readonly-banner" id="readonlyBanner" th:if="${selectedRoom.status.name() == 'CLOSED'}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff5252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                    <span>마감된 멘토링입니다. 더 이상 메시지를 보낼 수 없습니다.</span>
+                    <div style="color: #f87171; display: flex; align-items: center; font-size: 0.9rem; margin-bottom: 1rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span>마감된 멘토링입니다. 더 이상 메시지를 보낼 수 없습니다.</span>
+                    </div>
+
+                    <form th:action="@{/chat/rooms}" method="post" th:if="${!isSenior}">
+                        <input type="hidden" name="seniorId" th:value="${selectedRoom.senior.id}"/>
+                        <button type="submit"
+                                style="background-color: transparent; border: 1px solid #00CFE8; color: #00CFE8; border-radius: 999px; padding: 0.6rem 1.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;"
+                                onmouseover="this.style.backgroundColor='#00CFE8'; this.style.color='#0b0f19';"
+                                onmouseout="this.style.backgroundColor='transparent'; this.style.color='#00CFE8';">
+                            💬 같은 멘토에게 다시 멘토링 조율하기
+                        </button>
+                    </form>
                 </div>
 
                 <!--
