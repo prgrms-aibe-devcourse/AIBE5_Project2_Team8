@@ -13,6 +13,7 @@ import com.knoc.order.entity.Order;
 import com.knoc.order.repository.OrderRepository;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -33,6 +34,9 @@ public class ChatController {
     private final ChatRoomService chatRoomService;
     private final OrderRepository orderRepository;
     private final SeniorProfileRepository seniorProfileRepository;
+
+    @Value("${toss.payments.client-key:}")
+    private String tossClientKey;
 
 
     // 메시지 목록에서 PAYMENT_REQUESTED 타입만 골라 (orderId, amount) 맵을 구성한다.
@@ -107,6 +111,7 @@ public class ChatController {
         model.addAttribute("orderAmounts", orderAmounts);
         model.addAttribute("hasPaymentRequest", hasPaymentRequest);
         model.addAttribute("seniorPricePerReview", seniorPricePerReview);
+        model.addAttribute("tossClientKey", tossClientKey);
 
         return "chat/chatrooms";
     }
