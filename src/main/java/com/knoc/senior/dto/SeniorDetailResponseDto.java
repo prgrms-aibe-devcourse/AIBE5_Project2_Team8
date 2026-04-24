@@ -1,6 +1,7 @@
 package com.knoc.senior.dto;
 
 import com.knoc.senior.entity.SeniorProfile;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -24,9 +25,10 @@ public class SeniorDetailResponseDto {
     private final List<String> skills;
     private final List<SeniorDetailResponseDto.CareerDto> careers;
     private final Long memberId;
+    private final List<ReviewDto> latestReviews;
 
 
-    public SeniorDetailResponseDto(SeniorProfile profile) {
+    public SeniorDetailResponseDto(SeniorProfile profile, List<ReviewDto> latestReviews) {
         this.id = profile.getId();
         this.nickname = profile.getMember().getNickname();
         this.profileImageUrl = profile.getMember().getProfileImageUrl();
@@ -45,9 +47,19 @@ public class SeniorDetailResponseDto {
                 .map(CareerDto::from)
                 .collect(Collectors.toList());
         this.memberId = profile.getMember().getId();
+        this.latestReviews = latestReviews;
     }
-    public static SeniorDetailResponseDto from(SeniorProfile profile) {
-        return new SeniorDetailResponseDto(profile);
+    public static SeniorDetailResponseDto from(SeniorProfile profile, List<ReviewDto> latestReviews) {
+        return new SeniorDetailResponseDto(profile, latestReviews);
+    }
+
+    @Getter
+    @Builder
+    public static class ReviewDto {
+        private final String juniorNickname;
+        private final byte rating;
+        private final String comment;
+        private final String timeAgo;
     }
 
     @Getter

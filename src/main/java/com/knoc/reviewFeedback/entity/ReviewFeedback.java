@@ -1,4 +1,4 @@
-package com.knoc.settlement.entity;
+package com.knoc.reviewFeedback.entity;
 
 import com.knoc.member.Member;
 import com.knoc.order.entity.Order;

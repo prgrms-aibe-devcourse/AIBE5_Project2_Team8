@@ -265,11 +265,21 @@ class OrderServiceTest {
         verify(orderRepository, times(1)).saveAndFlush(any(Order.class));
 
         // 결제 완료 이벤트 검증
+        // - PAYMENT_COMPLETED: 시니어/주니어 공통
+        // - REVIEW_REQUESTED: 주니어 전용(실시간 전송)
         ArgumentCaptor<ChatSystemEvent> eventCaptor = ArgumentCaptor.forClass(ChatSystemEvent.class);
-        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
 
-        ChatSystemEvent capturedEvent = eventCaptor.getValue();
-        assertThat(capturedEvent.type()).isEqualTo(MessageType.PAYMENT_COMPLETED);
+        assertThat(eventCaptor.getAllValues())
+                .extracting(ChatSystemEvent::type)
+                .containsExactlyInAnyOrder(MessageType.PAYMENT_COMPLETED, MessageType.REVIEW_REQUESTED);
+
+        ChatSystemEvent reviewRequested = eventCaptor.getAllValues().stream()
+                .filter(e -> e.type() == MessageType.REVIEW_REQUESTED)
+                .findFirst()
+                .orElseThrow();
+        assertThat(reviewRequested.sendToJunior()).isTrue();
+        assertThat(reviewRequested.sendToSenior()).isFalse();
     }
 
     @Test

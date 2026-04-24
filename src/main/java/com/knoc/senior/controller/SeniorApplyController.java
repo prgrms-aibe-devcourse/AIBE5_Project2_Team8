@@ -9,6 +9,7 @@ import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
 import com.knoc.senior.SeniorProfileService;
+import com.knoc.senior.dto.SeniorDetailResponseDto;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 
 @Tag(name="Senior-Controller",description = "시니어 지원 및 신청 및 프로필 관리 관련 API")
@@ -124,6 +126,22 @@ public class SeniorApplyController {
     public String detail(@PathVariable Long id, Model model) {
         model.addAttribute("senior", seniorProfileService.getDetailById(id));
         return "senior/detail";
+    }
+
+    @Operation(summary = "시니어 전체 후기 조회", description = "특정 시니어가 받은 전체 후기를 조회합니다.")
+    @GetMapping("/{id}/reviews")
+    public String reviews(@PathVariable Long id, Model model) {
+        SeniorDetailResponseDto senior = seniorProfileService.getDetailById(id);
+
+        List<SeniorDetailResponseDto.ReviewDto> reviews = seniorProfileService.getReviewsBySeniorId(id);
+
+        model.addAttribute("seniorId", id);
+        model.addAttribute("seniorNickname", senior.getNickname());
+        model.addAttribute("avgRating", senior.getAvgRating());
+        model.addAttribute("totalCount", reviews.size());
+        model.addAttribute("reviews", reviews);
+
+        return "senior/reviews";
     }
 
     @Operation(summary = "인증번호 확인",description = "입력한 인증번호가 일치하는지 확인합니다.")

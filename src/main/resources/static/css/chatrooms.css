@@ -526,7 +526,7 @@
     font-weight: 800;
 }
 
-/* 결제 상세 모달: 하단 에스크로 안내 박스 (주문 카드와 비슷한 글자 스케일) */
+/* 결제 상세 모달: 하단 에스크로 안내 박스 */
 #paymentDetailModal .pmt-detail-escrow {
     margin-top: 0.65rem;
     border: 1px solid rgba(34, 197, 94, 0.35);
@@ -648,22 +648,23 @@
 /* ── 시스템 메시지 & 마감 배너 스타일 ── */
 .system-message-card {
     margin: 15px auto;
-    max-width: 80%;
-    background: #1a2a3a;
-    padding: 15px;
-    border-radius: 12px;
+    max-width: 88%;
+    background: linear-gradient(165deg, #222226 0%, #18181c 100%);
+    padding: 1.35rem 1.4rem;
+    border-radius: 18px;
     text-align: center;
-    border: 1px solid #00CFE8;
+    border: 1px solid rgba(0, 207, 232, 0.55);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
 }
 
 /* PAYMENT_REQUESTED 카드: 레퍼런스(다크 + 오렌지) 톤으로 오버라이드 */
 .system-message-card.type-payment {
-    max-width: 88%;
-    background: linear-gradient(165deg, #222226 0%, #18181c 100%);
     border: 1px solid rgba(245, 158, 11, 0.55);
-    border-radius: 18px;
-    padding: 1.35rem 1.4rem;
-    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* REVIEW_REQUESTED 등 리뷰 계열: 블루 테두리로 통일 */
+.system-message-card.type-review {
+    border-color: rgba(59, 130, 246, 0.55);
 }
 
 .system-message-card.type-payment .sys-header {
@@ -721,6 +722,18 @@
     color: #141414;
     font-weight: 800;
     box-shadow: 0 6px 18px rgba(245, 158, 11, 0.42);
+}
+
+/* REVIEW_REQUESTED 버튼: 에스크로 결제 버튼과 동일한 형태(색상만 블루) */
+.system-message-card.type-review .sys-action-btn.action-review {
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.95rem 1.2rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    color: #0b1220;
+    font-weight: 800;
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.42);
 }
 
 .chat-readonly-banner {
