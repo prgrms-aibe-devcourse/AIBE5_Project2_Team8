@@ -336,6 +336,75 @@
                     </div>
                 </div>
 
+                <!--
+                    주니어 전용 '상세 리뷰 요청서 작성' 모달 (UI only).
+                    - REVIEW_REQUESTED 시스템 메시지의 버튼(.action-review) 클릭 시 열림 (chat.js에서 연결)
+                    - 제출은 fetch POST로 처리 예정 (백엔드/JS는 후속 작업)
+                -->
+                <div id="reviewRequestModal"
+                     class="pmt-modal"
+                     role="dialog"
+                     aria-modal="true"
+                     aria-labelledby="reviewRequestModalTitle"
+                     aria-hidden="true"
+                     th:if="${!isSenior}">
+                    <div class="pmt-modal-backdrop" data-review-close></div>
+                    <div class="pmt-modal-card review-req-card" role="document">
+                        <div class="pmt-modal-header">
+                            <div class="pmt-modal-icon review-req-icon" aria-hidden="true">📄</div>
+                            <div class="pmt-modal-titles">
+                                <h3 id="reviewRequestModalTitle" class="pmt-modal-title">상세 리뷰 요청서 작성</h3>
+                                <p class="pmt-modal-subtitle">
+                                    시니어가 정확히 리뷰할 수 있도록 프로젝트 맥락과 고민 지점을 자세히 적어주세요.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pmt-modal-body">
+                            <form id="reviewRequestForm" class="review-req-form">
+                                <!-- JS가 채울 hidden (예: orderId) -->
+                                <input type="hidden" id="reviewRequestOrderId" name="orderId" value="" />
+
+                                <label class="review-req-label" for="reviewRequestGithubPrUrl">GitHub PR 링크</label>
+                                <input id="reviewRequestGithubPrUrl"
+                                       name="githubPrUrl"
+                                       type="url"
+                                       class="review-req-input"
+                                       placeholder="https://github.com/user/repo/pull/1"
+                                       autocomplete="off"
+                                       required />
+
+                                <label class="review-req-label" for="reviewRequestProjectContext" style="margin-top: 14px;">배경/비즈니스 로직</label>
+                                <textarea id="reviewRequestProjectContext"
+                                          name="projectContext"
+                                          class="review-req-textarea"
+                                          placeholder="이 PR이 어떤 문제를 해결하는지, 어떤 비즈니스 로직이 포함되어 있는지 설명해주세요."
+                                          rows="5"
+                                          required></textarea>
+
+                                <label class="review-req-label" for="reviewRequestConcernPoint" style="margin-top: 14px;">질문/고민 포인트</label>
+                                <textarea id="reviewRequestConcernPoint"
+                                          name="concernPoint"
+                                          class="review-req-textarea"
+                                          placeholder="예: 전역 상태 관리를 이렇게 설계했는데 성능상 문제가 없을까요?"
+                                          rows="5"
+                                          required></textarea>
+
+                                <p id="reviewRequestError" class="pmt-error" role="alert" style="display:none; margin-top: 12px;"></p>
+                            </form>
+                        </div>
+
+                        <div class="pmt-divider"></div>
+                        <div class="pmt-modal-footer">
+                            <button type="button" class="pmt-btn pmt-btn-text" data-review-close>취소</button>
+                            <button type="button" class="pmt-btn pmt-btn-primary" id="reviewRequestSubmitBtn">
+                                <span>제출하고 워크스페이스 입장</span>
+                                <span class="pmt-btn-arrow" aria-hidden="true">›</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </th:block>
 
         </div>
