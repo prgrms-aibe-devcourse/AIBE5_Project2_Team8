@@ -10,6 +10,7 @@
 
 <th:block layout:fragment="head-extra">
     <link rel="stylesheet" th:href="@{/css/chatrooms.css}">
+    <script src="https://js.tosspayments.com/v2/standard"></script>
 </th:block>
 
 <main layout:fragment="content">
@@ -342,8 +343,14 @@
         window.JUNIOR_ID = /*[[${juniorId}]]*/ null;
         window.FIRST_MESSAGE_ID = /*[[${firstMessageId}]]*/ null;
         window.SENIOR_PRICE_PER_REVIEW = /*[[${seniorPricePerReview}]]*/ 0;
+
+        // Toss Payments (프론트 결제창 호출용)
+        window.__TOSS_CLIENT_KEY__ = /*[[${tossClientKey}]]*/ "";
+        window.__TOSS_SUCCESS_PATH__ = "/orders/payment/toss/success";
+        window.__TOSS_FAIL_PATH__ = "/orders/payment/toss/fail";
     </script>
 
+    <script src="/js/toss-pay.js"></script>
     <script src="/js/chat.js"></script>
 </th:block>
 
