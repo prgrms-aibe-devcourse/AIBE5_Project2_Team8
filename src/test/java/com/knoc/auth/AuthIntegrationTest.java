@@ -36,10 +36,11 @@ public class AuthIntegrationTest {
     @DisplayName("회원 가입 성공 시 데이터가 db에 정상적으로 저장되고 로그인 페이지로 이동한다")
     void signUpSuccessTest() throws Exception {
         mockMvc.perform(post("/auth/signup")
-                .param("email", "test-user@email.com")
-                .param("password", "password123!")
-                .param("nickname", "테스트 유저1")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                        .param("email", "test-user@email.com")
+                        .param("password", "password123!")
+                        .param("passwordConfirm", "password123!")
+                        .param("nickname", "테스트 유저1")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/auth/login"));
 
@@ -52,10 +53,11 @@ public class AuthIntegrationTest {
         signUpSuccessTest();
 
         mockMvc.perform(post("/auth/signup")
-                .param("email", "test-user@email.com") // 중복된 이메일
-                .param("password", "password123!")
-                .param("nickname", "테스트 유저2")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                        .param("email", "test-user@email.com") // 중복된 이메일
+                        .param("password", "password123!")
+                        .param("passwordConfirm", "password123!")
+                        .param("nickname", "테스트 유저2")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/signup"))
                 .andExpect(model().attributeExists("errorMessage"));
@@ -68,6 +70,7 @@ public class AuthIntegrationTest {
         mockMvc.perform(post("/auth/signup")
                         .param("email", "test-user-new@email.com")
                         .param("password", "password123!")
+                        .param("passwordConfirm", "password123!")
                         .param("nickname", "테스트 유저1")  // 중복된 닉네임
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -80,6 +83,7 @@ public class AuthIntegrationTest {
         mockMvc.perform(post("/auth/signup")
                         .param("email", "wrong-format")
                         .param("password", "password123!")
+                        .param("passwordConfirm", "password123!")
                         .param("nickname", "홍길동")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -89,6 +93,7 @@ public class AuthIntegrationTest {
         mockMvc.perform(post("/auth/signup")
                         .param("email", "test-user@email.com")
                         .param("password", "pass")
+                        .param("passwordConfirm", "pass")
                         .param("nickname", "홍길동")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().isOk())
@@ -103,9 +108,9 @@ public class AuthIntegrationTest {
         signUpSuccessTest();
 
         mockMvc.perform(post("/auth/login")
-                .param("username", "test-user@email.com")
-                .param("password", "password123!")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                        .param("username", "test-user@email.com")
+                        .param("password", "password123!")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"))
                 .andExpect(cookie().exists("accessToken"))
@@ -153,5 +158,4 @@ public class AuthIntegrationTest {
                 .andExpect(status().isOk());
 
     }
-
 }
