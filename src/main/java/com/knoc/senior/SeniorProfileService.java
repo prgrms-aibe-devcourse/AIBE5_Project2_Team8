@@ -14,6 +14,7 @@ import com.knoc.senior.entity.SeniorSkill;
 import com.knoc.senior.repository.SeniorProfileQueryRepository;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import com.knoc.settlement.repository.ReviewFeedbackRepository;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +75,19 @@ public class SeniorProfileService {
         SeniorProfile profile = seniorProfileRepository.findByMemberId(memberId)
                 .orElseThrow(() ->  new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
         return SeniorProfileResponseDto.from(profile);
+    }
+
+    // 시니어 프로필 전체 리뷰 조회
+    public List<SeniorDetailResponseDto.ReviewDto> getReviewsBySeniorId(Long seniorProfileId){
+        return reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(seniorProfileId)
+                .stream()
+                .map(r -> SeniorDetailResponseDto.ReviewDto.builder()
+                        .juniorNickname(r.getJunior().getNickname())
+                                .rating(r.getRating())
+                                .comment(r.getComment())
+                                .timeAgo(timeAgo(r.getCreatedAt()))
+                                .build())
+                .collect(Collectors.toList());
     }
 
     // 시니어 프로필 수정

@@ -154,7 +154,7 @@
                 </div>
 
                 <!-- 최신 리뷰 최대 3개 -->
-                <div class="d-flex flex-column gap-4" th:unless="${#lists.isEmpty(senior.latestReviews)}">
+                <div class="d-flex flex-column gap-3" th:unless="${#lists.isEmpty(senior.latestReviews)}">
                     <th:block th:each="review, stat : ${senior.latestReviews}">
                         <div th:classappend="${!stat.first} ? 'border-top pt-4' : ''" style="border-color: #2a2f40 !important;">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -166,7 +166,9 @@
                                     <span th:classappend="${i <= review.rating} ? 'text-warning' : 'text-secondary'">★</span>
                                 </th:block>
                             </div>
-                            <p class="text-secondary small lh-base mb-0" th:text="${review.comment}"></p>
+                            <p class="text-light small"
+                               style="overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; text-overflow:ellipsis;"
+                               th:text="${review.comment}"></p>
                         </div>
                     </th:block>
                 </div>

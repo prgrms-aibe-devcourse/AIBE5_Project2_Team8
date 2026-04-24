@@ -34,7 +34,6 @@ public class SeniorApplyController {
     private final SeniorProfileService seniorProfileService;
     private final MemberRepository memberRepository;
     private final EmailVerificationService emailVerificationService;
-    private final ReviewFeedbackRepository reviewFeedbackRepository;
 
     @Operation(summary = "시니어 지원 안내 페이지", description = "시니어 지원을 위한 안내 페이지를 보여줍니다.")
     @GetMapping("/apply")
@@ -136,16 +135,7 @@ public class SeniorApplyController {
     public String reviews(@PathVariable Long id, Model model) {
         SeniorDetailResponseDto senior = seniorProfileService.getDetailById(id);
 
-        List<ReviewFeedback> feedbacks = reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(id);
-
-        List<SeniorDetailResponseDto.ReviewDto> reviews = feedbacks.stream()
-                .map(r -> SeniorDetailResponseDto.ReviewDto.builder()
-                        .juniorNickname(r.getJunior().getNickname())
-                        .rating(r.getRating())
-                        .comment(r.getComment())
-                        .timeAgo(seniorProfileService.timeAgo(r.getCreatedAt()))
-                        .build())
-                .collect(java.util.stream.Collectors.toList());
+        List<SeniorDetailResponseDto.ReviewDto> reviews = seniorProfileService.getReviewsBySeniorId(id);
 
         model.addAttribute("seniorId", id);
         model.addAttribute("seniorNickname", senior.getNickname());
