@@ -1,14 +1,12 @@
-package com.knoc.settlement.service;
+package com.knoc.reviewFeedback.service;
 
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
-import com.knoc.member.MemberRepository;
 import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
-import com.knoc.reviewFeedback.service.ReviewFeedbackService;
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import com.knoc.reviewFeedback.dto.ReviewFeedbackRequestDto;
@@ -40,8 +38,6 @@ class ReviewFeedbackServiceTest {
     private OrderRepository orderRepository;
     @Mock
     private SeniorProfileRepository seniorProfileRepository;
-    @Mock
-    private MemberRepository memberRepository; // ReviewFeedbackService 생성자 주입 대상
 
     @Test
     @DisplayName("후기 작성 성공:PAID상태 주문 후기 작성, 시니어 프로필 avgRating 갱신")
