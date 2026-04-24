@@ -1,5 +1,6 @@
 package com.knoc.order.service;
 
+import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
@@ -27,6 +28,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -735,5 +738,60 @@ class OrderServiceTest {
         verify(eventPublisher, never()).publishEvent(any());
         verify(chatMessageRepository, never())
                 .existsByReferenceIdAndMessageTypeAndCreatedAtAfter(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("진행 중인 결제 요청 확인: PENDING이나 PAID 상태인 주문이 있으면 true를 반환한다.")
+    void hasActivePaymentRequest_ReturnsTrue() {
+        // given
+        ChatRoom chatRoom = mock(ChatRoom.class);
+        given(orderRepository.existsByChatRoomAndStatusIn(eq(chatRoom), any(List.class)))
+                .willReturn(true);
+
+        // when
+        boolean result = orderService.hasActivePaymentRequest(chatRoom);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("메시지에서 주문 금액 추출: PAYMENT_REQUESTED 메시지의 referenceId로 주문을 찾아 금액을 매핑한다.")
+    void extractOrderAmounts_Success() {
+        // given
+        Long orderId1 = 100L;
+        Long orderId2 = 200L;
+
+        // 채팅 메시지 모의 데이터 생성
+        ChatMessage msg1 = mock(ChatMessage.class);
+        given(msg1.getMessageType()).willReturn(MessageType.PAYMENT_REQUESTED);
+        given(msg1.getReferenceId()).willReturn(orderId1);
+
+        ChatMessage msg2 = mock(ChatMessage.class);
+        given(msg2.getMessageType()).willReturn(MessageType.USER); // 이건 필터링되어 빠져야 함
+
+        ChatMessage msg3 = mock(ChatMessage.class);
+        given(msg3.getMessageType()).willReturn(MessageType.PAYMENT_REQUESTED);
+        given(msg3.getReferenceId()).willReturn(orderId2);
+
+        // 주문 모의 데이터 생성
+        Order order1 = mock(Order.class);
+        given(order1.getId()).willReturn(orderId1);
+        given(order1.getAmount()).willReturn(50000);
+
+        Order order2 = mock(Order.class);
+        given(order2.getId()).willReturn(orderId2);
+        given(order2.getAmount()).willReturn(30000);
+
+        given(orderRepository.findAllById(List.of(orderId1, orderId2)))
+                .willReturn(List.of(order1, order2));
+
+        // when
+        Map<Long, Integer> result = orderService.extractOrderAmounts(List.of(msg1, msg2, msg3));
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(orderId1)).isEqualTo(50000);
+        assertThat(result.get(orderId2)).isEqualTo(30000);
     }
 }
