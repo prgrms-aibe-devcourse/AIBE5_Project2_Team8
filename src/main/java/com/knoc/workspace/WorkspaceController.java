@@ -2,7 +2,7 @@ package com.knoc.workspace;
 
 import com.knoc.chat.dto.ChatMessageResponse;
 import com.knoc.chat.service.ChatMessageService;
-import com.knoc.settlement.dto.ReviewFeedbackRequestDto;
+import com.knoc.reviewFeedback.dto.ReviewFeedbackRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
