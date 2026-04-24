@@ -411,6 +411,40 @@
             transform: translateY(-1px);
         }
 
+        /* 결제 상세 모달: 시니어 프로필 (senior/detail.html 과 동일 — url 없을 때 👤) */
+        #paymentDetailSeniorAvatarWrap {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+        }
+        #paymentDetailSeniorAvatarWrap .pmt-detail-avatar-img {
+            display: none;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #2a2f40;
+        }
+        #paymentDetailSeniorAvatarWrap .pmt-detail-avatar-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #2a2f40;
+            background-color: #2a2f40;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        #paymentDetailSeniorAvatarWrap.has-photo .pmt-detail-avatar-fallback {
+            display: none;
+        }
+        #paymentDetailSeniorAvatarWrap.has-photo .pmt-detail-avatar-img {
+            display: block;
+        }
+
         /* 메시지 목록 */
         .chat-messages {
             flex: 1;
@@ -804,6 +838,98 @@
                             <button type="button" class="pmt-btn pmt-btn-primary" id="paymentSubmitBtn">
                                 <span>결제 요청 보내기</span>
                                 <span class="pmt-btn-arrow" aria-hidden="true">›</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!--
+                    주니어 전용 '결제 상세' 모달.
+                    - 채팅 시스템 메시지의 "에스크로 안전 결제"(.action-pay) 클릭 → chat.js가 GET /orders/{orderId}/prepare 호출
+                    - 응답(OrderResponse)으로 모달 필드를 채운 뒤 표시(오픈/닫기는 chat.js에서 처리 예정)
+                    - CTA의 금액은 '총 결제 금액'과 동일한 포맷(₩ + 천단위 콤마)을 그대로 사용
+                -->
+                <div id="paymentDetailModal"
+                     class="pmt-modal"
+                     role="dialog"
+                     aria-modal="true"
+                     aria-labelledby="paymentDetailTitle"
+                     aria-hidden="true"
+                     th:if="${!isSenior}">
+                    <div class="pmt-modal-backdrop" data-pmt-detail-close></div>
+                    <div class="pmt-modal-card" role="document">
+
+                        <div class="pmt-modal-header" style="align-items:flex-start;">
+                            <div class="pmt-modal-titles" style="width:100%;">
+                                <a th:href="@{/chat/rooms}"
+                                   style="display:inline-flex; align-items:center; gap:6px; color:#9ca3af; font-size:0.78rem; text-decoration:none; margin-bottom:0.55rem;">
+                                    <span aria-hidden="true">←</span>
+                                    <span>채팅방으로 돌아가기</span>
+                                </a>
+                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; color:#9ca3af; font-size:0.78rem; margin-bottom:0.35rem;">
+                                    <span aria-hidden="true">🛡️</span>
+                                    <span>Knoc. 안전 에스크로 결제</span>
+                                </div>
+                                <h3 id="paymentDetailTitle" class="pmt-modal-title" style="text-align:center;">결제 및 리뷰 시작</h3>
+                                <p class="pmt-modal-subtitle" style="text-align:center;">
+                                    결제 대금은 리뷰가 완료될 때까지 Knoc.에서 안전하게 보관합니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pmt-modal-body">
+                            <div style="font-weight:800; color:#e5e7eb; margin:0 0 0.75rem 0;">주문 내역</div>
+
+                            <!-- 시니어 정보 -->
+                            <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
+                                <!-- senior/detail.html 과 동일: url 있으면 img, 없으면 👤 원형 플레이스홀더 -->
+                                <div id="paymentDetailSeniorAvatarWrap">
+                                    <img id="paymentDetailSeniorAvatar" class="pmt-detail-avatar-img" alt="" width="48" height="48" />
+                                    <div class="pmt-detail-avatar-fallback" id="paymentDetailSeniorAvatarPlaceholder" aria-hidden="true">👤</div>
+                                </div>
+                                <div style="min-width:0;">
+                                    <div id="paymentDetailSeniorName" style="font-weight:900; color:#fff; line-height:1.1;">-</div>
+                                    <div id="paymentDetailSeniorPosition" style="color:#9ca3af; font-size:0.85rem; margin-top:0.2rem;">-</div>
+                                </div>
+                            </div>
+
+                            <!-- 주문 요약 -->
+                            <div style="border:1px solid #2a2d3e; border-radius:12px; padding:12px;">
+                                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                                    <span style="color:#d1d5db;">1:1 맞춤 코드 리뷰 (에스크로)</span>
+                                    <strong id="paymentDetailLineAmount" style="color:#fbbf24;">₩0</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                                    <span style="color:#d1d5db;">안전 결제 수수료 (0%)</span>
+                                    <strong style="color:#22c55e;">무료</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; gap:12px; padding-top:10px; border-top:1px solid #2a2d3e;">
+                                    <span style="color:#fff; font-weight:900;">총 결제 금액</span>
+                                    <strong id="paymentDetailTotal" style="color:#fbbf24; font-size:1.05rem;">₩0</strong>
+                                </div>
+                            </div>
+
+                            <div id="paymentDetailEscrowInfo"
+                                 style="margin-top:12px; border:1px solid rgba(34,197,94,0.35); border-radius:12px; padding:12px; color:#c8f5d0; background:rgba(16, 185, 129, 0.06);">
+                                <div style="font-weight:900; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
+                                    <span aria-hidden="true">🛡️</span>
+                                    <span>100% 안전 에스크로 결제</span>
+                                </div>
+                                <div style="font-size:0.82rem; line-height:1.45; color:#d1fae5;">
+                                    결제하신 금액은 Knoc.에서 안전하게 보관하며, 시니어가 리뷰 리포트를 제출하고 주니어님이
+                                    <span style="font-weight:800;">'구매 확정'</span>을 진행해야만 시니어에게 대금이 지급됩니다.
+                                </div>
+                            </div>
+
+                            <div id="paymentDetailError" class="pmt-error" role="alert" style="display:none; margin-top:12px;"></div>
+                        </div>
+
+                        <div class="pmt-divider"></div>
+                        <div class="pmt-modal-footer" style="justify-content:stretch;">
+                            <button type="button" id="paymentDetailSubmitBtn" class="pmt-btn pmt-btn-primary"
+                                    style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;">
+                                <span id="paymentDetailCtaAmount" style="font-weight:900;">₩0</span>
+                                <span>안전 결제하기</span>
                             </button>
                         </div>
                     </div>

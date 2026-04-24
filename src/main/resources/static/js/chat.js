@@ -289,11 +289,11 @@ if (chatContainer) {
                 if (!res.ok) throw new Error(await res.text().catch(() => ''));
                 const data = await res.json();
                 console.log(`prepare data`, data);
-                // data로 모달 내용 채우기
-                // fillPaymentDetailModal(data);
+                setPaymentDetailError('');
+                fillPaymentDetailModal(data);
             } catch (err) {
                 console.error(`[prepare 실패]`, err);
-                // setPaymentDetailError(`결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.`);
+                setPaymentDetailError('결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
             } finally {
                 // setPaymentDetailLoading(false);
             }
@@ -417,6 +417,67 @@ function parseAmountInput(value) {
 function formatAmountWithComma(num) {
     if (num == null || isNaN(num)) return '';
     return Number(num).toLocaleString();
+}
+
+// 결제 상세 모달: ₩ + 천단위 콤마 (총액/CTA에 동일하게 사용)
+function formatKrw(amount) {
+    const formatted = formatAmountWithComma(amount);
+    return formatted ? `₩${formatted}` : '₩0';
+}
+
+function setPaymentDetailError(msg) {
+    const errEl = document.getElementById('paymentDetailError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+// GET /orders/{id}/prepare 응답(OrderResponse) → 결제 상세 모달에 반영
+function fillPaymentDetailModal(data) {
+    if (!data) return;
+
+    const nameEl = document.getElementById('paymentDetailSeniorName');
+    const posEl = document.getElementById('paymentDetailSeniorPosition');
+    const wrapEl = document.getElementById('paymentDetailSeniorAvatarWrap');
+    const imgEl = document.getElementById('paymentDetailSeniorAvatar');
+    const phEl = document.getElementById('paymentDetailSeniorAvatarPlaceholder');
+
+    if (nameEl) nameEl.textContent = data.seniorNickname || '-';
+    if (posEl) posEl.textContent = data.seniorPosition || '-';
+
+    const url = data.seniorProfileImageUrl && String(data.seniorProfileImageUrl).trim();
+    if (wrapEl && imgEl) {
+        if (phEl) phEl.setAttribute('aria-hidden', url ? 'true' : 'false');
+        if (url) {
+            wrapEl.classList.add('has-photo');
+            imgEl.alt = (data.seniorNickname ? `${data.seniorNickname} 프로필` : '시니어 프로필');
+            imgEl.onerror = function onAvatarError() {
+                imgEl.onerror = null;
+                imgEl.removeAttribute('src');
+                wrapEl.classList.remove('has-photo');
+                if (phEl) phEl.setAttribute('aria-hidden', 'false');
+            };
+            imgEl.src = url;
+        } else {
+            imgEl.onerror = null;
+            imgEl.removeAttribute('src');
+            imgEl.alt = '';
+            wrapEl.classList.remove('has-photo');
+        }
+    }
+
+    const krw = formatKrw(data.amount);
+    const line = document.getElementById('paymentDetailLineAmount');
+    const total = document.getElementById('paymentDetailTotal');
+    const cta = document.getElementById('paymentDetailCtaAmount');
+    if (line) line.textContent = krw;
+    if (total) total.textContent = krw;
+    if (cta) cta.textContent = krw;
 }
 
 // --- 에러/로딩 상태 ---
