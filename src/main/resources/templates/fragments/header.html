@@ -37,6 +37,8 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
+                    <a th:href="@{/chat/rooms}" class="text-decoration-none text-white">채팅</a>
+
                     <a th:href="@{/my/dashboard}" class="text-decoration-none text-white">내 멘토링</a>
 
                     <span class="hero-pill text-mint" style="font-size: 0.9rem;"
