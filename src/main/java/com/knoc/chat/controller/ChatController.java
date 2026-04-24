@@ -10,6 +10,7 @@ import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
 import com.knoc.order.entity.Order;
+import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -84,8 +85,13 @@ public class ChatController {
         // PAYMENT_REQUESTED 메시지들의 금액 맵 구성 (orderId -> amount)
         Map<Long, Integer> orderAmounts = buildOrderAmounts(messages);
 
-        // 해당 채팅방에 이미 결제 요청(Order)이 있었는지 (시니어 헤더 버튼 초기 노출 제어)
-        boolean hasPaymentRequest = orderRepository.existsByChatRoom_Id(roomId);
+        // 해당 채팅방에 "현재 진행 중인" 결제 요청(Order)이 있는지 확인 (시니어 헤더 버튼 초기 노출 제어)
+        // PENDING(결제 대기), PAID(결제 완료/진행 중) 상태인 주문이 있다면 결제 버튼을 숨김.
+        // SETTLED(완료)나 CANCELLED(취소)된 과거 주문은 무시.
+        boolean hasPaymentRequest = orderRepository.existsByChatRoomAndStatusIn(
+                chatRoom,
+                List.of(OrderStatus.PENDING, OrderStatus.PAID)
+        );
 
         // 이 채팅방 시니어의 등록 리뷰 단가 (결제 요청 모달 placeholder용)
         // 프로필 미등록/미설정 시 0 → 프런트에서 기본값으로 처리
