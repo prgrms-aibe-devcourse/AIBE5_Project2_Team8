@@ -162,6 +162,13 @@ public class WorkspaceFacadeService {
                 .edgeCases(edgeCases)
                 .alternatives(alternatives)
                 .build());
+
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                order.getChatRoom().getId(),
+                MessageType.REPORT_COMPLETED,
+                null,
+                orderId
+        ));
     }
 
     @Transactional
