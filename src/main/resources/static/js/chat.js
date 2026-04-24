@@ -267,14 +267,35 @@ if (messageInput) {
 
 // 시스템 알림 버튼 클릭 이벤트 (이벤트 위임)
 if (chatContainer) {
-    chatContainer.addEventListener('click', function(e) {
+    chatContainer.addEventListener('click', async function(e) {
         const target = e.target.closest('.sys-action-btn');
         if (!target) return;
 
         if (target.classList.contains('action-pay')) {
             const orderId = target.getAttribute('data-order-id');
-            console.log(`[결제 요청] 주문 ID: ${orderId}`);
-            // TODO: 결제 모듈 호출
+            if (!orderId) return;
+
+            // GET /orders/{orderId}/prepare
+            // - 성공: OrderResponse로 모달을 채운 뒤 연다.
+            // - 실패: EMPTY_PAYMENT_DETAIL로 덮어쓰고, 에러 문구를 모달 안에 보이게 하기 위해 연다.
+            try {
+                const res = await fetch(`/orders/${orderId}/prepare`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {'Accept': 'application/json'}
+                })
+                if (!res.ok) throw new Error(await res.text().catch(() => ''));
+                const data = await res.json();
+                console.log(`prepare data`, data);
+                setPaymentDetailError('');
+                fillPaymentDetailModal(data);
+                openPaymentDetailModal();
+            } catch (err) {
+                console.error(`[prepare 실패]`, err);
+                fillPaymentDetailModal(EMPTY_PAYMENT_DETAIL);
+                setPaymentDetailError('결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+                openPaymentDetailModal();
+            }
         } else if (target.classList.contains('action-review')) {
             const roomId = target.getAttribute('data-room-id');
             console.log(`[리뷰 폼 이동] 방 번호: ${roomId}`);
@@ -350,7 +371,7 @@ function hideRequestPaymentButton() {
     if (btn) btn.style.display = 'none';
 }
 
-// --- 모달 open / close ---
+// --- 시니어: 결제 요청 모달 open / close ---
 
 function openPaymentRequestModal() {
     const modal = document.getElementById('paymentRequestModal');
@@ -383,6 +404,40 @@ function closePaymentRequestModal() {
     document.body.style.overflow = '';
 }
 
+// --- 주니어: 결제 상세 모달 open / close ---
+
+function openPaymentDetailModal() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return;
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    const cta = document.getElementById('paymentDetailSubmitBtn');
+    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
+    setTimeout(() => { if (cta) cta.focus(); }, 50);
+}
+
+function closePaymentDetailModal() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return;
+
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    setPaymentDetailError('');
+}
+
+// prepare 실패 직전에 성공했던 주문 데이터가 화면에 남지 않도록
+// fillPaymentDetailModal()에 넘기는 빈 응답.
+const EMPTY_PAYMENT_DETAIL = {
+    amount: 0,
+    seniorNickname: null,
+    seniorPosition: null,
+    seniorProfileImageUrl: null,
+};
+
 // --- 금액 유틸 ---
 
 // 사용자 입력 문자열 → 숫자. 콤마/공백/기타 문자 제거. 빈값이면 null.
@@ -395,6 +450,67 @@ function parseAmountInput(value) {
 function formatAmountWithComma(num) {
     if (num == null || isNaN(num)) return '';
     return Number(num).toLocaleString();
+}
+
+// 결제 상세 모달: ₩ + 천단위 콤마 (총액/CTA에 동일하게 사용)
+function formatKrw(amount) {
+    const formatted = formatAmountWithComma(amount);
+    return formatted ? `₩${formatted}` : '₩0';
+}
+
+function setPaymentDetailError(msg) {
+    const errEl = document.getElementById('paymentDetailError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+// GET /orders/{id}/prepare 응답(OrderResponse) → 결제 상세 모달에 반영
+function fillPaymentDetailModal(data) {
+    if (!data) return;
+
+    const nameEl = document.getElementById('paymentDetailSeniorName');
+    const posEl = document.getElementById('paymentDetailSeniorPosition');
+    const wrapEl = document.getElementById('paymentDetailSeniorAvatarWrap');
+    const imgEl = document.getElementById('paymentDetailSeniorAvatar');
+    const phEl = document.getElementById('paymentDetailSeniorAvatarPlaceholder');
+
+    if (nameEl) nameEl.textContent = data.seniorNickname || '-';
+    if (posEl) posEl.textContent = data.seniorPosition || '-';
+
+    const url = data.seniorProfileImageUrl && String(data.seniorProfileImageUrl).trim();
+    if (wrapEl && imgEl) {
+        if (phEl) phEl.setAttribute('aria-hidden', url ? 'true' : 'false');
+        if (url) {
+            wrapEl.classList.add('has-photo');
+            imgEl.alt = (data.seniorNickname ? `${data.seniorNickname} 프로필` : '시니어 프로필');
+            imgEl.onerror = function onAvatarError() {
+                imgEl.onerror = null;
+                imgEl.removeAttribute('src');
+                wrapEl.classList.remove('has-photo');
+                if (phEl) phEl.setAttribute('aria-hidden', 'false');
+            };
+            imgEl.src = url;
+        } else {
+            imgEl.onerror = null;
+            imgEl.removeAttribute('src');
+            imgEl.alt = '';
+            wrapEl.classList.remove('has-photo');
+        }
+    }
+
+    const krw = formatKrw(data.amount);
+    const line = document.getElementById('paymentDetailLineAmount');
+    const total = document.getElementById('paymentDetailTotal');
+    const cta = document.getElementById('paymentDetailCtaAmount');
+    if (line) line.textContent = krw;
+    if (total) total.textContent = krw;
+    if (cta) cta.textContent = krw;
 }
 
 // --- 에러/로딩 상태 ---
@@ -505,13 +621,6 @@ async function submitPaymentRequest() {
     const submitBtn = document.getElementById('paymentSubmitBtn');
     if (submitBtn) submitBtn.addEventListener('click', submitPaymentRequest);
 
-    // ESC로 닫기 (모달이 열려있을 때만)
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-            closePaymentRequestModal();
-        }
-    });
-
     // 금액 입력: 실시간 콤마 포맷 + Enter 제출 (IME 조합 중 제외)
     const input = document.getElementById('paymentAmountInput');
     if (input) {
@@ -526,4 +635,36 @@ async function submitPaymentRequest() {
             }
         });
     }
+})();
+
+// --- 주니어: 결제 상세 모달 이벤트 바인딩 (IIFE로 스코프 격리) ---
+// 닫기 트리거: [data-pmt-detail-close] (백드롭). 열기/닫기, 스크롤 락, ESC 는
+// openPaymentDetailModal, closePaymentDetailModal, bindModalEscape 에서 처리.
+(function bindPaymentDetailModalEvents() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return; // 시니어 화면 등 모달이 없는 경우
+
+    modal.querySelectorAll('[data-pmt-detail-close]').forEach(function (el) {
+        el.addEventListener('click', closePaymentDetailModal);
+    });
+})();
+
+// ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)
+(function bindModalEscape() {
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+
+        const detail = document.getElementById('paymentDetailModal');
+        if (detail && detail.classList.contains('is-open')) {
+            e.preventDefault();
+            closePaymentDetailModal();
+            return;
+        }
+
+        const request = document.getElementById('paymentRequestModal');
+        if (request && request.classList.contains('is-open')) {
+            e.preventDefault();
+            closePaymentRequestModal();
+        }
+    });
 })();

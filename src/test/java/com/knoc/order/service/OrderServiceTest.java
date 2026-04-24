@@ -14,6 +14,7 @@ import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
+import com.knoc.senior.repository.SeniorProfileRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,6 +56,9 @@ class OrderServiceTest {
 
     @Mock
     private ChatMessageRepository chatMessageRepository;
+
+    @Mock
+    private SeniorProfileRepository seniorProfileRepository;
 
     @Test
     @DisplayName("결제 요청 성공: 정상적인 데이터가 입력되면 주문이 PENDING 상태로 생성된다.")
@@ -161,7 +165,7 @@ class OrderServiceTest {
 
     @Test
     @DisplayName("결제창 요청 성공: PENDING 주문이면 상태 변경 없이 주문 정보를 반환한다.")
-    void payOrder_Success_ReturnsOrderWithoutStateChange() {
+    void preparePayment_Success_ReturnsOrderWithoutStateChange() {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
@@ -181,6 +185,7 @@ class OrderServiceTest {
                 .build(); // status = PENDING
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(seniorProfileRepository.findByMemberId(any())).willReturn(Optional.empty());
 
         // when
         OrderResponse response = orderService.preparePayment(orderId, juniorId);
@@ -196,7 +201,7 @@ class OrderServiceTest {
 
     @Test
     @DisplayName("결제창 요청 멱등: 이미 PAID면 저장/메시지 없이 그대로 응답한다.")
-    void payOrder_Idempotent_WhenAlreadyPaid() {
+    void preparePayment_Idempotent_WhenAlreadyPaid() {
         // given
         Long orderId = 101L;
         Long juniorId = 2L;

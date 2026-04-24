@@ -14,6 +14,8 @@ import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
+import com.knoc.senior.entity.SeniorProfile;
+import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,6 +50,7 @@ public class OrderService {
 
     // 결제 실패 메시지 중복 발행 방지를 위한 쿨다운 (30초)
     private static final long FAILURE_MESSAGE_COOLDOWN_SECONDS = 30L;
+    private final SeniorProfileRepository seniorProfileRepository;
 
     @Transactional
     public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
@@ -139,7 +142,12 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID); // 결제 불가능한 상태
         }
 
-        return OrderResponse.from(order); // 결제 가능한 상태(PENDING)면 dto 만들어서 반환
+        // 시니어 직군 가져오기
+        String seniorPosition = seniorProfileRepository.findByMemberId(order.getSenior().getId())
+                .map(SeniorProfile::getPosition)
+                .orElse(null);
+
+        return OrderResponse.from(order, seniorPosition); // 결제 가능한 상태(PENDING)면 dto 만들어서 반환
     }
 
     // Toss confirm API 호출 전 사전 금액 검증.
