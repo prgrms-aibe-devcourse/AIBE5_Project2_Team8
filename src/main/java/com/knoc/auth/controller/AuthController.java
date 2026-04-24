@@ -41,7 +41,10 @@ public class AuthController {
     @PostMapping("/signup")
     public String processSignUp(@Valid @ModelAttribute("signupDto") SignUpDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
 
-        // 1. 폼 형식 검증 에러 처리 (비밀번호 자리수, 이메일 형식 등)
+        if (dto.getPassword() != null && !dto.getPassword().equals(dto.getPasswordConfirm())) {
+            bindingResult.rejectValue("passwordConfirm", "passwordInCorrect", "비밀번호가 일치하지 않습니다.");
+        }
+        //  폼 형식 검증 에러 처리 (비밀번호 자리수, 이메일 형식 등)
         if(bindingResult.hasErrors()) {
             return "auth/signup"; // 에러가 있으면 다시 회원가입 페이지
         }
