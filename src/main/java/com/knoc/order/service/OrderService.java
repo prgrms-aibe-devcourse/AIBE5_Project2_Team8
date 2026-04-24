@@ -1,5 +1,6 @@
 package com.knoc.order.service;
 
+import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.ChatRoom;
 import com.knoc.chat.entity.ChatSystemEvent;
 import com.knoc.chat.entity.MessageType;
@@ -296,5 +297,32 @@ public class OrderService {
                 null, // 템플릿 사용 → "결제가 실패하거나 취소되었습니다. 다시 시도해주세요."
                 order.getId()
         ));
+    }
+
+    /**
+     * 현재 진행 중(PENDING, PAID)인 결제 요청이 있는지 확인.
+     * (시니어 헤더 버튼 노출 제어용 - 과거 SETTLED, CANCELLED 주문은 무시)
+     */
+    public boolean hasActivePaymentRequest(ChatRoom chatRoom) {
+        return orderRepository.existsByChatRoomAndStatusIn(
+                chatRoom,
+                java.util.List.of(OrderStatus.PENDING, OrderStatus.PAID)
+        );
+    }
+
+    /**
+     * 메시지 목록에서 PAYMENT_REQUESTED 타입만 골라 (orderId -> amount) 맵 구성.
+     * (채팅방 렌더링 시 결제 버튼에 올바른 금액을 표시하기 위해 사용)
+     */
+    public java.util.Map<Long, Integer> extractOrderAmounts(java.util.List<ChatMessage> messages) {
+        java.util.List<Long> paymentOrderIds = messages.stream()
+                .filter(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED && m.getReferenceId() != null)
+                .map(ChatMessage::getReferenceId)
+                .toList();
+
+        if (paymentOrderIds.isEmpty()) return java.util.Collections.emptyMap();
+
+        return orderRepository.findAllById(paymentOrderIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Order::getId, Order::getAmount));
     }
 }
