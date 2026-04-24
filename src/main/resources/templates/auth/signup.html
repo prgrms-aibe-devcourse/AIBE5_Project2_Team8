@@ -67,6 +67,20 @@
                 <p th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="text-red-400 text-xs font-bold pl-1"></p>
             </div>
 
+            <div class="space-y-2">
+                <label for="passwordConfirm" class="text-sm font-bold text-slate-300">비밀번호 확인</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <input type="password" id="passwordConfirm" th:field="*{passwordConfirm}" required class="block w-full pl-12 pr-4 py-3.5 bg-[#0B0F19] border border-slate-700 text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-shadow shadow-inner" placeholder="••••••••" />
+                </div>
+                <p th:if="${#fields.hasErrors('passwordConfirm')}" th:errors="*{passwordConfirm}" class="text-red-400 text-xs font-bold pl-1"></p>
+            </div>
+
             <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-cyan-950 font-black py-4 rounded-xl mt-8 flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all">
                 가입 완료하기
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
