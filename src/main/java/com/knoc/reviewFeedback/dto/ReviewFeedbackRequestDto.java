@@ -1,4 +1,4 @@
-package com.knoc.settlement.dto;
+package com.knoc.reviewFeedback.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
