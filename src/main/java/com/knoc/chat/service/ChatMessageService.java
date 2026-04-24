@@ -15,7 +15,6 @@ import com.knoc.order.entity.Order;
 import com.knoc.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,6 +93,18 @@ public class ChatMessageService {
         chatRoomService.verifyParticipant(chatRoom, member);
         List<ChatMessage> messages = chatMessageRepository
                 .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, before, PageRequest.of(0, 20));
+
+        // 주니어 전용 시스템 메시지(REVIEW_REQUESTED)는 시니어 화면에서는 노출하지 않는다.
+        boolean isSenior = chatRoom.getSenior() != null
+                && chatRoom.getSenior().getId() != null
+                && member.getId() != null
+                && chatRoom.getSenior().getId().equals(member.getId());
+        if (isSenior) {
+            messages = messages.stream()
+                    .filter(m -> m.getMessageType() != MessageType.REVIEW_REQUESTED)
+                    .toList();
+        }
+
         Collections.reverse(messages);
 
 

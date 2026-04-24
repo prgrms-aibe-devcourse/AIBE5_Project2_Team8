@@ -67,9 +67,13 @@ public class ChatEventListener {
                 .amount(amount)
                 .build();
 
-        // 4. 1:1 Queue 방식으로 주니어, 시니어 양쪽에게 전송
-        messagingTemplate.convertAndSendToUser(chatRoom.getJunior().getEmail(), "/queue/chat", response);
-        messagingTemplate.convertAndSendToUser(chatRoom.getSenior().getEmail(), "/queue/chat", response);
+        // 4. 1:1 Queue 방식으로 조건에 맞게 전송
+        if (event.sendToJunior()) {
+            messagingTemplate.convertAndSendToUser(chatRoom.getJunior().getEmail(), "/queue/chat", response);
+        }
+        if (event.sendToSenior()) {
+            messagingTemplate.convertAndSendToUser(chatRoom.getSenior().getEmail(), "/queue/chat", response);
+        }
 
         log.info("System Message Broadcast via Queue [" + event.type() + "]");
     }

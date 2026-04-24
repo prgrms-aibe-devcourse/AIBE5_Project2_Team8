@@ -85,11 +85,21 @@ public class ChatController {
                 && chatRoom.getSenior().getEmail().equals(principal.getName());
         Long juniorId = chatRoom.getJunior() != null ? chatRoom.getJunior().getId() : null;
 
+        // 주니어 전용 시스템 메시지(REVIEW_REQUESTED)는 시니어 화면에서는 노출하지 않는다.
+        if (isSenior && messages != null && !messages.isEmpty()) {
+            messages = messages.stream()
+                    .filter(m -> m.getMessageType() != MessageType.REVIEW_REQUESTED)
+                    .toList();
+        }
+
         // PAYMENT_REQUESTED 메시지들의 금액 맵 구성 (orderId -> amount)
         Map<Long, Integer> orderAmounts = buildOrderAmounts(messages);
 
-        // 해당 채팅방에 이미 결제 요청(Order)이 있었는지 (시니어 헤더 버튼 초기 노출 제어)
-        boolean hasPaymentRequest = orderRepository.existsByChatRoom_Id(roomId);
+        // 해당 채팅방에 이미 결제 요청 시스템 메시지가 있었는지 여부
+        // - 버튼 초기 노출 제어에만 사용
+        // - DB에 Order가 남아있더라도, "결제 요청 메시지"가 없다면 버튼은 노출할 수 있다.
+        boolean hasPaymentRequest = messages != null && messages.stream()
+                .anyMatch(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED);
 
         // 이 채팅방 시니어의 등록 리뷰 단가 (결제 요청 모달 placeholder용)
         // 프로필 미등록/미설정 시 0 → 프런트에서 기본값으로 처리
@@ -98,7 +108,7 @@ public class ChatController {
                 .orElse(0);
 
         model.addAttribute("selectedRoomId", dto.selectedRoomId());
-        model.addAttribute("messages", dto.messages());
+        model.addAttribute("messages", messages);
         model.addAttribute("currentNickname", dto.currentNickname());
         model.addAttribute("rooms", dto.rooms());
         model.addAttribute("selectedRoom", dto.selectedRoom());

@@ -254,6 +254,18 @@ public class OrderService {
                 savedOrder.getId()
         ));
 
+        // 주니어 전용: 결제 완료 직후 상세 리뷰 요청서 작성 안내
+        // - 결제 성공 후 success 리다이렉트로 페이지가 새로 로드될 수 있으므로 DB에도 저장한다.
+        // - 단, 시니어에게는 전송하지 않으며(실시간/히스토리 모두), 시니어 화면에서는 서버에서 메시지를 필터링한다.
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                savedOrder.getChatRoom().getId(),
+                MessageType.REVIEW_REQUESTED,
+                null,
+                savedOrder.getId(),
+                true,   // sendToJunior
+                false   // sendToSenior
+        ));
+
         return OrderResponse.from(savedOrder);
     }
 

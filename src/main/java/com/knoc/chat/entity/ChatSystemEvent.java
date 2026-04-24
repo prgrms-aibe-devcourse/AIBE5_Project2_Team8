@@ -6,11 +6,20 @@ package com.knoc.chat.entity;
  * @param type     메시지의 성격 (결제완료, 리포트도착 등)
  * @param customContent 동적 텍스트 (금액 등 포함). null이면 MessageType의 기본 문구 사용
  * @param referenceId 해당 메시지와 연결될 주문(Order) ID
+ * @param sendToJunior 주니어에게 전송할지 여부 (기본 true)
+ * @param sendToSenior 시니어에게 전송할지 여부 (기본 true)
  */
 
 public record ChatSystemEvent(
         Long roomId,
         MessageType type,
         String customContent,
-        Long referenceId
-) {}
+        Long referenceId,
+        boolean sendToJunior,
+        boolean sendToSenior
+) {
+    // 기존 생성자 시그니처 호환 (기본: 양쪽 전송 + 저장)
+    public ChatSystemEvent(Long roomId, MessageType type, String customContent, Long referenceId) {
+        this(roomId, type, customContent, referenceId, true, true);
+    }
+}
