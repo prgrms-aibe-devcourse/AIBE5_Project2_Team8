@@ -9,8 +9,8 @@ import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.repository.SeniorProfileRepository;
-import com.knoc.settlement.entity.ReviewFeedback;
-import com.knoc.settlement.repository.ReviewFeedbackRepository;
+import com.knoc.reviewFeedback.entity.ReviewFeedback;
+import com.knoc.reviewFeedback.repository.ReviewFeedbackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;

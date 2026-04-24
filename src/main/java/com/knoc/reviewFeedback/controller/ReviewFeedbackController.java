@@ -1,6 +1,7 @@
-package com.knoc.review;
+package com.knoc.reviewFeedback.controller;
 
-import com.knoc.review.dto.ReviewPageDto;
+import com.knoc.reviewFeedback.dto.ReviewPageDto;
+import com.knoc.reviewFeedback.service.ReviewFeedbackService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,14 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping("/reviews")
 @RequiredArgsConstructor
-public class ReviewPageController {
+public class ReviewFeedbackController {
 
-    private final ReviewPageService reviewPageService;
+    private final ReviewFeedbackService reviewFeedbackService;
 
     @Operation(summary = "멘토링 후기 목록 페이지", description = "전체 후기를 최신순으로 조회합니다.")
     @GetMapping("/posts")
     public String reviews(Model model) {
-        ReviewPageDto page = reviewPageService.getReviewPage();
+        ReviewPageDto page = reviewFeedbackService.getReviewPage();
         model.addAttribute("reviews", page.getReviews());
         model.addAttribute("totalCount", page.getTotalCount());
         model.addAttribute("topSeniors", page.getTopSeniors());

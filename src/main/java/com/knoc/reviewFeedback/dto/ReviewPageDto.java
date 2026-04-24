@@ -1,4 +1,4 @@
-package com.knoc.review.dto;
+package com.knoc.reviewFeedback.dto;
 
 import lombok.Builder;
 import lombok.Getter;

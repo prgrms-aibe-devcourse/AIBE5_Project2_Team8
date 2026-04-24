@@ -11,8 +11,6 @@ import com.knoc.member.MemberRepository;
 import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.dto.SeniorDetailResponseDto;
 import com.knoc.senior.dto.SeniorProfileRequestDto;
-import com.knoc.settlement.entity.ReviewFeedback;
-import com.knoc.settlement.repository.ReviewFeedbackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

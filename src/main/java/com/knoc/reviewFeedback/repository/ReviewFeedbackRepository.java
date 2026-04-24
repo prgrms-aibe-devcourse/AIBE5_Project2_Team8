@@ -1,7 +1,7 @@
-package com.knoc.settlement.repository;
+package com.knoc.reviewFeedback.repository;
 
 import com.knoc.senior.entity.SeniorProfile;
-import com.knoc.settlement.entity.ReviewFeedback;
+import com.knoc.reviewFeedback.entity.ReviewFeedback;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
