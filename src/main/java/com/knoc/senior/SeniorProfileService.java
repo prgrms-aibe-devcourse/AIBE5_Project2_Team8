@@ -13,10 +13,13 @@ import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.entity.SeniorSkill;
 import com.knoc.senior.repository.SeniorProfileQueryRepository;
 import com.knoc.senior.repository.SeniorProfileRepository;
+import com.knoc.settlement.repository.ReviewFeedbackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +30,7 @@ public class SeniorProfileService {
     private final SeniorProfileRepository seniorProfileRepository;
     private final SeniorProfileQueryRepository seniorProfileQueryRepository;
     private final MemberRepository memberRepository;
+    private final ReviewFeedbackRepository reviewFeedbackRepository;
 
     // 시니어 목록 검색 (QueryDSL)
     public List<SeniorProfileResponseDto> searchProfiles(SeniorSearchCondition condition) {
@@ -39,7 +43,30 @@ public class SeniorProfileService {
     public SeniorDetailResponseDto getDetailById(Long id) {
         SeniorProfile profile = seniorProfileRepository.findById(id)
                 .orElseThrow(() ->  new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
-        return SeniorDetailResponseDto.from(profile);
+
+        // 최신 리뷰
+        List<SeniorDetailResponseDto.ReviewDto> latestReviews =
+                reviewFeedbackRepository.findTop3BySeniorProfile_IdOrderByCreatedAtDesc(id)
+                        .stream()
+                        .map(r -> SeniorDetailResponseDto.ReviewDto.builder()
+                                .juniorNickname(r.getJunior().getNickname())
+                                .rating(r.getRating())
+                                .comment(r.getComment())
+                                .timeAgo(timeAgo(r.getCreatedAt()))
+                                .build())
+                        .collect(Collectors.toList());
+
+        return SeniorDetailResponseDto.from(profile, latestReviews);
+    }
+
+    public String timeAgo(LocalDateTime createdAt) {
+        if (createdAt == null) return "";
+        // 리뷰 생성일과 현재 날짜를 비교
+        long days = ChronoUnit.DAYS.between(createdAt, LocalDateTime.now());
+        if (days == 0) return "오늘";
+        else if (days < 7) return days + "일 전";
+        else if (days < 30) return (days / 7) + "주 전";
+        return (days / 30) + "개월 전";
     }
 
     // 시니어 프로필 조회
