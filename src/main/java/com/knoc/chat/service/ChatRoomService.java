@@ -2,10 +2,7 @@ package com.knoc.chat.service;
 
 import com.knoc.chat.dto.ChatRoomDetailDto;
 import com.knoc.chat.dto.ChatRoomListDto;
-import com.knoc.chat.entity.ChatMessage;
-import com.knoc.chat.entity.ChatRoom;
-import com.knoc.chat.entity.ChatSystemEvent;
-import com.knoc.chat.entity.MessageType;
+import com.knoc.chat.entity.*;
 import com.knoc.chat.repository.ChatMessageRepository;
 import com.knoc.chat.repository.ChatRoomRepository;
 import com.knoc.global.exception.BusinessException;
@@ -91,15 +88,26 @@ public class ChatRoomService {
 
         Optional<ChatRoom> existing =  chatRoomRepository.findByJuniorAndSenior(junior, senior);
         if(existing.isPresent()) {
-            return existing.get();
+            ChatRoom chatRoom = existing.get();
+
+            if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+                chatRoom.reopen();
+
+                eventPublisher.publishEvent(new ChatSystemEvent(
+                        chatRoom.getId(),
+                        MessageType.ROOM_REOPEN,
+                        MessageType.ROOM_REOPEN.getTemplate(),
+                        null
+                ));
+            }
+
+            return chatRoom;
         }
 
         ChatRoom newChatRoom = ChatRoom.builder()
                 .junior(junior)
                 .senior(senior)
                 .build();
-
-
 
         chatRoomRepository.save(newChatRoom);
         return newChatRoom;

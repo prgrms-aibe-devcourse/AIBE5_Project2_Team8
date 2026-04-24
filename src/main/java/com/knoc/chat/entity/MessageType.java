@@ -18,7 +18,8 @@ public enum MessageType {
     REVIEW_SUBMITTED("상세 리뷰 요청서가 성공적으로 접수되었습니다.\n곧 시니어의 코드 리뷰가 시작됩니다."),
     REPORT_COMPLETED("시니어님이 상세 코드 리뷰 리포트를 등록했습니다.\n주니어님은 리포트를 확인하고 구매를 확정해 주세요."),
     WORKSPACE_READY("협업을 위한 워크스페이스가 준비되었습니다.\n이제 코드를 공유하고 리뷰를 시작해 보세요."),
-    ROOM_CLOSE("멘토링이 종료되어 채팅창이 읽기 전용으로 전환됩니다.");
+    ROOM_CLOSE("멘토링이 종료되어 채팅창이 읽기 전용으로 전환됩니다."),
+    ROOM_REOPEN("멘토링이 다시 시작되었습니다! 자유롭게 대화를 나누어 보세요.");
 
 
     private final String template;
