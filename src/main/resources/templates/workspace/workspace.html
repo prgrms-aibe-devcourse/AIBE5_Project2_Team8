@@ -719,11 +719,39 @@
                 fetch(action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() })
                     .then(function (res) {
                         if (!res.ok) throw new Error('submit failed');
-                        const panel = document.getElementById('tab-report');
-                        panel.innerHTML =
-                            buildReportCard('현업 관점', formData.get('industryPerspective')) +
-                            buildReportCard('엣지 케이스', formData.get('edgeCases')) +
-                            buildReportCard('개선 방향 / 대안', formData.get('alternatives'));
+                        const ip  = formData.get('industryPerspective') || '';
+                        const ec  = formData.get('edgeCases') || '';
+                        const alt = formData.get('alternatives') || '';
+                        document.getElementById('tab-report').innerHTML =
+                            '<div id="reportView">' +
+                            '<div class="report-view-header"><span class="report-view-title">리뷰 완료</span>' +
+                            '<button class="btn-edit-report" onclick="enterEditMode()">수정</button></div>' +
+                            '<div class="section-card"><div class="section-label">현업 관점</div>' +
+                            '<div class="section-text" id="view-industryPerspective"></div></div>' +
+                            '<div class="section-card"><div class="section-label">엣지 케이스</div>' +
+                            '<div class="section-text" id="view-edgeCases"></div></div>' +
+                            '<div class="section-card"><div class="section-label">개선 방향 / 대안</div>' +
+                            '<div class="section-text" id="view-alternatives"></div></div>' +
+                            '</div>' +
+                            '<div id="reportEditForm" style="display:none;">' +
+                            '<div class="report-view-header"><span class="report-view-title">리뷰 수정</span>' +
+                            '<div style="display:flex;gap:0.5rem;">' +
+                            '<button class="btn-edit-report btn-cancel-report" onclick="cancelEditMode()">취소</button>' +
+                            '<button class="btn-submit-report" onclick="saveReport()" id="btnSaveReport">저장</button>' +
+                            '</div></div>' +
+                            '<div class="form-group"><label class="form-label">현업 관점</label>' +
+                            '<textarea id="edit-industryPerspective" class="form-textarea" rows="5"></textarea></div>' +
+                            '<div class="form-group"><label class="form-label">엣지 케이스</label>' +
+                            '<textarea id="edit-edgeCases" class="form-textarea" rows="5"></textarea></div>' +
+                            '<div class="form-group"><label class="form-label">개선 방향 / 대안</label>' +
+                            '<textarea id="edit-alternatives" class="form-textarea" rows="5"></textarea></div>' +
+                            '</div>';
+                        document.getElementById('view-industryPerspective').innerHTML = escapeHtml(ip);
+                        document.getElementById('view-edgeCases').innerHTML           = escapeHtml(ec);
+                        document.getElementById('view-alternatives').innerHTML        = escapeHtml(alt);
+                        document.getElementById('edit-industryPerspective').value = ip;
+                        document.getElementById('edit-edgeCases').value           = ec;
+                        document.getElementById('edit-alternatives').value        = alt;
                     })
                     .catch(function () {
                         btn.disabled = false; btn.textContent = '리뷰 제출하기';
