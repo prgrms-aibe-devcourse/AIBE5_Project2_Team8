@@ -136,13 +136,13 @@
                                 </button>
                             </div>
 
-                            <!-- REVIEW_REQUESTED: 주니어에게만 '상세 리뷰 요청서 작성' 버튼 노출 -->
+                            <!-- REVIEW_REQUESTED: 주니어에게만 '리뷰 요청서 작성' 버튼 노출 -->
                             <div class="sys-footer"
                                  th:if="${msg.messageType.name() == 'REVIEW_REQUESTED' and !isSenior}">
                                 <button type="button"
                                         class="sys-action-btn btn-blue action-review"
                                         th:attr="data-room-id=${selectedRoomId}">
-                                    📄 상세 리뷰 요청서 작성
+                                    📄 리뷰 요청서 작성
                                 </button>
                             </div>
                         </div>

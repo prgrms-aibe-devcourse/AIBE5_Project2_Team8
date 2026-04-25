@@ -77,10 +77,10 @@ function renderSystemMessage(data, options = {}) {
             break;
         }
         case 'REVIEW_REQUESTED': {
-            // 상세 리뷰 요청서 작성 버튼은 REVIEW_REQUESTED일 때만 노출 (주니어 전용)
+            // 리뷰 요청서 작성 버튼은 REVIEW_REQUESTED일 때만 노출 (주니어 전용)
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
             if (!IS_SENIOR) {
-                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}">📄 상세 리뷰 요청서 작성</button>`;
+                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}">📄 리뷰 요청서 작성</button>`;
             }
             break;
         }
@@ -90,7 +90,7 @@ function renderSystemMessage(data, options = {}) {
         }
         case 'REPORT_COMPLETED': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '✅';
-            buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${escapeHTML(String(data.referenceId))}">✔️ 구매 확정 및 리뷰 남기기</button>`;
+            buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${escapeHTML(String(data.referenceId))}">✔️ 멘토링 종료 및 리뷰 남기기</button>`;
             break;
         }
         case 'ROOM_CLOSE': {
@@ -315,7 +315,9 @@ if (chatContainer) {
         } else if (target.classList.contains('action-review')) {
             const roomId = target.getAttribute('data-room-id');
             console.log(`[리뷰 폼 이동] 방 번호: ${roomId}`);
-            // TODO: 리뷰 작성 페이지로 라우팅
+            // REVIEW_REQUESTED 시스템 메시지 버튼 클릭 시: 화면 전환 없이 모달을 연다.
+            // NOTE: 제출 시 orderId가 필요하므로, 추후 data-order-id로 확장하는 것을 권장한다.
+            openReviewRequestModal();
         } else if (target.classList.contains('action-confirm')) {
             const reportId = target.getAttribute('data-report-id');
             if (confirm("구매를 확정하시겠습니까?\n구매 확정 시 에스크로 대금이 시니어에게 정산됩니다.")) {
@@ -443,6 +445,45 @@ function closePaymentDetailModal() {
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     setPaymentDetailError('');
+}
+
+// --- 주니어: 리뷰 요청서 모달 open / close ---
+
+function setReviewRequestError(msg) {
+    const errEl = document.getElementById('reviewRequestError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+function openReviewRequestModal() {
+    const modal = document.getElementById('reviewRequestModal');
+    if (!modal) return;
+
+    setReviewRequestError('');
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    const firstInput = document.getElementById('reviewRequestGithubPrUrl');
+    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
+    setTimeout(() => { if (firstInput) firstInput.focus(); }, 50);
+}
+
+function closeReviewRequestModal() {
+    const modal = document.getElementById('reviewRequestModal');
+    if (!modal) return;
+
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    setReviewRequestError('');
 }
 
 // prepare 실패 직전에 성공했던 주문 데이터가 화면에 남지 않도록
@@ -705,10 +746,29 @@ async function submitPaymentRequest() {
     if (submitBtn) submitBtn.addEventListener('click', startPaymentFromDetailModal);
 })();
 
+// --- 주니어: 리뷰 요청서 모달 이벤트 바인딩 (IIFE로 스코프 격리) ---
+// 닫기 트리거: [data-review-close] (백드롭 + 취소 버튼). 열기/닫기, 스크롤 락, ESC 는
+// openReviewRequestModal, closeReviewRequestModal, bindModalEscape 에서 처리.
+(function bindReviewRequestModalEvents() {
+    const modal = document.getElementById('reviewRequestModal');
+    if (!modal) return; // 시니어 화면 등 모달이 없는 경우
+
+    modal.querySelectorAll('[data-review-close]').forEach(function (el) {
+        el.addEventListener('click', closeReviewRequestModal);
+    });
+})();
+
 // ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)
 (function bindModalEscape() {
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
+
+        const review = document.getElementById('reviewRequestModal');
+        if (review && review.classList.contains('is-open')) {
+            e.preventDefault();
+            closeReviewRequestModal();
+            return;
+        }
 
         const detail = document.getElementById('paymentDetailModal');
         if (detail && detail.classList.contains('is-open')) {
