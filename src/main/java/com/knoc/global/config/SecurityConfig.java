@@ -41,7 +41,7 @@ public class SecurityConfig {
                 // url 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         // [공통/비로그인] AUTH-01(로그인), POST-02(후기 목록 조회-비로그인 가능 명시)
-                        .requestMatchers("/", "/auth/**", "/error/**", "/reviews/posts", "/orders/payment/toss/**", "/senior/apply", "/css/**", "/js/**", "/images/**", "/ws/**", "/uploads/**").permitAll()
+                        .requestMatchers("/", "/auth/**", "/error/**", "/reviews/posts", "/orders/payment/toss/**", "/senior/apply", "/css/**", "/js/**", "/images/**", "/ws/**", "/uploads/**","/orders/**").permitAll()
                         // [시니어 전용] PROF-01(프로필 관리), REV-02(리포트 제출), MY-02(시니어 마이페이지), ORD-01(결제 요청)
                         .requestMatchers("/senior/profile/**", "/reports/**", "/my/senior/**", "/orders/request").hasRole("SENIOR")
                         // [주니어 전용] CHAT-01(방생성), ORD-01/02(결제), REV-01(요청), SET-01(구매확정), POST-01(후기작성), MY-01(주니어 마이페이지)

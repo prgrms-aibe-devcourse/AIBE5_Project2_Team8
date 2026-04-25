@@ -48,4 +48,10 @@ public class ReviewReport extends BaseEntity {
         this.alternatives = alternatives;
         this.aiSummary = aiSummary;
     }
+
+    public void update(String industryPerspective, String edgeCases, String alternatives) {
+        this.industryPerspective = industryPerspective;
+        this.edgeCases = edgeCases;
+        this.alternatives = alternatives;
+    }
 }

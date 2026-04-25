@@ -38,8 +38,8 @@ public class ReviewFeedbackService {
         if(!order.getJunior().getId().equals(juniorId)){
             throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
         }
-        //3. 결제 완료 상태인지 확인 (결제 완료PAID 상태에서만 후기 작성이 가능)
-        if (order.getStatus() != OrderStatus.PAID) {
+        //3. 결제 완료 상태인지 확인 (결제 완료PAID&&SETTLED 상태에서만 후기 작성이 가능)
+        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.SETTLED) {
             throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
         }
         //4. 후기를 이미 작성한 주문인지 검증
