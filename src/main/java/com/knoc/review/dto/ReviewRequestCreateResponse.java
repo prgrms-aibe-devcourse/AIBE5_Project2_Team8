@@ -8,12 +8,10 @@ import lombok.Getter;
 @Builder
 public class ReviewRequestCreateResponse {
     private Long orderId;
-    private Long reviewRequestId;
 
     public static ReviewRequestCreateResponse from(ReviewRequest reviewRequest) {
         return ReviewRequestCreateResponse.builder()
                 .orderId(reviewRequest.getOrder().getId())
-                .reviewRequestId(reviewRequest.getId())
                 .build();
     }
 }
