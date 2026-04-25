@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default_layout}">
+
+<head>
+    <title>워크스페이스</title>
+</head>
+
+<th:block layout:fragment="head-extra">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        body { padding-top: 72px; }
+
+        .workspace-container {
+            display: flex;
+            height: calc(100vh - 72px);
+            overflow: hidden;
+        }
+
+        /* ── 왼쪽 PR 뷰어 ── */
+        .pr-pane {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2a2a2a;
+            overflow: hidden;
+            background-color: #161616;
+        }
+
+        .pr-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #2a2a2a;
+            background-color: #1a1a1a;
+        }
+
+        .pr-title { font-size: 1rem; font-weight: bold; color: #fff; margin-bottom: 0.5rem; word-break: break-word; }
+
+        .pr-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: 0.8rem; color: #888; }
+
+        .pr-badge { padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+        .badge-open   { background-color: #1a3a2a; color: #00e676; }
+        .badge-merged { background-color: #2a1a3a; color: #a78bfa; }
+        .badge-closed { background-color: #2a2a2a; color: #777; }
+
+        .stat-item { color: #888; }
+        .stat-add  { color: #4ade80; }
+        .stat-del  { color: #f87171; }
+
+        .pr-tabs { display: flex; border-bottom: 1px solid #2a2a2a; background-color: #1a1a1a; padding: 0 1rem; }
+        .pr-tab {
+            padding: 0.7rem 1rem; font-size: 0.82rem; font-weight: 600; color: #666;
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+        }
+        .pr-tab:hover { color: #aaa; }
+        .pr-tab.active { color: #00CFE8; border-bottom-color: #00CFE8; }
+
+        .pr-body { flex: 1; overflow-y: auto; padding: 1rem; }
+        .pr-body::-webkit-scrollbar { width: 4px; }
+        .pr-body::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .file-card { background-color: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden; }
+        .file-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem; background-color: #222; cursor: pointer; user-select: none; }
+        .file-header:hover { background-color: #272727; }
+        .file-name { font-size: 0.82rem; font-family: 'Consolas','Fira Code',monospace; color: #e0e0e0; flex: 1; word-break: break-all; }
+        .file-status { font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; }
+        .status-modified { background-color: #1a2a3a; color: #60a5fa; }
+        .status-added    { background-color: #1a3a2a; color: #4ade80; }
+        .status-removed  { background-color: #3a1a1a; color: #f87171; }
+        .status-renamed  { background-color: #2a1a3a; color: #c084fc; }
+        .file-stats { font-size: 0.72rem; color: #666; }
+        .file-stats .add { color: #4ade80; }
+        .file-stats .del { color: #f87171; }
+        .collapse-icon { font-size: 0.7rem; color: #555; transition: transform 0.15s; }
+        .collapse-icon.open { transform: rotate(90deg); }
+
+        .patch-viewer { overflow-x: auto; background-color: #0d1117; }
+        .patch-viewer::-webkit-scrollbar { height: 4px; }
+        .patch-viewer::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
+        .patch-line { display: flex; font-family: 'Consolas','Fira Code',monospace; font-size: 0.75rem; line-height: 1.6; white-space: pre; }
+        .patch-line.add  { background-color: #0d2b1a; }
+        .patch-line.del  { background-color: #2b0d0d; }
+        .patch-line.hunk { background-color: #0d1a2b; color: #60a5fa; }
+        .patch-line.ctx  { color: #adbac7; }
+        .patch-viewer .hljs { background: transparent !important; }
+        .diff-prefix { user-select: none; }
+        .patch-line.add .diff-prefix { color: #4ade80; }
+        .patch-line.del .diff-prefix { color: #f87171; }
+        .patch-line.ctx .diff-prefix { color: #555; }
+        .patch-line-num { min-width: 48px; padding: 0 0.5rem; text-align: right; color: #3a3a3a; border-right: 1px solid #222; user-select: none; flex-shrink: 0; }
+        .patch-line-content { padding: 0 0.75rem; }
+
+        .section-card { background-color: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+        .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #00CFE8; margin-bottom: 0.5rem; }
+        .section-text  { font-size: 0.87rem; color: #ccc; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+        .empty-pr { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #555; gap: 0.5rem; font-size: 0.9rem; }
+
+        /* ── 오른쪽 채팅 ── */
+        .chat-pane { flex: 2; display: flex; flex-direction: column; overflow: hidden; background-color: #121212; }
+        .chat-header { padding: 1rem 1.25rem; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 0.75rem; background-color: #1a1a1a; }
+        .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #00CFE8; color: #121212; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+        .chat-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-header-name { font-size: 0.95rem; font-weight: bold; color: #fff; flex: 1; }
+        .connection-status { font-size: 0.7rem; padding: 0.15rem 0.6rem; border-radius: 999px; }
+        .status-connected    { background-color: #1a3a2a; color: #00e676; }
+        .status-disconnected { background-color: #3a1a1a; color: #ff5252; }
+
+        .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem; }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
+        .msg-left  { align-self: flex-start; display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
+        .msg-right { align-self: flex-end;   display: flex; flex-direction: column; align-items: flex-end;   max-width: 80%; }
+        .msg-bubble { padding: 0.6rem 1rem; border-radius: 16px; font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
+        .msg-left  .msg-bubble { background-color: #2a2a2a; color: #fff; border-bottom-left-radius: 4px; }
+        .msg-right .msg-bubble { background-color: #00CFE8; color: #121212; border-bottom-right-radius: 4px; }
+        .msg-sender { font-size: 0.72rem; color: #777; margin-bottom: 0.2rem; }
+        .msg-time   { font-size: 0.68rem; color: #555; margin-top: 0.2rem; }
+        .msg-right .msg-time { text-align: right; }
+
+        .system-message-card { margin: 0.5rem auto; max-width: 90%; background: #1a2a3a; padding: 0.75rem 1rem; border-radius: 10px; text-align: center; border: 1px solid #00CFE8; font-size: 0.82rem; color: #ccc; }
+
+        .chat-input-area { display: flex; gap: 0.5rem; padding: 1rem 1.25rem; border-top: 1px solid #2a2a2a; }
+        .chat-input-area input { flex: 1; background-color: #1e1e1e; border: 1px solid #333; color: #fff; border-radius: 8px; padding: 0.65rem 1rem; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+        .chat-input-area input:focus { border-color: #00CFE8; box-shadow: 0 0 0 0.15rem rgba(0,207,232,0.15); }
+        .chat-input-area input::placeholder { color: #555; }
+        .btn-send { background-color: #00CFE8; color: #121212; font-weight: bold; border: none; border-radius: 8px; padding: 0.65rem 1.1rem; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
+        .btn-send:hover { background-color: #00A6BA; }
+        .chat-closed-banner { padding: 0.75rem 1.25rem; background-color: #1e1e1e; border-top: 1px solid #2a2a2a; text-align: center; font-size: 0.82rem; color: #f87171; }
+
+        .report-view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+        .report-view-title  { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #4ade80; }
+        .btn-edit-report { background: none; border: 1px solid #444; color: #aaa; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+        .btn-edit-report:hover { border-color: #00CFE8; color: #00CFE8; }
+        .btn-cancel-report { border-color: #555 !important; }
+        .btn-cancel-report:hover { border-color: #f87171 !important; color: #f87171 !important; }
+
+        .report-waiting { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; gap: 0.75rem; }
+        .waiting-icon  { font-size: 2.5rem; }
+        .waiting-title { font-size: 1rem; font-weight: 700; color: #fff; }
+        .waiting-desc  { font-size: 0.85rem; color: #666; }
+
+        .report-form { display: flex; flex-direction: column; gap: 1.1rem; }
+        .form-group  { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-label  { font-size: 0.8rem; font-weight: 700; color: #00CFE8; display: flex; flex-direction: column; gap: 0.2rem; }
+        .form-hint   { font-size: 0.72rem; font-weight: 400; color: #666; }
+        .form-textarea { background-color: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 0.85rem; line-height: 1.6; padding: 0.75rem 1rem; resize: vertical; outline: none; transition: border-color 0.2s; font-family: inherit; }
+        .form-textarea:focus { border-color: #00CFE8; box-shadow: 0 0 0 0.15rem rgba(0,207,232,0.15); }
+        .form-textarea::placeholder { color: #444; }
+        .btn-submit-report { background-color: #00CFE8; color: #121212; font-weight: 700; border: none; border-radius: 8px; padding: 0.75rem 1.5rem; font-size: 0.9rem; cursor: pointer; transition: background-color 0.2s; align-self: flex-end; }
+        .btn-submit-report:hover { background-color: #00A6BA; }
+
+        /* ── 액션 바 ── */
+        .action-bar { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 1.25rem; padding: 2rem 1.5rem; background: linear-gradient(135deg, #0d1f3a 0%, #0a1628 50%, #0d2040 100%); border: 1px solid #1a3a5a; border-radius: 16px; text-align: center; }
+        .action-bar-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+        .action-bar-msg   { font-size: 0.82rem; color: #7aa8cc; margin: 0; }
+        .btn-settle { display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(90deg, #00CFE8, #00a8c8); color: #0a1628; font-weight: 700; border: none; border-radius: 999px; padding: 0.85rem 2rem; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s; box-shadow: 0 4px 20px rgba(0,207,232,0.35); }
+        .btn-settle:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+        .btn-settle:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-review { display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(90deg, #00CFE8, #00a8c8); color: #0a1628; font-weight: 700; border: none; border-radius: 999px; padding: 0.85rem 2rem; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s; box-shadow: 0 4px 20px rgba(0,207,232,0.35); }
+        .btn-review:hover { opacity: 0.88; transform: translateY(-1px); }
+
+        /* ── 멘토링 종료 모달 (풀스크린 카드) ── */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.82);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 1rem;
+        }
+
+        .modal-box {
+            background: linear-gradient(160deg, #0e1c35 0%, #091526 60%, #0c1a30 100%);
+            border: 1px solid #1e3a5a;
+            border-radius: 20px;
+            width: 460px;
+            max-width: calc(100vw - 2rem);
+            max-height: calc(100vh - 2rem);
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+        }
+        .modal-box::-webkit-scrollbar { width: 4px; }
+        .modal-box::-webkit-scrollbar-thumb { background: #2a3a5a; border-radius: 4px; }
+
+        /* 체크 영역 */
+        .modal-check-area {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 2.5rem 2rem 1.25rem; gap: 0.9rem;
+        }
+        .modal-check-icon {
+            width: 58px; height: 58px; border-radius: 50%;
+            background: linear-gradient(135deg, #00CFE8, #0099b8);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; color: #071220; font-weight: 900;
+            box-shadow: 0 0 28px rgba(0,207,232,0.45); flex-shrink: 0;
+        }
+        .modal-main-title { font-size: 1.55rem; font-weight: 800; color: #fff; text-align: center; margin: 0; }
+        .modal-main-desc  { font-size: 0.83rem; color: #7aa8cc; text-align: center; margin: 0; line-height: 1.65; }
+        .modal-main-desc .modal-notice { color: #00CFE8; font-weight: 600; }
+
+        /* 별점 */
+        .modal-section { padding: 0 2rem 1.25rem; }
+        .modal-section-title { font-size: 0.88rem; font-weight: 700; color: #ccc; margin: 0 0 0.8rem; text-align: center; }
+        .star-row { display: flex; gap: 0.4rem; justify-content: center; }
+        .star { font-size: 2.5rem; color: #1e3050; cursor: pointer; transition: color 0.12s, transform 0.1s; user-select: none; line-height: 1; }
+        .star:hover { transform: scale(1.18); }
+        .star.filled { color: #00CFE8; }
+
+        /* 후기 텍스트 */
+        .modal-textarea-section { padding: 0 2rem 1.5rem; }
+        .modal-textarea-label { font-size: 0.88rem; font-weight: 700; color: #ccc; margin: 0 0 0.25rem; }
+        .modal-textarea-hint  { font-size: 0.75rem; color: #3a5a7a; margin: 0 0 0.75rem; }
+        .modal-textarea {
+            width: 100%; background-color: rgba(255,255,255,0.035);
+            border: 1px solid #1e3a5a; border-radius: 10px;
+            color: #bbd; font-size: 0.85rem; line-height: 1.65;
+            padding: 0.85rem 1rem; resize: none; outline: none;
+            transition: border-color 0.2s; font-family: inherit; box-sizing: border-box;
+        }
+        .modal-textarea:focus { border-color: #00CFE8; box-shadow: 0 0 0 0.15rem rgba(0,207,232,0.12); }
+        .modal-textarea::placeholder { color: #2a4060; font-size: 0.8rem; }
+
+        /* 버튼 */
+        .modal-actions { padding: 0 2rem 1.5rem; display: flex; flex-direction: column; gap: 0.65rem; }
+        .btn-modal-primary {
+            width: 100%;
+            background: linear-gradient(90deg, #00CFE8, #009ab8);
+            color: #071220; font-weight: 800; border: none; border-radius: 12px;
+            padding: 1rem 1.5rem; font-size: 1rem; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+            box-shadow: 0 4px 20px rgba(0,207,232,0.3);
+        }
+        .btn-modal-primary:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+        .btn-modal-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-modal-secondary {
+            width: 100%; background: none; border: 1px solid #1e3a5a;
+            color: #6a98bc; font-weight: 600; border-radius: 12px;
+            padding: 0.85rem 1.5rem; font-size: 0.9rem; cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-modal-secondary:hover:not(:disabled) { border-color: #4a7aaa; color: #aac8e8; }
+        .btn-modal-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .modal-footer-note { text-align: center; font-size: 0.72rem; color: #2e4a68; padding: 0 2rem 1.5rem; }
+
+        /* ── 후기 시스템 메시지 카드 ── */
+        .review-written-card { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+        .btn-view-review {
+            background: linear-gradient(90deg, #00CFE8, #009ab8);
+            color: #071220; font-weight: 700; border: none; border-radius: 8px;
+            padding: 0.45rem 1.2rem; font-size: 0.8rem; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-view-review:hover { opacity: 0.85; }
+
+        /* ── 후기 보기 모달 (읽기 전용) ── */
+        .star-display { font-size: 2rem; color: #1e3050; line-height: 1; }
+        .star-display.filled { color: #00CFE8; }
+        .review-comment-box {
+            width: 100%; background: rgba(255,255,255,0.035);
+            border: 1px solid #1e3a5a; border-radius: 10px;
+            color: #bbd; font-size: 0.85rem; line-height: 1.65;
+            padding: 0.85rem 1rem; white-space: pre-wrap;
+            word-break: break-word; box-sizing: border-box;
+            min-height: 80px;
+        }
+    </style>
+</th:block>
+
+<main layout:fragment="content">
+    <div class="workspace-container">
+
+        <!-- ── 왼쪽: PR 뷰어 ── -->
+        <div class="pr-pane">
+            <div class="pr-header">
+                <div class="pr-title"
+                     th:text="${workspace.prMetadata != null ? workspace.prMetadata.title() : (workspace.githubPrUrl != null ? 'PR 정보를 불러올 수 없습니다' : '리뷰 요청이 없습니다')}">
+                </div>
+                <div class="pr-meta" th:if="${workspace.prMetadata != null}">
+                    <span th:class="'pr-badge badge-' + ${workspace.prMetadata.state()}"
+                          th:text="${workspace.prMetadata.state()}"></span>
+                    <span class="stat-item">파일 <span th:text="${workspace.prMetadata.changedFiles()}"></span>개</span>
+                    <span class="stat-add">+<span th:text="${workspace.prMetadata.additions()}"></span></span>
+                    <span class="stat-del">-<span th:text="${workspace.prMetadata.deletions()}"></span></span>
+                    <a th:if="${workspace.githubPrUrl != null}"
+                       th:href="${workspace.githubPrUrl}" target="_blank"
+                       style="color:#00CFE8; font-size:0.78rem; text-decoration:none; margin-left:auto;">
+                        GitHub에서 열기 ↗
+                    </a>
+                </div>
+                <div class="pr-meta" th:if="${workspace.prMetadata == null and workspace.githubPrUrl != null}">
+                    <a th:href="${workspace.githubPrUrl}" target="_blank"
+                       style="color:#00CFE8; font-size:0.78rem; text-decoration:none;">
+                        GitHub에서 열기 ↗
+                    </a>
+                </div>
+            </div>
+
+            <div class="pr-tabs">
+                <div class="pr-tab active" onclick="switchTab('files', this)">변경 파일</div>
+                <div class="pr-tab" onclick="switchTab('context', this)">리뷰 요청 정보</div>
+                <div class="pr-tab" onclick="switchTab('report', this)">시니어 리포트</div>
+            </div>
+
+            <div class="pr-body">
+
+                <!-- 변경 파일 탭 -->
+                <div id="tab-files" class="tab-panel active">
+                    <div th:if="${workspace.prMetadata == null}" class="empty-pr">
+                        <span style="font-size:2rem;">📂</span>
+                        <span th:text="${workspace.githubPrUrl != null ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></span>
+                    </div>
+                    <th:block th:if="${workspace.prMetadata != null}">
+                        <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="empty-pr">
+                            <span>변경된 파일이 없습니다.</span>
+                        </div>
+                        <div th:each="file, iter : ${workspace.prMetadata.files()}"
+                             class="file-card" th:id="'file-' + ${iter.index}">
+                            <div class="file-header" th:onclick="'toggleFile(' + ${iter.index} + ')'">
+                                <span class="collapse-icon open" th:id="'icon-' + ${iter.index}">▶</span>
+                                <span th:class="'file-status status-' + ${file.status()}" th:text="${file.status()}"></span>
+                                <span class="file-name" th:text="${file.filename()}"></span>
+                                <span class="file-stats">
+                                    <span class="add">+<th:block th:text="${file.additions()}"></th:block></span>
+                                    <span class="del"> -<th:block th:text="${file.deletions()}"></th:block></span>
+                                </span>
+                            </div>
+                            <div th:id="'patch-' + ${iter.index}" class="patch-viewer" th:attr="data-patch=${file.patch()}"></div>
+                        </div>
+                    </th:block>
+                </div>
+
+                <!-- 리뷰 요청 정보 탭 -->
+                <div id="tab-context" class="tab-panel">
+                    <div th:if="${workspace.projectContext == null}" class="empty-pr">
+                        <span>아직 제출된 리뷰 요청이 없습니다.</span>
+                    </div>
+                    <th:block th:if="${workspace.projectContext != null}">
+                        <div class="section-card">
+                            <div class="section-label">프로젝트 컨텍스트</div>
+                            <div class="section-text" th:text="${workspace.projectContext}"></div>
+                        </div>
+                        <div class="section-card">
+                            <div class="section-label">궁금한 점 / 우려 사항</div>
+                            <div class="section-text" th:text="${workspace.concernPoint}"></div>
+                        </div>
+                    </th:block>
+                </div>
+
+                <!-- 시니어 리포트 탭 -->
+                <div id="tab-report" class="tab-panel">
+
+                    <div id="reportView" th:if="${workspace.hasReport}">
+                        <div class="report-view-header">
+                            <span class="report-view-title">리뷰 완료</span>
+                            <button th:if="${workspace.isSenior and workspace.orderStatus != 'SETTLED'}" class="btn-edit-report" onclick="enterEditMode()">수정</button>
+                        </div>
+                        <div class="section-card">
+                            <div class="section-label">현업 관점</div>
+                            <div class="section-text" id="view-industryPerspective" th:text="${workspace.reportIndustryPerspective}"></div>
+                        </div>
+                        <div class="section-card">
+                            <div class="section-label">엣지 케이스</div>
+                            <div class="section-text" id="view-edgeCases" th:text="${workspace.reportEdgeCases}"></div>
+                        </div>
+                        <div class="section-card">
+                            <div class="section-label">개선 방향 / 대안</div>
+                            <div class="section-text" id="view-alternatives" th:text="${workspace.reportAlternatives}"></div>
+                        </div>
+                        <div class="section-card" th:if="${workspace.reportAiSummary != null}">
+                            <div class="section-label">AI 요약</div>
+                            <div class="section-text" th:text="${workspace.reportAiSummary}"></div>
+                        </div>
+
+                        <!-- 주니어 전용 액션 바 -->
+                        <div th:if="${!workspace.isSenior}" id="actionBar" class="action-bar">
+                            <th:block th:if="${workspace.orderStatus == 'PAID'}">
+                                <p class="action-bar-title">멘토링이 모두 완료되었나요?</p>
+                                <p class="action-bar-msg">멘토링 종료를 누르시면 에스크로 대금이 안전하게 정산됩니다.</p>
+                                <button class="btn-settle" onclick="openConfirmModal()">
+                                    &#10003; 멘토링 종료 및 리뷰 남기기
+                                </button>
+                            </th:block>
+                            <th:block th:if="${workspace.orderStatus == 'SETTLED'}">
+                                <span style="color:#4ade80; font-size:1.3rem;">✓</span>
+                                <p class="action-bar-title" style="color:#4ade80;">멘토링 종료 완료</p>
+                                <button th:if="${!workspace.hasReview}" class="btn-review" onclick="openReviewOnlyModal()">후기 남기기</button>
+                                <span th:if="${workspace.hasReview}" style="color:#4ade80; font-size:0.88rem; font-weight:600;">✓ 후기 작성 완료</span>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- 리포트 수정 폼 -->
+                    <div id="reportEditForm" th:if="${workspace.hasReport and workspace.isSenior}" style="display:none;">
+                        <div class="report-view-header">
+                            <span class="report-view-title">리뷰 수정</span>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn-edit-report btn-cancel-report" onclick="cancelEditMode()">취소</button>
+                                <button class="btn-submit-report" onclick="saveReport()" id="btnSaveReport">저장</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">현업 관점</label>
+                            <textarea id="edit-industryPerspective" name="industryPerspective" class="form-textarea" rows="5"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">엣지 케이스</label>
+                            <textarea id="edit-edgeCases" name="edgeCases" class="form-textarea" rows="5"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">개선 방향 / 대안</label>
+                            <textarea id="edit-alternatives" name="alternatives" class="form-textarea" rows="5"></textarea>
+                        </div>
+                    </div>
+
+                    <div th:if="${!workspace.hasReport and !workspace.isSenior}" class="report-waiting">
+                        <div class="waiting-icon">⏳</div>
+                        <div class="waiting-title">시니어가 리뷰를 작성 중입니다</div>
+                        <div class="waiting-desc">리뷰가 완료되면 이 탭에서 확인할 수 있습니다.</div>
+                    </div>
+
+                    <div th:if="${!workspace.hasReport and workspace.isSenior}">
+                        <form id="reportForm" th:attr="data-action=@{/orders/{id}/report(id=${workspace.orderId})}" class="report-form">
+                            <div class="form-group">
+                                <label class="form-label">현업 관점 <span class="form-hint">현장에서 이런 코드를 봤을 때 어떤 인상을 받는지 솔직하게 작성해 주세요.</span></label>
+                                <textarea name="industryPerspective" class="form-textarea" rows="5" required placeholder="현업에서 실제로 이런 패턴을 어떻게 평가하는지, 코드 품질·가독성·유지보수성 등 관점에서 서술해 주세요."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">엣지 케이스 <span class="form-hint">코드에서 놓칠 수 있는 경계 상황이나 예외를 알려주세요.</span></label>
+                                <textarea name="edgeCases" class="form-textarea" rows="5" required placeholder="동시성, null 처리, 빈 컬렉션, 네트워크 오류 등 예상되는 엣지 케이스를 구체적으로 작성해 주세요."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">개선 방향 / 대안 <span class="form-hint">더 나은 방법이 있다면 구체적인 방향과 이유를 제안해 주세요.</span></label>
+                                <textarea name="alternatives" class="form-textarea" rows="5" required placeholder="리팩토링 방향, 다른 패턴 제안, 라이브러리 활용 등 개선안을 자유롭게 작성해 주세요."></textarea>
+                            </div>
+                            <button type="submit" class="btn-submit-report">리뷰 제출하기</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 오른쪽: 채팅 ── -->
+        <div class="chat-pane">
+            <div class="chat-header">
+                <div class="chat-header-avatar" th:with="avatarUrl=${workspace.opponentAvatarUrl}">
+                    <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="avatar"/>
+                    <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}" th:text="${#strings.substring(workspace.opponentNickname, 0, 1)}"></span>
+                </div>
+                <div class="chat-header-name" th:text="${workspace.opponentNickname}"></div>
+                <span id="connectionStatus" class="connection-status status-disconnected">연결 중...</span>
+            </div>
+
+            <div class="chat-messages" id="messageList">
+                <th:block th:each="msg : ${workspace.initialMessages}">
+                    <th:block th:if="${msg.messageType.name() != 'USER'}">
+                        <div th:if="${msg.messageType.name() != 'REVIEW_WRITTEN'}"
+                             class="system-message-card" th:text="${msg.content}"></div>
+                        <div th:if="${msg.messageType.name() == 'REVIEW_WRITTEN'}"
+                             class="system-message-card review-written-card">
+                            <span th:text="${msg.content}"></span>
+                            <button class="btn-view-review"
+                                    th:onclick="'openReviewModal(' + ${msg.referenceId} + ')'">후기 보기</button>
+                        </div>
+                    </th:block>
+                    <div th:if="${msg.messageType.name() == 'USER'}"
+                         th:class="${msg.senderNickname == workspace.currentNickname} ? 'msg-right' : 'msg-left'">
+                        <div class="msg-sender" th:text="${msg.senderNickname}"></div>
+                        <div class="msg-bubble" th:text="${msg.content}"></div>
+                        <div class="msg-time" th:text="${#temporals.format(msg.createdAt, 'HH:mm')}"></div>
+                    </div>
+                </th:block>
+            </div>
+
+            <div class="chat-input-area" th:if="${workspace.chatRoomActive}">
+                <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." autocomplete="off"/>
+                <button class="btn-send" onclick="sendMessage()">전송</button>
+            </div>
+            <div class="chat-closed-banner" th:if="${!workspace.chatRoomActive}">
+                멘토링이 종료되어 메시지를 보낼 수 없습니다.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── 멘토링 종료 모달 ── -->
+    <div id="confirmModal" class="modal-backdrop" style="display:none;" onclick="onBackdropClick(event)">
+        <div class="modal-box">
+
+            <!-- 체크 + 제목 -->
+            <div class="modal-check-area">
+                <div class="modal-check-icon">✓</div>
+                <p class="modal-main-title">멘토링 완료!</p>
+                <p class="modal-main-desc">
+                    수고하셨습니다. 성장에 도움이 되셨나요?<br>
+                    <span class="modal-notice">* 구매 확정 시 실시간 채팅은 읽기 전용으로 전환됩니다.</span>
+                </p>
+            </div>
+
+            <!-- 별점 -->
+            <div class="modal-section">
+                <p class="modal-section-title">시니어에게 별점 남기기</p>
+                <div class="star-row" id="starRow">
+                    <span class="star" data-val="1">★</span>
+                    <span class="star" data-val="2">★</span>
+                    <span class="star" data-val="3">★</span>
+                    <span class="star" data-val="4">★</span>
+                    <span class="star" data-val="5">★</span>
+                </div>
+            </div>
+
+            <!-- 후기 -->
+            <div class="modal-textarea-section">
+                <p class="modal-textarea-label">성장의 기록을 남겨주세요</p>
+                <p class="modal-textarea-hint">남겨주신 소중한 후기는 동료 주니어들에게 멋진 길잡이가 됩니다.</p>
+                <textarea id="commentInput" class="modal-textarea" rows="5"
+                          placeholder="고민했던 문제를 적어주세요.&#10;시니어의 리뷰를 통해 새롭게 알게 된 점을 적어주세요.&#10;시니어의 피드백 중 가장 인상 깊었던 조언을 적어주세요."></textarea>
+            </div>
+
+            <!-- 버튼 -->
+            <div class="modal-actions">
+                <button id="btnSettleReview" class="btn-modal-primary" onclick="doSettle(true)">
+                    멘토링 종료 및 정산 완료
+                </button>
+                <button id="btnSettleOnly" class="btn-modal-secondary" onclick="doSettle(false)">
+                    후기 없이 멘토링 종료하기
+                </button>
+            </div>
+
+            <p class="modal-footer-note">작성하지 못한 후기는 내 멘토링에서 언제든 작성 가능합니다.</p>
+        </div>
+    </div>
+
+    <!-- ── 후기 보기 모달 ── -->
+    <div id="reviewModal" class="modal-backdrop" style="display:none;" onclick="onReviewBackdropClick(event)">
+        <div class="modal-box">
+            <div class="modal-check-area">
+                <div class="modal-check-icon">★</div>
+                <p class="modal-main-title">멘토링 후기</p>
+            </div>
+            <div class="modal-section">
+                <p class="modal-section-title">별점</p>
+                <div class="star-row" id="reviewStarRow">
+                    <span class="star star-display" data-val="1">★</span>
+                    <span class="star star-display" data-val="2">★</span>
+                    <span class="star star-display" data-val="3">★</span>
+                    <span class="star star-display" data-val="4">★</span>
+                    <span class="star star-display" data-val="5">★</span>
+                </div>
+            </div>
+            <div class="modal-textarea-section">
+                <p class="modal-textarea-label">후기 내용</p>
+                <div id="reviewCommentBox" class="review-comment-box"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-secondary" onclick="closeReviewModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="script">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <script th:inline="javascript">
+        const chatRoomId      = [[${workspace.chatRoomId}]];
+        const orderId         = [[${workspace.orderId}]];
+        const currentNickname = [[${workspace.currentNickname}]];
+        const chatRoomActive  = [[${workspace.chatRoomActive}]];
+
+        let cursor = null;
+        const initMsgs = /*[[${workspace.initialMessages}]]*/ [];
+        if (initMsgs && initMsgs.length > 0) cursor = initMsgs[0].id;
+
+        let stompClient = null;
+        if (chatRoomActive) {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null;
+            stompClient.connect({}, function () {
+                document.getElementById('connectionStatus').textContent = '연결됨';
+                document.getElementById('connectionStatus').className = 'connection-status status-connected';
+                stompClient.subscribe('/user/queue/chat', function (payload) { appendMessage(JSON.parse(payload.body)); });
+                scrollToBottom();
+            }, function () {
+                document.getElementById('connectionStatus').textContent = '연결 끊김';
+                document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+            });
+        } else {
+            const statusEl = document.getElementById('connectionStatus');
+            if (statusEl) { statusEl.textContent = '종료됨'; statusEl.className = 'connection-status status-disconnected'; }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = (input.value || '').trim();
+            if (!content || !stompClient) return;
+            stompClient.send('/app/' + chatRoomId + '/send', {}, JSON.stringify({ content }));
+            input.value = '';
+        }
+
+        function appendMessage(msg) {
+            const list = document.getElementById('messageList');
+            if (!list) return;
+            const isMine = msg.senderNickname === currentNickname;
+            if (msg.messageType && msg.messageType !== 'USER') {
+                if (msg.messageType === 'REVIEW_WRITTEN') {
+                    const card = document.createElement('div');
+                    card.className = 'system-message-card review-written-card';
+                    const text = document.createElement('span');
+                    text.textContent = msg.content || '멘토링 후기가 작성되었습니다. 아래 버튼을 눌러 확인하세요.';
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-view-review';
+                    btn.textContent = '후기 보기';
+                    btn.onclick = function() { openReviewModal(msg.referenceId); };
+                    card.appendChild(text);
+                    card.appendChild(btn);
+                    list.appendChild(card);
+                    scrollToBottom();
+                    return;
+                }
+                const card = document.createElement('div');
+                card.className = 'system-message-card';
+                card.textContent = msg.content;
+                list.appendChild(card);
+                if (msg.messageType === 'ROOM_CLOSE') {
+                    const inputArea = document.querySelector('.chat-input-area');
+                    if (inputArea) {
+                        const banner = document.createElement('div');
+                        banner.className = 'chat-closed-banner';
+                        banner.textContent = '멘토링이 종료되어 메시지를 보낼 수 없습니다.';
+                        inputArea.replaceWith(banner);
+                    }
+                    const statusEl = document.getElementById('connectionStatus');
+                    if (statusEl) { statusEl.textContent = '종료됨'; statusEl.className = 'connection-status status-disconnected'; }
+                }
+            } else {
+                const wrapper = document.createElement('div');
+                wrapper.className = isMine ? 'msg-right' : 'msg-left';
+                const sender = document.createElement('div'); sender.className = 'msg-sender'; sender.textContent = msg.senderNickname;
+                const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.textContent = msg.content;
+                const time   = document.createElement('div'); time.className   = 'msg-time';   time.textContent   = formatTime(msg.createdAt);
+                wrapper.appendChild(sender); wrapper.appendChild(bubble); wrapper.appendChild(time);
+                list.appendChild(wrapper);
+            }
+            scrollToBottom();
+        }
+
+        function prependMessage(msg) {
+            const list = document.getElementById('messageList');
+            if (!list) return;
+            const isMine = msg.senderNickname === currentNickname;
+            const wrapper = document.createElement('div');
+            wrapper.className = isMine ? 'msg-right' : 'msg-left';
+            const sender = document.createElement('div'); sender.className = 'msg-sender'; sender.textContent = msg.senderNickname;
+            const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.textContent = msg.content;
+            const time   = document.createElement('div'); time.className   = 'msg-time';   time.textContent   = formatTime(msg.createdAt);
+            wrapper.appendChild(sender); wrapper.appendChild(bubble); wrapper.appendChild(time);
+            list.prepend(wrapper);
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        }
+
+        function scrollToBottom() { const list = document.getElementById('messageList'); if (list) list.scrollTop = list.scrollHeight; }
+
+        const msgInput = document.getElementById('messageInput');
+        if (msgInput) msgInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.isComposing) sendMessage(); });
+
+        let isLoading = false;
+        const messageList = document.getElementById('messageList');
+        if (messageList) {
+            messageList.addEventListener('scroll', function () {
+                if (messageList.scrollTop === 0 && !isLoading && cursor != null) {
+                    isLoading = true;
+                    fetch('/orders/' + orderId + '/messages?before=' + cursor)
+                        .then(res => res.json())
+                        .then(messages => {
+                            if (!messages || messages.length === 0) return;
+                            const prevHeight = messageList.scrollHeight;
+                            messages.forEach(msg => prependMessage(msg));
+                            messageList.scrollTop = messageList.scrollHeight - prevHeight;
+                            cursor = messages[0].id;
+                        })
+                        .finally(() => { isLoading = false; });
+                }
+            });
+            scrollToBottom();
+        }
+
+        function switchTab(tabName, el) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.pr-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            el.classList.add('active');
+        }
+
+        const reportForm = document.getElementById('reportForm');
+        if (reportForm) {
+            reportForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const action = reportForm.getAttribute('data-action');
+                const formData = new FormData(reportForm);
+                const params = new URLSearchParams(/** @type {any} */ (formData));
+                const btn = reportForm.querySelector('.btn-submit-report');
+                btn.disabled = true; btn.textContent = '제출 중...';
+                fetch(action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('submit failed');
+                        const panel = document.getElementById('tab-report');
+                        panel.innerHTML =
+                            buildReportCard('현업 관점', formData.get('industryPerspective')) +
+                            buildReportCard('엣지 케이스', formData.get('edgeCases')) +
+                            buildReportCard('개선 방향 / 대안', formData.get('alternatives'));
+                    })
+                    .catch(function () {
+                        btn.disabled = false; btn.textContent = '리뷰 제출하기';
+                        alert('제출 중 오류가 발생했습니다. 다시 시도해 주세요.');
+                    });
+            });
+        }
+
+        function buildReportCard(label, text) {
+            return '<div class="section-card"><div class="section-label">' + label + '</div><div class="section-text">' + escapeHtml(text) + '</div></div>';
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+        }
+
+        // ── 모달 ──
+        let selectedRating = 0;
+
+        function openConfirmModal() {
+            selectedRating = 0; updateStars(0);
+            document.getElementById('commentInput').value = '';
+            resetModalButtons();
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function openReviewOnlyModal() {
+            selectedRating = 0; updateStars(0);
+            document.getElementById('commentInput').value = '';
+            resetModalButtons();
+            document.getElementById('btnSettleOnly').style.display = 'none';
+            document.getElementById('btnSettleReview').textContent = '후기 남기기';
+            document.getElementById('confirmModal').setAttribute('data-review-only', 'true');
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            document.getElementById('confirmModal').removeAttribute('data-review-only');
+        }
+
+        function onBackdropClick(e) { if (e.target === document.getElementById('confirmModal')) closeConfirmModal(); }
+
+        function resetModalButtons() {
+            const btnOnly   = document.getElementById('btnSettleOnly');
+            const btnReview = document.getElementById('btnSettleReview');
+            btnOnly.style.display = ''; btnOnly.disabled = false; btnOnly.textContent = '후기 없이 멘토링 종료하기';
+            btnReview.disabled = false; btnReview.textContent = '멘토링 종료 및 정산 완료';
+            document.getElementById('confirmModal').removeAttribute('data-review-only');
+        }
+
+        function updateStars(val) {
+            document.querySelectorAll('#starRow .star').forEach(function(s) {
+                s.classList.toggle('filled', parseInt(s.dataset.val) <= val);
+            });
+        }
+
+        document.querySelectorAll('#starRow .star').forEach(function(s) {
+            s.addEventListener('click',      function() { selectedRating = parseInt(s.dataset.val); updateStars(selectedRating); });
+            s.addEventListener('mouseenter', function() { updateStars(parseInt(s.dataset.val)); });
+            s.addEventListener('mouseleave', function() { updateStars(selectedRating); });
+        });
+
+        function doSettle(withReview) {
+            const isReviewOnly = document.getElementById('confirmModal').getAttribute('data-review-only') === 'true';
+            if (withReview && selectedRating === 0) { alert('별점을 선택해 주세요.'); return; }
+            const btnOnly   = document.getElementById('btnSettleOnly');
+            const btnReview = document.getElementById('btnSettleReview');
+            btnOnly.disabled = true; btnReview.disabled = true;
+            (withReview ? btnReview : btnOnly).textContent = '처리 중...';
+            const comment = document.getElementById('commentInput').value.trim();
+            const settlePromise = isReviewOnly
+                ? Promise.resolve()
+                : fetch('/orders/' + orderId + '/settle', { method: 'POST' }).then(function(r) { if (!r.ok) throw new Error('settle'); });
+            const chain = withReview
+                ? settlePromise.then(function() {
+                    return fetch('/orders/' + orderId + '/feedback', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: orderId, rating: selectedRating, comment: comment || null })
+                    }).then(function(r) { if (!r.ok) throw new Error('review'); });
+                })
+                : settlePromise;
+            chain
+                .then(function() {
+                    closeConfirmModal();
+                    if (isReviewOnly) { showReviewDone(); } else { showSettledBar(withReview); }
+                })
+                .catch(function() {
+                    btnOnly.disabled = false; btnReview.disabled = false; resetModalButtons();
+                    alert('처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+                });
+        }
+
+        function showSettledBar(hasReview) {
+            const bar = document.getElementById('actionBar');
+            if (!bar) return;
+            let html = '<span style="color:#4ade80;font-size:1.3rem;">✓</span>' +
+                '<p class="action-bar-title" style="color:#4ade80;">멘토링 종료 완료</p>';
+            html += hasReview
+                ? '<span style="color:#4ade80;font-size:0.88rem;font-weight:600;">✓ 후기 작성 완료</span>'
+                : '<button class="btn-review" onclick="openReviewOnlyModal()">후기 남기기</button>';
+            bar.innerHTML = html;
+        }
+
+        function showReviewDone() {
+            const bar = document.getElementById('actionBar');
+            if (!bar) return;
+            bar.innerHTML =
+                '<span style="color:#4ade80;font-size:1.3rem;">✓</span>' +
+                '<p class="action-bar-title" style="color:#4ade80;">멘토링 종료 완료</p>' +
+                '<span style="color:#4ade80;font-size:0.88rem;font-weight:600;">✓ 후기 작성 완료</span>';
+        }
+
+        function enterEditMode() {
+            const ip  = document.getElementById('view-industryPerspective');
+            const ec  = document.getElementById('view-edgeCases');
+            const alt = document.getElementById('view-alternatives');
+            if (!ip) return;
+            document.getElementById('edit-industryPerspective').value = ip.innerText;
+            document.getElementById('edit-edgeCases').value           = ec.innerText;
+            document.getElementById('edit-alternatives').value        = alt.innerText;
+            document.getElementById('reportView').style.display     = 'none';
+            document.getElementById('reportEditForm').style.display = 'block';
+        }
+
+        function cancelEditMode() {
+            document.getElementById('reportEditForm').style.display = 'none';
+            document.getElementById('reportView').style.display     = 'block';
+        }
+
+        function saveReport() {
+            const industryPerspective = document.getElementById('edit-industryPerspective').value.trim();
+            const edgeCases           = document.getElementById('edit-edgeCases').value.trim();
+            const alternatives        = document.getElementById('edit-alternatives').value.trim();
+            if (!industryPerspective || !edgeCases || !alternatives) { alert('모든 항목을 입력해 주세요.'); return; }
+            const btn = document.getElementById('btnSaveReport');
+            btn.disabled = true; btn.textContent = '저장 중...';
+            fetch('/orders/' + orderId + '/report', {
+                method: 'PATCH', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ industryPerspective, edgeCases, alternatives }).toString()
+            })
+                .then(function(res) {
+                    if (!res.ok) throw new Error('update failed');
+                    document.getElementById('view-industryPerspective').innerHTML = escapeHtml(industryPerspective);
+                    document.getElementById('view-edgeCases').innerHTML           = escapeHtml(edgeCases);
+                    document.getElementById('view-alternatives').innerHTML        = escapeHtml(alternatives);
+                    btn.disabled = false; btn.textContent = '저장';
+                    document.getElementById('reportEditForm').style.display = 'none';
+                    document.getElementById('reportView').style.display     = 'block';
+                })
+                .catch(function() { btn.disabled = false; btn.textContent = '저장'; alert('저장 중 오류가 발생했습니다. 다시 시도해 주세요.'); });
+        }
+
+        function toggleFile(idx) {
+            const patch = document.getElementById('patch-' + idx);
+            const icon  = document.getElementById('icon-' + idx);
+            if (!patch) return;
+            const hidden = patch.style.display === 'none';
+            patch.style.display = hidden ? '' : 'none';
+            icon.classList.toggle('open', hidden);
+        }
+
+        const EXT_LANG_MAP = {
+            java:'java', js:'javascript', ts:'typescript', py:'python', html:'html', css:'css', xml:'xml',
+            json:'json', yml:'yaml', yaml:'yaml', sh:'bash', md:'markdown', sql:'sql', kt:'kotlin',
+            go:'go', rb:'ruby', php:'php', cs:'csharp', cpp:'cpp', c:'c', rs:'rust', swift:'swift',
+            scala:'scala', gradle:'groovy', groovy:'groovy', properties:'properties'
+        };
+
+        function detectLang(filename) { const ext = (filename||'').split('.').pop().toLowerCase(); return EXT_LANG_MAP[ext]||null; }
+        function escapeHtmlCode(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function applyHighlight(code, lang) {
+            if (!window.hljs||!code||!lang) return escapeHtmlCode(code);
+            try { if (hljs.getLanguage(lang)) return hljs.highlight(code,{language:lang,ignoreIllegals:true}).value; } catch(e){}
+            return escapeHtmlCode(code);
+        }
+
+        function renderPatch(container, patchText, filename) {
+            if (!patchText) return;
+            const lang = detectLang(filename);
+            let lineNum = 0;
+            patchText.split('\n').forEach(function(line) {
+                const row    = document.createElement('div'); row.className = 'patch-line';
+                const numEl  = document.createElement('span'); numEl.className  = 'patch-line-num';
+                const codeEl = document.createElement('span'); codeEl.className = 'patch-line-content';
+                if (line.startsWith('@@')) {
+                    row.classList.add('hunk'); numEl.textContent = '...'; codeEl.textContent = line;
+                } else if (line.startsWith('+')) {
+                    row.classList.add('add'); lineNum++; numEl.textContent = String(lineNum);
+                    codeEl.innerHTML = '<span class="diff-prefix">+</span>' + applyHighlight(line.slice(1), lang);
+                } else if (line.startsWith('-')) {
+                    row.classList.add('del'); numEl.textContent = '';
+                    codeEl.innerHTML = '<span class="diff-prefix">-</span>' + applyHighlight(line.slice(1), lang);
+                } else {
+                    row.classList.add('ctx'); lineNum++; numEl.textContent = String(lineNum);
+                    codeEl.innerHTML = '<span class="diff-prefix"> </span>' + applyHighlight(line.slice(1), lang);
+                }
+                row.appendChild(numEl); row.appendChild(codeEl); container.appendChild(row);
+            });
+        }
+
+        // ── 후기 보기 모달 ──
+        function openReviewModal(reviewOrderId) {
+            fetch('/orders/' + reviewOrderId + '/review')
+                .then(function(r) { if (!r.ok) throw new Error('fetch'); return r.json(); })
+                .then(function(data) {
+                    document.querySelectorAll('#reviewStarRow .star').forEach(function(s) {
+                        s.classList.toggle('filled', parseInt(s.dataset.val) <= data.rating);
+                    });
+                    document.getElementById('reviewCommentBox').textContent = data.comment || '(후기 내용 없음)';
+                    document.getElementById('reviewModal').style.display = 'flex';
+                })
+                .catch(function() { alert('후기를 불러오지 못했습니다.'); });
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+        }
+
+        function onReviewBackdropClick(e) {
+            if (e.target === document.getElementById('reviewModal')) closeReviewModal();
+        }
+
+        document.querySelectorAll('.patch-viewer[data-patch]').forEach(function(el) {
+            const patch    = el.getAttribute('data-patch');
+            const card     = el.closest('.file-card');
+            const filename = card ? (card.querySelector('.file-name').textContent.trim()||'') : '';
+            renderPatch(el, patch, filename);
+        });
+    </script>
+</th:block>
+
+</html>

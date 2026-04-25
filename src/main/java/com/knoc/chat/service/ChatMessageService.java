@@ -19,6 +19,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +105,7 @@ public class ChatMessageService {
                     .filter(m -> m.getMessageType() != MessageType.REVIEW_REQUESTED)
                     .toList();
         }
-
+        messages = new ArrayList<>(messages);
         Collections.reverse(messages);
 
 

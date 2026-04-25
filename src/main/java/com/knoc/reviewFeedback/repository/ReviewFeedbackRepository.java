@@ -12,6 +12,8 @@ import java.util.List;
 public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,Long> {
     boolean existsByOrderId(Long orderId);
 
+    java.util.Optional<ReviewFeedback> findByOrderId(Long orderId);
+
     List<ReviewFeedback> findTop3BySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId);
 
     List<ReviewFeedback> findBySeniorProfile_Id(Long seniorProfileId);
