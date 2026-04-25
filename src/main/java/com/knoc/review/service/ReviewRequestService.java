@@ -37,7 +37,7 @@ public class ReviewRequestService {
 
         // 상태 검증
         if (order.getStatus() != OrderStatus.PAID) {
-            throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
+            throw new BusinessException(ErrorCode.REVIEW_REQUEST_NOT_ALLOWED);
         }
 
         // 중복 검증
@@ -67,6 +67,7 @@ public class ReviewRequestService {
                 null,
                 order.getId()
         ));
+
         // 6. 저장된 주문을 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
         return ReviewRequestCreateResponse.from(reviewRequest);
     }
