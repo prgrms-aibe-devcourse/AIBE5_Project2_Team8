@@ -42,6 +42,7 @@ public enum ErrorCode {
     ORDER_INVALID_ORDER_NUMBER(400, "유효하지 않은 주문번호입니다."),
 
     // 리뷰 관련 (Review)
+    REVIEW_REQUEST_ALREADY_EXISTS(409, "이미 해당 주문에 대한 리뷰 요청서가 존재합니다."),
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
     REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
 
