@@ -106,6 +106,7 @@ public class ChatController {
     @Operation(summary = "메시지 전송 (WebSocket)", description = "채팅방으로 메시지를 전송합니다. (WebSocket/STOMP)")
     @MessageMapping("/{roomId}/send")
     public void sendMessage(@DestinationVariable Long roomId, @Payload ChatMessageRequest request, Principal principal) {
+        // Principal(이메일)만 넘기고 유저 찾는 로직도 Service로 이동하면 더 깔끔해집니다!
         chatMessageService.sendMessage(roomId, principal.getName(), request.getContent());
     }
 
