@@ -10,6 +10,7 @@ import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.service.ChatMessageService;
 import com.knoc.chat.service.ChatRoomService;
 import com.knoc.order.service.OrderService;
+import com.knoc.senior.SeniorProfileService;
 import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +33,7 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
     private final ChatRoomService chatRoomService;
     private final OrderService orderService;
-    private final SeniorProfileRepository seniorProfileRepository;
+    private final SeniorProfileService seniorProfileService;
 
     @Value("${toss.payments.client-key:}")
     private String tossClientKey;
@@ -78,9 +79,7 @@ public class ChatController {
 
         boolean hasPaymentRequest = orderService.hasActivePaymentRequest(chatRoom);
 
-        int seniorPricePerReview = seniorProfileRepository.findByMemberId(chatRoom.getSenior().getId())
-                .map(p -> p.getPricePerReview())
-                .orElse(0);
+        int seniorPricePerReview = seniorProfileService.getPricePerReview(chatRoom.getSenior().getId());
 
         model.addAttribute("selectedRoomId", dto.selectedRoomId());
         model.addAttribute("messages", messages);
