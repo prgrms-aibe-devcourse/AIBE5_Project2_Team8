@@ -85,6 +85,15 @@ function renderSystemMessage(data, options = {}) {
             }
             break;
         }
+        case 'REVIEW_SUBMITTED': {
+            // 리뷰 요청서 접수 완료: 시니어에게 워크스페이스 입장 버튼 노출
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
+            if (IS_SENIOR && data.referenceId) {
+                buttonHtml = `<button class="sys-action-btn btn-blue action-workspace" data-order-id="${escapeHTML(String(data.referenceId))}">
+                    워크스페이스 입장</button>`;
+            }
+            break;
+        }
         case 'WORKSPACE_READY': {
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
             break;
@@ -323,6 +332,10 @@ if (chatContainer) {
 
             console.log(`[리뷰 요청서 작성 폼 이동] 방 번호: ${roomId}`);
             openReviewRequestModal();
+        } else if (target.classList.contains('action-workspace')) {
+            const orderId = target.getAttribute('data-order-id');
+            if (!orderId) return;
+            window.location.href = `/orders/${orderId}`;
         } else if (target.classList.contains('action-confirm')) {
             const reportId = target.getAttribute('data-report-id');
             if (confirm("구매를 확정하시겠습니까?\n구매 확정 시 에스크로 대금이 시니어에게 정산됩니다.")) {

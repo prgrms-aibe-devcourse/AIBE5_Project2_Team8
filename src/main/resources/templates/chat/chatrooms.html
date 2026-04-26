@@ -105,7 +105,7 @@
                         <div th:if="${msg.messageType.name() != 'USER'}"
                              th:classappend="${
                                 msg.messageType.name() == 'PAYMENT_REQUESTED' ? ' type-payment' :
-                                (msg.messageType.name() == 'REVIEW_REQUESTED' ? ' type-review' : ' type-default')
+                                (msg.messageType.name() == 'REVIEW_REQUESTED' or msg.messageType.name() == 'REVIEW_SUBMITTED' ? ' type-review' : ' type-default')
                              }"
                              class="system-message-card">
 
@@ -115,11 +115,14 @@
                             <div class="sys-header text-blue" th:if="${msg.messageType.name() == 'REVIEW_REQUESTED'}">
                                 <span style="margin-right: 6px;">📄</span> 시스템 알림
                             </div>
+                            <div class="sys-header text-blue" th:if="${msg.messageType.name() == 'REVIEW_SUBMITTED'}">
+                                <span style="margin-right: 6px;">🔔</span> 시스템 알림
+                            </div>
                             <div class="sys-header text-gray" th:if="${msg.messageType.name() == 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔒</span> 시스템 알림
                             </div>
                             <div class="sys-header text-gray"
-                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'REVIEW_REQUESTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
+                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'REVIEW_REQUESTED' and msg.messageType.name() != 'REVIEW_SUBMITTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔔</span> 시스템 알림
                             </div>
 
@@ -143,6 +146,16 @@
                                         class="sys-action-btn btn-blue action-review"
                                         th:attr="data-room-id=${selectedRoomId}, data-order-id=${msg.referenceId}">
                                     📄 리뷰 요청서 작성
+                                </button>
+                            </div>
+
+                            <!-- REVIEW_SUBMITTED: 시니어에게 워크스페이스 입장 버튼 노출 -->
+                            <div class="sys-footer"
+                                 th:if="${msg.messageType.name() == 'REVIEW_SUBMITTED' and isSenior and msg.referenceId != null}">
+                                <button type="button"
+                                        class="sys-action-btn btn-blue action-workspace"
+                                        th:attr="data-order-id=${msg.referenceId}">
+                                    워크스페이스 입장
                                 </button>
                             </div>
                         </div>

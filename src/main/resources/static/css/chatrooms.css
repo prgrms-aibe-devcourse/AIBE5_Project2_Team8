@@ -787,7 +787,8 @@
 }
 
 /* REVIEW_REQUESTED 버튼: 에스크로 결제 버튼과 동일한 형태(색상만 블루) */
-.system-message-card.type-review .sys-action-btn.action-review {
+.system-message-card.type-review .sys-action-btn.action-review,
+.system-message-card.type-review .sys-action-btn.action-workspace {
     width: 100%;
     margin-top: 0.4rem;
     padding: 0.95rem 1.2rem;
