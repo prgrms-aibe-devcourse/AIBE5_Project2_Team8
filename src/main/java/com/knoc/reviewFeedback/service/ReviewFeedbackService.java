@@ -94,6 +94,7 @@ public class ReviewFeedbackService {
                 .timeAgo(timeAgo(r.getCreatedAt()))
                 .rating(r.getRating())
                 .content(r.getComment())
+                .orderId(r.getOrder().getId())
                 .build()
         ).toList();
     }
