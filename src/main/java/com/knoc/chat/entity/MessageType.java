@@ -11,7 +11,7 @@ public enum MessageType {
     USER(""),
 
     // 아래부터는 이벤트 발생 시 템플릿에 들어갈 기본 문구
-    PAYMENT_REQUESTED("시니어님이 %d원 결제를 요청했습니다..."),
+    PAYMENT_REQUESTED("시니어님이 %,d원 결제를 요청했습니다..."),
     PAYMENT_COMPLETED("결제가 성공적으로 처리되었습니다.\n결제 금액..."),
     PAYMENT_FAILED("결제가 실패하거나 취소되었습니다. 다시 시도해..."),
     REVIEW_REQUESTED("리뷰를 진행할 코드 정보와 상세한 요청 사항..."),
