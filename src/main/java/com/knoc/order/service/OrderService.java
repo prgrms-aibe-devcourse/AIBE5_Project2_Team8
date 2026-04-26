@@ -280,7 +280,7 @@ public class OrderService {
             throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
         }
         if (order.getStatus() != OrderStatus.PAID) {
-            throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_PAID);
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_BE_SETTLED);
         }
 
         order.updateStatus(OrderStatus.SETTLED);
@@ -296,7 +296,7 @@ public class OrderService {
         eventPublisher.publishEvent(new ChatSystemEvent(
                 order.getChatRoom().getId(),
                 MessageType.ROOM_CLOSE,
-                MessageType.ROOM_CLOSE.getTemplate(),
+                null,
                 null
         ));
     }

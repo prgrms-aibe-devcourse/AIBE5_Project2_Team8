@@ -40,6 +40,7 @@ public enum ErrorCode {
     INVALID_IDEMPOTENCY_KEY(400, "유효하지 않은 멱등성 키입니다."),
     ORDER_INVALID_AMOUNT(400, "유효하지 않은 결제 금액입니다."),
     ORDER_INVALID_ORDER_NUMBER(400, "유효하지 않은 주문번호입니다."),
+    ORDER_CANNOT_BE_SETTLED(400, "현재 주문 상태에서는 정산을 진행할 수 없습니다."),
 
     // 리뷰 요청서 관련 (Review Request)
     REVIEW_REQUEST_ALREADY_EXISTS(409, "이미 해당 주문에 대한 리뷰 요청서가 존재합니다."),
