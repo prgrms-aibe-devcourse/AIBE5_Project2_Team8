@@ -312,13 +312,18 @@
 
                 <!-- 변경 파일 탭 -->
                 <div id="tab-files" class="tab-panel active">
-                    <div th:if="${workspace.prMetadata == null}" class="empty-pr">
-                        <span style="font-size:2rem;">📂</span>
-                        <span th:text="${workspace.hasReviewRequest ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></span>
+                    <div th:if="${workspace.prMetadata == null}" class="report-waiting">
+                        <div class="waiting-icon">📂</div>
+                        <div class="waiting-title"
+                             th:text="${workspace.hasReviewRequest ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></div>
+                        <div class="waiting-desc"
+                             th:text="${workspace.hasReviewRequest ? '잠시 후 다시 시도하거나 GitHub PR 링크를 확인해 주세요.' : '주니어가 리뷰 요청서를 제출하면 변경 파일을 확인할 수 있습니다.'}"></div>
                     </div>
                     <th:block th:if="${workspace.prMetadata != null}">
-                        <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="empty-pr">
-                            <span>변경된 파일이 없습니다.</span>
+                        <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="report-waiting">
+                            <div class="waiting-icon">📄</div>
+                            <div class="waiting-title">변경된 파일이 없습니다</div>
+                            <div class="waiting-desc">PR에 포함된 변경 파일 목록이 비어 있습니다.</div>
                         </div>
                         <div th:each="file, iter : ${workspace.prMetadata.files()}"
                              class="file-card" th:id="'file-' + ${iter.index}">
@@ -338,8 +343,10 @@
 
                 <!-- 리뷰 요청 정보 탭 -->
                 <div id="tab-context" class="tab-panel">
-                    <div th:if="${!workspace.hasReviewRequest}" class="empty-pr">
-                        <span>아직 제출된 리뷰 요청이 없습니다.</span>
+                    <div th:if="${!workspace.hasReviewRequest}" class="report-waiting">
+                        <div class="waiting-icon">📁</div>
+                        <div class="waiting-title">아직 제출된 리뷰 요청이 없습니다</div>
+                        <div class="waiting-desc">주니어가 리뷰 요청서를 제출하면 이 탭에서 확인할 수 있습니다.</div>
                     </div>
                     <th:block th:if="${workspace.hasReviewRequest}">
                         <div class="section-card">
