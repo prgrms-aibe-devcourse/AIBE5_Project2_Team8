@@ -9,7 +9,6 @@ import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
-import com.sun.source.tree.MemberReferenceTree;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -36,12 +35,23 @@ public class ChatRoomService {
     }
 
     // 최신 메시지 map 생성 로직
-    private Map<Long, ChatMessage> buildLatestMessages(List<ChatRoom> chatRooms) {
-        Map<Long, ChatMessage> lastestMessages = new HashMap<>();
-        for(ChatRoom chatRoom : chatRooms) {
-            lastestMessages.put(chatRoom.getId(), chatMessageRepository.findFirstByChatRoomOrderByCreatedAtDesc(chatRoom));
+    // - 시니어 화면에서는 주니어 전용 시스템 메시지(REVIEW_REQUESTED)가 사이드바 미리보기에 노출되지 않도록 필터링한다.
+    private Map<Long, ChatMessage> buildLatestMessages(List<ChatRoom> chatRooms, Member currentMember) {
+        Map<Long, ChatMessage> latestMessages = new HashMap<>();
+        for (ChatRoom chatRoom : chatRooms) {
+            ChatMessage latest = chatMessageRepository.findFirstByChatRoomOrderByCreatedAtDesc(chatRoom);
+            if (latest != null
+                    && latest.getMessageType() == MessageType.REVIEW_REQUESTED
+                    && chatRoom.getSenior() != null
+                    && chatRoom.getSenior().getId() != null
+                    && chatRoom.getSenior().getId().equals(currentMember.getId())) {
+                // 시니어에게는 REVIEW_REQUESTED를 숨김 (다음 최신 메시지로 대체)
+                latest = chatMessageRepository.findFirstByChatRoomAndMessageTypeNotOrderByCreatedAtDesc(
+                        chatRoom, MessageType.REVIEW_REQUESTED);
+            }
+            latestMessages.put(chatRoom.getId(), latest);
         }
-        return lastestMessages;
+        return latestMessages;
     }
 
     // 채팅방 목록 조회 로직
@@ -50,7 +60,7 @@ public class ChatRoomService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(member, member);
-        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
+        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms, member);
 
         return new ChatRoomListDto(chatRooms, latestMessages, member.getNickname());
     }
@@ -69,7 +79,7 @@ public class ChatRoomService {
                 .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, Long.MAX_VALUE, PageRequest.of(0, 20));
         Collections.reverse(messages);
         Long firstMessageId = messages.isEmpty() ? Long.MAX_VALUE : messages.get(0).getId();
-        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms);
+        Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms, currentMember);
 
         return new ChatRoomDetailDto(
                 roomId, messages, currentMember.getNickname(),chatRooms,

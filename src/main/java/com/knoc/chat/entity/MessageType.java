@@ -11,15 +11,17 @@ public enum MessageType {
     USER(""),
 
     // 아래부터는 이벤트 발생 시 템플릿에 들어갈 기본 문구
-    PAYMENT_REQUESTED("시니어님이 %,d원 결제를 요청했습니다.\n결제를 완료하시면 상세 리뷰 요청서를 작성하실 수 있습니다."),
-    PAYMENT_COMPLETED("결제가 성공적으로 처리되었습니다.\n결제 금액은 구매 확정 시까지 Knoc.에서 안전하게 보호합니다."),
-    PAYMENT_FAILED("결제가 실패하거나 취소되었습니다. 다시 시도해주세요."),
-    REVIEW_REQUESTED("리뷰를 진행할 코드 정보와 상세한 요청 사항을 폼에 작성해주세요."),
-    REVIEW_SUBMITTED("상세 리뷰 요청서가 성공적으로 접수되었습니다.\n곧 시니어의 코드 리뷰가 시작됩니다."),
-    REPORT_COMPLETED("시니어님이 상세 코드 리뷰 리포트를 등록했습니다.\n주니어님은 리포트를 확인하고 구매를 확정해 주세요."),
-    WORKSPACE_READY("협업을 위한 워크스페이스가 준비되었습니다.\n이제 코드를 공유하고 리뷰를 시작해 보세요."),
-    ROOM_CLOSE("멘토링이 종료되어 채팅창이 읽기 전용으로 전환됩니다."),
-    ROOM_REOPEN("멘토링이 다시 시작되었습니다! 자유롭게 대화를 나누어 보세요.");
+    PAYMENT_REQUESTED("시니어님이 %d원 결제를 요청했습니다..."),
+    PAYMENT_COMPLETED("결제가 성공적으로 처리되었습니다.\n결제 금액..."),
+    PAYMENT_FAILED("결제가 실패하거나 취소되었습니다. 다시 시도해..."),
+    REVIEW_REQUESTED("리뷰를 진행할 코드 정보와 상세한 요청 사항..."),
+    REVIEW_SUBMITTED("상세 리뷰 요청서가 성공적으로 접수되었습니다..."),
+    REPORT_COMPLETED("시니어님이 상세 코드 리뷰 리포트를 등록했습니..."),
+    WORKSPACE_READY("협업을 위한 워크스페이스가 준비되었습니다.\n..."),
+    PURCHASE_CONFIRMED("구매가 확정되었습니다. 멘토링이 성공적..."),
+    ROOM_CLOSE("멘토링이 종료되어 채팅창이 읽기 전용으로 전환됩니..."),
+    ROOM_REOPEN("멘토링이 다시 시작되었습니다! 자유롭게 대화..."),
+    REVIEW_WRITTEN("멘토링 후기가 작성되었습니다. 아래 버튼을...");
 
 
     private final String template;

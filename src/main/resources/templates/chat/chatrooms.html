@@ -105,7 +105,7 @@
                         <div th:if="${msg.messageType.name() != 'USER'}"
                              th:classappend="${
                                 msg.messageType.name() == 'PAYMENT_REQUESTED' ? ' type-payment' :
-                                (msg.messageType.name() == 'REVIEW_REQUESTED' ? ' type-review' : ' type-default')
+                                (msg.messageType.name() == 'REVIEW_REQUESTED' or msg.messageType.name() == 'REVIEW_SUBMITTED' ? ' type-review' : ' type-default')
                              }"
                              class="system-message-card">
 
@@ -115,11 +115,14 @@
                             <div class="sys-header text-blue" th:if="${msg.messageType.name() == 'REVIEW_REQUESTED'}">
                                 <span style="margin-right: 6px;">📄</span> 시스템 알림
                             </div>
+                            <div class="sys-header text-blue" th:if="${msg.messageType.name() == 'REVIEW_SUBMITTED'}">
+                                <span style="margin-right: 6px;">🔔</span> 시스템 알림
+                            </div>
                             <div class="sys-header text-gray" th:if="${msg.messageType.name() == 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔒</span> 시스템 알림
                             </div>
                             <div class="sys-header text-gray"
-                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'REVIEW_REQUESTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
+                                 th:if="${msg.messageType.name() != 'PAYMENT_REQUESTED' and msg.messageType.name() != 'REVIEW_REQUESTED' and msg.messageType.name() != 'REVIEW_SUBMITTED' and msg.messageType.name() != 'ROOM_CLOSE'}">
                                 <span style="margin-right: 6px;">🔔</span> 시스템 알림
                             </div>
 
@@ -136,13 +139,23 @@
                                 </button>
                             </div>
 
-                            <!-- REVIEW_REQUESTED: 주니어에게만 '상세 리뷰 요청서 작성' 버튼 노출 -->
+                            <!-- REVIEW_REQUESTED: 주니어에게만 '리뷰 요청서 작성' 버튼 노출 -->
                             <div class="sys-footer"
                                  th:if="${msg.messageType.name() == 'REVIEW_REQUESTED' and !isSenior}">
                                 <button type="button"
                                         class="sys-action-btn btn-blue action-review"
-                                        th:attr="data-room-id=${selectedRoomId}">
-                                    📄 상세 리뷰 요청서 작성
+                                        th:attr="data-room-id=${selectedRoomId}, data-order-id=${msg.referenceId}">
+                                    📄 리뷰 요청서 작성
+                                </button>
+                            </div>
+
+                            <!-- REVIEW_SUBMITTED: 시니어에게 워크스페이스 입장 버튼 노출 -->
+                            <div class="sys-footer"
+                                 th:if="${msg.messageType.name() == 'REVIEW_SUBMITTED' and isSenior and msg.referenceId != null}">
+                                <button type="button"
+                                        class="sys-action-btn btn-blue action-workspace"
+                                        th:attr="data-order-id=${msg.referenceId}">
+                                    워크스페이스 입장
                                 </button>
                             </div>
                         </div>
@@ -186,160 +199,9 @@
                     </form>
                 </div>
 
-                <!--
-                    시니어 전용 '결제 요청' 모달.
-                    - 헤더의 '결제 요청하기' 버튼 클릭 시 openPaymentRequestModal()이 .is-open 클래스 부여
-                    - 금액 입력 후 POST /orders/request (Idempotency-Key 헤더 포함) 호출
-                    - 성공 시 서버가 양쪽 유저에게 PAYMENT_REQUESTED WebSocket 메시지를 브로드캐스트
-                -->
-                <div id="paymentRequestModal"
-                     class="pmt-modal"
-                     role="dialog"
-                     aria-modal="true"
-                     aria-labelledby="paymentModalTitle"
-                     aria-hidden="true"
-                     th:if="${isSenior}">
-                    <div class="pmt-modal-backdrop" data-pmt-close></div>
-                    <div class="pmt-modal-card" role="document">
-
-                        <!-- 헤더: 아이콘 박스 + 타이틀/서브타이틀 -->
-                        <div class="pmt-modal-header">
-                            <div class="pmt-modal-icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                     viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-                                    <line x1="2" y1="10" x2="22" y2="10"></line>
-                                </svg>
-                            </div>
-                            <div class="pmt-modal-titles">
-                                <h3 id="paymentModalTitle" class="pmt-modal-title">결제 금액 설정</h3>
-                                <p class="pmt-modal-subtitle">주니어와 합의된 최종 결제 금액을 입력해주세요.</p>
-                            </div>
-                        </div>
-
-                        <!-- 바디: 금액 입력 -->
-                        <div class="pmt-modal-body">
-                            <label class="pmt-label" for="paymentAmountInput">요청 금액 (원)</label>
-                            <div class="pmt-amount-wrap">
-                                <input id="paymentAmountInput"
-                                       type="text"
-                                       inputmode="numeric"
-                                       class="pmt-amount-input"
-                                       placeholder="0"
-                                       autocomplete="off"
-                                       maxlength="15" />
-                                <span class="pmt-currency-suffix">원</span>
-                            </div>
-                            <p id="paymentModalError" class="pmt-error" role="alert" style="display: none;"></p>
-                        </div>
-
-                        <!-- 디바이더 + 푸터 -->
-                        <div class="pmt-divider"></div>
-                        <div class="pmt-modal-footer">
-                            <button type="button" class="pmt-btn pmt-btn-text" id="paymentCancelBtn" data-pmt-close>취소</button>
-                            <button type="button" class="pmt-btn pmt-btn-primary" id="paymentSubmitBtn">
-                                <span>결제 요청 보내기</span>
-                                <span class="pmt-btn-arrow" aria-hidden="true">›</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!--
-                    주니어 전용 '결제 상세' 모달.
-                    - 채팅 시스템 메시지의 "에스크로 안전 결제"(.action-pay) 클릭 → chat.js가 GET /orders/{orderId}/prepare 호출
-                    - 응답(OrderResponse)으로 모달 필드를 채운 뒤 표시(오픈/닫기는 chat.js에서 처리 예정)
-                    - CTA의 금액은 '총 결제 금액'과 동일한 포맷(₩ + 천단위 콤마)을 그대로 사용
-                -->
-                <div id="paymentDetailModal"
-                     class="pmt-modal"
-                     role="dialog"
-                     aria-modal="true"
-                     aria-labelledby="paymentDetailTitle"
-                     aria-hidden="true"
-                     th:if="${!isSenior}">
-                    <div class="pmt-modal-backdrop" data-pmt-detail-close></div>
-                    <div class="pmt-modal-card" role="document">
-
-                        <div class="pmt-modal-header" style="align-items:flex-start;">
-                            <div class="pmt-modal-titles pmt-detail-hero" style="width:100%;">
-                                <a class="pmt-detail-back" th:href="@{/chat/{id}(id=${selectedRoomId})}">
-                                    <span aria-hidden="true">←</span>
-                                    <span>채팅방으로 돌아가기</span>
-                                </a>
-                                <div class="pmt-detail-hero-center">
-                                    <div class="pmt-detail-badge" aria-label="에스크로 결제">
-                                        <svg class="pmt-detail-badge-icon" xmlns="http://www.w3.org/2000/svg"
-                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                        </svg>
-                                        <span>Knoc. 안전 에스크로 결제</span>
-                                    </div>
-                                    <h3 id="paymentDetailTitle" class="pmt-modal-title pmt-detail-title">결제 및 리뷰 시작</h3>
-                                    <p class="pmt-modal-subtitle pmt-detail-subtitle">
-                                        결제 대금은 리뷰가 완료될 때까지 Knoc.에서 안전하게 보관합니다.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pmt-modal-body">
-                            <div class="pmt-detail-section-title">주문 내역</div>
-
-                            <div class="pmt-detail-order-card">
-                                <div class="pmt-detail-order-profile">
-                                    <div id="paymentDetailSeniorAvatarWrap">
-                                        <img id="paymentDetailSeniorAvatar" class="pmt-detail-avatar-img" alt="" width="44" height="44" />
-                                        <div class="pmt-detail-avatar-fallback" id="paymentDetailSeniorAvatarPlaceholder" aria-hidden="true">👤</div>
-                                    </div>
-                                    <div class="pmt-detail-order-profile-text">
-                                        <div id="paymentDetailSeniorName" class="pmt-detail-senior-name">-</div>
-                                        <div id="paymentDetailSeniorPosition" class="pmt-detail-senior-position">-</div>
-                                    </div>
-                                </div>
-                                <div class="pmt-detail-order-divider" aria-hidden="true"></div>
-                                <div class="pmt-detail-order-row pmt-detail-order-row--line">
-                                    <span>1:1 맞춤 코드 리뷰 (에스크로)</span>
-                                    <strong id="paymentDetailLineAmount" class="pmt-detail-line-price">₩0</strong>
-                                </div>
-                                <div class="pmt-detail-order-row pmt-detail-order-row--fee">
-                                    <span class="pmt-detail-fee-label">안전 거래 수수료 (0%)</span>
-                                    <strong class="pmt-detail-fee-value">무료</strong>
-                                </div>
-                                <div class="pmt-detail-order-divider" aria-hidden="true"></div>
-                                <div class="pmt-detail-order-row pmt-detail-order-row--total">
-                                    <span>총 결제 금액</span>
-                                    <strong id="paymentDetailTotal" class="pmt-detail-total-price">₩0</strong>
-                                </div>
-                            </div>
-
-                            <div id="paymentDetailEscrowInfo" class="pmt-detail-escrow">
-                                <div class="pmt-detail-escrow-title">
-                                    <span class="pmt-detail-escrow-icon" aria-hidden="true">🛡️</span>
-                                    <span>100% 안전 에스크로 결제</span>
-                                </div>
-                                <p class="pmt-detail-escrow-body">
-                                    결제하신 금액은 Knoc.에서 안전하게 보관하며, 시니어가 리뷰 리포트를 제출하고 주니어님이
-                                    <span class="pmt-detail-escrow-em">'구매 확정'</span>을 진행해야만 시니어에게 대금이 지급됩니다.
-                                </p>
-                            </div>
-
-                            <div id="paymentDetailError" class="pmt-error" role="alert" style="display:none; margin-top:12px;"></div>
-                        </div>
-
-                        <div class="pmt-divider"></div>
-                        <div class="pmt-modal-footer" style="justify-content:stretch;">
-                            <button type="button" id="paymentDetailSubmitBtn" class="pmt-btn pmt-btn-primary"
-                                    style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;">
-                                <span id="paymentDetailCtaAmount" style="font-weight:900;">₩0</span>
-                                <span>안전 결제하기</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <th:block th:replace="~{chat/fragments/payment-request-modal :: paymentRequestModal(${isSenior})}"></th:block>
+                <th:block th:replace="~{chat/fragments/payment-detail-modal :: paymentDetailModal(${isSenior}, ${selectedRoomId})}"></th:block>
+                <th:block th:replace="~{chat/fragments/review-request-modal :: reviewRequestModal(${isSenior})}"></th:block>
 
             </th:block>
 
