@@ -964,7 +964,7 @@
 
         // ── 후기 보기 모달 ──
         function openReviewModal(reviewOrderId) {
-            fetch('/orders/' + reviewOrderId + '/review')
+            fetch('/orders/' + reviewOrderId + '/feedback')
                 .then(function(r) { if (!r.ok) throw new Error('fetch'); return r.json(); })
                 .then(function(data) {
                     document.querySelectorAll('#reviewStarRow .star').forEach(function(s) {
