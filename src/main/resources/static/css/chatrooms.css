@@ -592,6 +592,68 @@
     display: block;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   주니어: 상세 리뷰 요청서 모달 (UI)
+   - 결제/요청 모달과 동일한 pmt-modal 시스템을 재사용
+   ───────────────────────────────────────────────────────────── */
+
+#reviewRequestModal .review-req-card {
+  max-width: 560px;
+}
+
+#reviewRequestModal .review-req-icon {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
+#reviewRequestModal .review-req-form {
+  display: block;
+}
+
+#reviewRequestModal .review-req-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: rgba(148, 163, 184, 0.95);
+  text-transform: uppercase;
+}
+
+#reviewRequestModal .review-req-input,
+#reviewRequestModal .review-req-textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e5e7eb;
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#reviewRequestModal .review-req-input::placeholder,
+#reviewRequestModal .review-req-textarea::placeholder {
+  color: rgba(226, 232, 240, 0.45);
+}
+
+#reviewRequestModal .review-req-input:focus,
+#reviewRequestModal .review-req-textarea:focus {
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+#reviewRequestModal .review-req-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.35;
+}
+
+#reviewRequestModal .review-req-input,
+#reviewRequestModal .review-req-textarea {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 /* 메시지 목록 */
 .chat-messages {
     flex: 1;
@@ -725,7 +787,8 @@
 }
 
 /* REVIEW_REQUESTED 버튼: 에스크로 결제 버튼과 동일한 형태(색상만 블루) */
-.system-message-card.type-review .sys-action-btn.action-review {
+.system-message-card.type-review .sys-action-btn.action-review,
+.system-message-card.type-review .sys-action-btn.action-workspace {
     width: 100%;
     margin-top: 0.4rem;
     padding: 0.95rem 1.2rem;
