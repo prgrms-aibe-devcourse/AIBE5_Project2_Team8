@@ -151,10 +151,10 @@ public class WorkspaceFacadeService {
         }
 
         ReviewRequest reviewRequest = reviewRequestRepository.findByOrder(order)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REQUEST_REQUIRED_FOR_REPORT));
 
         if (reviewReportRepository.findByReviewRequest(reviewRequest).isPresent()) {
-            throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
+            throw new BusinessException(ErrorCode.REVIEW_REPORT_ALREADY_EXISTS);
         }
 
         reviewReportRepository.save(ReviewReport.builder()
@@ -191,10 +191,10 @@ public class WorkspaceFacadeService {
         }
 
         ReviewRequest reviewRequest = reviewRequestRepository.findByOrder(order)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REQUEST_REQUIRED_FOR_REPORT));
 
         ReviewReport report = reviewReportRepository.findByReviewRequest(reviewRequest)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND));
 
         report.update(industryPerspective, edgeCases, alternatives);
     }
