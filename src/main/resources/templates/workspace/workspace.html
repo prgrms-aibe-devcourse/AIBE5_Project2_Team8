@@ -997,6 +997,12 @@
             const filename = card ? (card.querySelector('.file-name').textContent.trim()||'') : '';
             renderPatch(el, patch, filename);
         });
+
+        // query param으로 진입 시 후기 모달 자동 오픈
+        const openReviewOnlyModalOnLoad = /*[[${openReviewOnlyModal}]]*/ false;
+        if (openReviewOnlyModalOnLoad) {
+            try { openReviewOnlyModal(); } catch (e) {}
+        }
     </script>
 </th:block>
 
