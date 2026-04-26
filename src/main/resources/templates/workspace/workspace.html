@@ -280,7 +280,7 @@
         <div class="pr-pane">
             <div class="pr-header">
                 <div class="pr-title"
-                     th:text="${workspace.prMetadata != null ? workspace.prMetadata.title() : (workspace.githubPrUrl != null ? 'PR 정보를 불러올 수 없습니다' : '리뷰 요청이 없습니다')}">
+                     th:text="${workspace.prMetadata != null ? workspace.prMetadata.title() : (workspace.hasReviewRequest ? 'PR 정보를 불러올 수 없습니다' : '리뷰 요청이 없습니다')}">
                 </div>
                 <div class="pr-meta" th:if="${workspace.prMetadata != null}">
                     <span th:class="'pr-badge badge-' + ${workspace.prMetadata.state()}"
@@ -312,13 +312,18 @@
 
                 <!-- 변경 파일 탭 -->
                 <div id="tab-files" class="tab-panel active">
-                    <div th:if="${workspace.prMetadata == null}" class="empty-pr">
-                        <span style="font-size:2rem;">📂</span>
-                        <span th:text="${workspace.githubPrUrl != null ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></span>
+                    <div th:if="${workspace.prMetadata == null}" class="report-waiting">
+                        <div class="waiting-icon">📂</div>
+                        <div class="waiting-title"
+                             th:text="${workspace.hasReviewRequest ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></div>
+                        <div class="waiting-desc"
+                             th:text="${workspace.hasReviewRequest ? '잠시 후 다시 시도하거나 GitHub PR 링크를 확인해 주세요.' : '주니어가 리뷰 요청서를 제출하면 변경 파일을 확인할 수 있습니다.'}"></div>
                     </div>
                     <th:block th:if="${workspace.prMetadata != null}">
-                        <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="empty-pr">
-                            <span>변경된 파일이 없습니다.</span>
+                        <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="report-waiting">
+                            <div class="waiting-icon">📄</div>
+                            <div class="waiting-title">변경된 파일이 없습니다</div>
+                            <div class="waiting-desc">PR에 포함된 변경 파일 목록이 비어 있습니다.</div>
                         </div>
                         <div th:each="file, iter : ${workspace.prMetadata.files()}"
                              class="file-card" th:id="'file-' + ${iter.index}">
@@ -338,16 +343,18 @@
 
                 <!-- 리뷰 요청 정보 탭 -->
                 <div id="tab-context" class="tab-panel">
-                    <div th:if="${workspace.projectContext == null}" class="empty-pr">
-                        <span>아직 제출된 리뷰 요청이 없습니다.</span>
+                    <div th:if="${!workspace.hasReviewRequest}" class="report-waiting">
+                        <div class="waiting-icon">📁</div>
+                        <div class="waiting-title">아직 제출된 리뷰 요청이 없습니다</div>
+                        <div class="waiting-desc">주니어가 리뷰 요청서를 제출하면 이 탭에서 확인할 수 있습니다.</div>
                     </div>
-                    <th:block th:if="${workspace.projectContext != null}">
+                    <th:block th:if="${workspace.hasReviewRequest}">
                         <div class="section-card">
-                            <div class="section-label">프로젝트 컨텍스트</div>
+                            <div class="section-label">프로젝트 배경/비즈니스 로직</div>
                             <div class="section-text" th:text="${workspace.projectContext}"></div>
                         </div>
                         <div class="section-card">
-                            <div class="section-label">궁금한 점 / 우려 사항</div>
+                            <div class="section-label">질문/고민 포인트</div>
                             <div class="section-text" th:text="${workspace.concernPoint}"></div>
                         </div>
                     </th:block>
@@ -425,7 +432,8 @@
                         <div class="waiting-desc">리뷰가 완료되면 이 탭에서 확인할 수 있습니다.</div>
                     </div>
 
-                    <div th:if="${!workspace.hasReport and workspace.isSenior}">
+                    <!-- 시니어 리포트 작성: 리뷰 요청서가 제출된 경우에만 폼 노출 -->
+                    <div th:if="${!workspace.hasReport and workspace.isSenior and workspace.hasReviewRequest}">
                         <form id="reportForm" th:attr="data-action=@{/orders/{id}/report(id=${workspace.orderId})}" class="report-form">
                             <div class="form-group">
                                 <label class="form-label">현업 관점 <span class="form-hint">현장에서 이런 코드를 봤을 때 어떤 인상을 받는지 솔직하게 작성해 주세요.</span></label>
@@ -441,6 +449,13 @@
                             </div>
                             <button type="submit" class="btn-submit-report">리뷰 제출하기</button>
                         </form>
+                    </div>
+
+                    <!-- 시니어: 리뷰 요청서가 없는 경우 리포트 작성 폼을 막고 안내만 노출 -->
+                    <div th:if="${!workspace.hasReport and workspace.isSenior and !workspace.hasReviewRequest}" class="report-waiting">
+                        <div class="waiting-icon">📁</div>
+                        <div class="waiting-title">아직 제출된 리뷰 요청이 없습니다</div>
+                        <div class="waiting-desc">주니어가 리뷰 요청서를 제출하면 리포트를 작성할 수 있습니다.</div>
                     </div>
 
                 </div>
@@ -956,7 +971,7 @@
 
         // ── 후기 보기 모달 ──
         function openReviewModal(reviewOrderId) {
-            fetch('/orders/' + reviewOrderId + '/review')
+            fetch('/orders/' + reviewOrderId + '/feedback')
                 .then(function(r) { if (!r.ok) throw new Error('fetch'); return r.json(); })
                 .then(function(data) {
                     document.querySelectorAll('#reviewStarRow .star').forEach(function(s) {

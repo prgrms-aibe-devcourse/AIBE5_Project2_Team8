@@ -45,6 +45,11 @@ public enum ErrorCode {
     REVIEW_REQUEST_ALREADY_EXISTS(409, "이미 해당 주문에 대한 리뷰 요청서가 존재합니다."),
     REVIEW_REQUEST_NOT_ALLOWED(403, "결제 완료된 주문만 리뷰 요청서를 작성할 수 있습니다."),
 
+    // 리뷰 리포트 관련 (Review Report)
+    REVIEW_REQUEST_REQUIRED_FOR_REPORT(400, "리뷰 요청서가 제출된 경우에만 리포트를 작성할 수 있습니다."),
+    REVIEW_REPORT_ALREADY_EXISTS(409, "이미 해당 리뷰 요청서에 대한 리포트가 존재합니다."),
+    REVIEW_REPORT_NOT_FOUND(404, "리뷰 리포트가 존재하지 않습니다."),
+
     // 리뷰 관련 (Review)
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
     REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),

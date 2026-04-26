@@ -83,6 +83,7 @@ public class WorkspaceFacadeService {
                 chatMessageService.getPreviousMessages(chatRoomId, Long.MAX_VALUE, email);
 
         Optional<ReviewRequest> reviewRequestOpt = reviewRequestRepository.findByOrder(order);
+        boolean hasReviewRequest = reviewRequestOpt.isPresent();
         String githubPrUrl = reviewRequestOpt.map(ReviewRequest::getGithubPrUrl).orElse(null);
         String projectContext = reviewRequestOpt.map(ReviewRequest::getProjectContext).orElse(null);
         String concernPoint = reviewRequestOpt.map(ReviewRequest::getConcernPoint).orElse(null);
@@ -121,6 +122,7 @@ public class WorkspaceFacadeService {
                 .opponentNickname(opponent.getNickname())
                 .opponentAvatarUrl(opponent.getProfileImageUrl())
                 .initialMessages(initialMessages)
+                .hasReviewRequest(hasReviewRequest)
                 .githubPrUrl(githubPrUrl)
                 .projectContext(projectContext)
                 .concernPoint(concernPoint)
@@ -149,10 +151,10 @@ public class WorkspaceFacadeService {
         }
 
         ReviewRequest reviewRequest = reviewRequestRepository.findByOrder(order)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REQUEST_REQUIRED_FOR_REPORT));
 
         if (reviewReportRepository.findByReviewRequest(reviewRequest).isPresent()) {
-            throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
+            throw new BusinessException(ErrorCode.REVIEW_REPORT_ALREADY_EXISTS);
         }
 
         reviewReportRepository.save(ReviewReport.builder()
@@ -189,10 +191,10 @@ public class WorkspaceFacadeService {
         }
 
         ReviewRequest reviewRequest = reviewRequestRepository.findByOrder(order)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REQUEST_REQUIRED_FOR_REPORT));
 
         ReviewReport report = reviewReportRepository.findByReviewRequest(reviewRequest)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND));
 
         report.update(industryPerspective, edgeCases, alternatives);
     }
