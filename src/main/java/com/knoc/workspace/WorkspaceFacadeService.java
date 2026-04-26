@@ -222,6 +222,13 @@ public class WorkspaceFacadeService {
         ));
     }
 
+    @Transactional
+    public void updateFeedback(Long orderId, String email, ReviewFeedbackRequestDto dto) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        reviewFeedbackService.updateReview(orderId, dto, member.getId());
+    }
+
     @Transactional(readOnly = true)
     public ReviewFeedbackResponse getReviewFeedback(Long orderId, String email) {
         Order order = orderRepository.findById(orderId)

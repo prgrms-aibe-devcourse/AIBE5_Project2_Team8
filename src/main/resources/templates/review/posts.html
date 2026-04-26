@@ -236,14 +236,18 @@
 
             <!-- 필터 탭 -->
             <div class="filter-tab-bar">
-                <a href="#" class="filter-tab active">
+                <a href="#" class="filter-tab active" id="tabAllReviews">
                     전체
-                    <span class="tab-count" th:text="${totalCount != null ? totalCount : 4}">4</span>
+                    <span class="tab-count" id="tabAllCount" th:text="${totalCount != null ? totalCount : 4}">4</span>
+                </a>
+                <a href="#" class="filter-tab" id="tabMyReviews">
+                    나의 후기
+                    <span class="tab-count" id="tabMyCount">0</span>
                 </a>
             </div>
 
             <!-- 후기 목록 -->
-            <div class="d-flex flex-column gap-3">
+            <div class="d-flex flex-column gap-3" id="reviewList">
 
                 <!-- ── 동적 렌더링 ── -->
                 <div th:each="review : ${reviews}" class="review-card">
@@ -262,16 +266,27 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="star-row mt-1">
-                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                <span th:class="${(i - 0.5) <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
-                            </th:block>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="star-row mt-1">
+                                <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <span th:class="${(i - 0.5) <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
+                                </th:block>
+                            </div>
                         </div>
                     </div>
                     <p class="review-body" th:text="${review.content}"></p>
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="d-flex align-items-center mt-3">
+                        <!-- JS가 '내 후기'에만 표시하도록 토글 -->
+                        <a th:href="@{|/orders/${review.orderId}?reviewOnly=1|}"
+                           class="btn btn-sm btn-outline-secondary rounded-pill px-2 d-none edit-review-link"
+                           style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
+                           title="후기 수정"
+                           aria-label="후기 수정"
+                           th:attr="data-order-id=${review.orderId}">
+                            ✎
+                        </a>
                         <a th:href="@{/senior/{id}(id=${review.seniorProfileId})}"
-                           class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                           class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto"
                            style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;">
                             멘토 프로필 보기 →
                         </a>
@@ -434,6 +449,183 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function () {
+        const tabAll = document.getElementById('tabAllReviews');
+        const tabMy = document.getElementById('tabMyReviews');
+        const tabMyCount = document.getElementById('tabMyCount');
+        const reviewList = document.getElementById('reviewList');
+
+        if (!tabAll || !tabMy || !reviewList) return;
+
+        const initialAllHtml = reviewList.innerHTML;
+        let myCache = null; // { myReviews: [], totalCount: number }
+
+        function setActiveTab(active) {
+            tabAll.classList.toggle('active', active === 'all');
+            tabMy.classList.toggle('active', active === 'my');
+        }
+
+        function escapeHtml(str) {
+            return (str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function starsHtml(rating) {
+            const r = Number(rating || 0);
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                html += `<span class="${(i - 0.5) <= r ? 'star-filled' : 'star-empty'}">★</span>`;
+            }
+            return html;
+        }
+
+        function renderEmptyMyReviews() {
+            reviewList.innerHTML = `
+                <div class="review-card">
+                    <p class="review-body mb-0" style="color:#8b93a7;">아직 작성한 후기가 없어요.</p>
+                </div>
+            `;
+        }
+
+        function renderMyReviews(myReviews) {
+            if (!Array.isArray(myReviews) || myReviews.length === 0) {
+                renderEmptyMyReviews();
+                return;
+            }
+
+            reviewList.innerHTML = myReviews.map(function (review) {
+                const juniorName = escapeHtml(review.juniorName || '');
+                const seniorName = escapeHtml(review.seniorName || '');
+                const mentoringType = escapeHtml(review.mentoringType || '');
+                const timeAgo = escapeHtml(review.timeAgo || '');
+                const content = escapeHtml(review.content || '');
+                const seniorProfileId = encodeURIComponent(review.seniorProfileId ?? '');
+                const orderId = review.orderId ?? '';
+
+                return `
+                    <div class="review-card">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="reviewer-avatar">${juniorName ? juniorName.substring(0, 1) : '나'}</div>
+                                <div>
+                                    <div class="reviewer-name">${juniorName || '나의 후기'}</div>
+                                    <div class="reviewer-meta">
+                                        <span>${seniorName}</span>
+                                        <span class="sep">·</span>
+                                        <span>${mentoringType}</span>
+                                        <span class="sep">·</span>
+                                        <span>${timeAgo}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="star-row mt-1">${starsHtml(review.rating)}</div>
+                            </div>
+                        </div>
+
+                        <p class="review-body">${content}</p>
+
+                        <div class="d-flex align-items-center mt-3">
+                            <a href="/orders/${encodeURIComponent(orderId)}?reviewOnly=1"
+                               class="btn btn-sm btn-outline-secondary rounded-pill px-2 edit-review-link"
+                               style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
+                               title="후기 수정"
+                               aria-label="후기 수정"
+                               data-order-id="${escapeHtml(String(orderId))}">
+                                ✎
+                            </a>
+                            <a href="/senior/${seniorProfileId}"
+                               class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto"
+                               style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;">
+                                멘토 프로필 보기 →
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadMyReviews() {
+            if (myCache) return myCache;
+
+            const res = await fetch('/reviews/posts/me', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error('fetch my reviews failed');
+            myCache = await res.json();
+            return myCache;
+        }
+
+        async function prefetchMyReviews() {
+            try {
+                const data = await loadMyReviews();
+                if (tabMyCount && typeof data?.totalCount !== 'undefined') {
+                    tabMyCount.textContent = String(data.totalCount);
+                }
+                applyEditableToAll();
+            } catch (e) {
+                // 로그인 전/권한 없음/네트워크 오류 등은 조용히 무시 (초기값 0 유지)
+            }
+        }
+
+        function applyEditableToAll() {
+            if (!myCache || !Array.isArray(myCache.myReviews)) return;
+            const editableOrderIds = new Set(
+                myCache.myReviews
+                    .map(r => r && r.orderId)
+                    .filter(v => v !== null && typeof v !== 'undefined')
+                    .map(v => String(v))
+            );
+
+            document.querySelectorAll('.edit-review-link[data-order-id]').forEach(function (el) {
+                const orderId = el.getAttribute('data-order-id');
+                if (orderId && editableOrderIds.has(String(orderId))) {
+                    el.classList.remove('d-none');
+                } else {
+                    el.classList.add('d-none');
+                }
+            });
+        }
+
+        tabAll.addEventListener('click', function (e) {
+            e.preventDefault();
+            setActiveTab('all');
+            reviewList.innerHTML = initialAllHtml;
+            applyEditableToAll();
+        });
+
+        tabMy.addEventListener('click', async function (e) {
+            e.preventDefault();
+            setActiveTab('my');
+
+            try {
+                const data = await loadMyReviews();
+                if (tabMyCount && typeof data?.totalCount !== 'undefined') {
+                    tabMyCount.textContent = String(data.totalCount);
+                }
+                renderMyReviews(data?.myReviews || []);
+                applyEditableToAll();
+            } catch (err) {
+                reviewList.innerHTML = `
+                    <div class="review-card">
+                        <p class="review-body mb-0" style="color:#8b93a7;">나의 후기를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+                    </div>
+                `;
+            }
+        });
+
+        // 페이지 진입 시 '나의 후기' count/수정 링크를 미리 동기화
+        prefetchMyReviews();
+    })();
+    </script>
 
 </div>
 </html>

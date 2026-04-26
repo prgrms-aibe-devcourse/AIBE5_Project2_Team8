@@ -40,6 +40,7 @@ public enum ErrorCode {
     INVALID_IDEMPOTENCY_KEY(400, "유효하지 않은 멱등성 키입니다."),
     ORDER_INVALID_AMOUNT(400, "유효하지 않은 결제 금액입니다."),
     ORDER_INVALID_ORDER_NUMBER(400, "유효하지 않은 주문번호입니다."),
+    ORDER_CANNOT_BE_SETTLED(400, "현재 주문 상태에서는 정산을 진행할 수 없습니다."),
 
     // 리뷰 요청서 관련 (Review Request)
     REVIEW_REQUEST_ALREADY_EXISTS(409, "이미 해당 주문에 대한 리뷰 요청서가 존재합니다."),
@@ -53,6 +54,8 @@ public enum ErrorCode {
     // 리뷰 관련 (Review)
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
     REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
+    REVIEW_NOT_FOUND(404, "해당 주문에 대한 후기가 존재하지 않습니다."),
+    REVIEW_UPDATE_NOT_ALLOWED(403, "후기를 수정할 권한이 없습니다."),
 
     // GitHub 관련 (Github)
     GITHUB_PR_NOT_FOUND(404, "존재하지 않는 PR이거나 접근 권한이 없습니다."),

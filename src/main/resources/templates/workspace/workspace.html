@@ -806,6 +806,7 @@
         function closeConfirmModal() {
             document.getElementById('confirmModal').style.display = 'none';
             document.getElementById('confirmModal').removeAttribute('data-review-only');
+            document.getElementById('confirmModal').removeAttribute('data-review-edit');
         }
 
         function onBackdropClick(e) { if (e.target === document.getElementById('confirmModal')) closeConfirmModal(); }
@@ -816,6 +817,7 @@
             btnOnly.style.display = ''; btnOnly.disabled = false; btnOnly.textContent = '후기 없이 멘토링 종료하기';
             btnReview.disabled = false; btnReview.textContent = '멘토링 종료 및 정산 완료';
             document.getElementById('confirmModal').removeAttribute('data-review-only');
+            document.getElementById('confirmModal').removeAttribute('data-review-edit');
         }
 
         function updateStars(val) {
@@ -832,6 +834,7 @@
 
         function doSettle(withReview) {
             const isReviewOnly = document.getElementById('confirmModal').getAttribute('data-review-only') === 'true';
+            const isReviewEdit = document.getElementById('confirmModal').getAttribute('data-review-edit') === 'true';
             if (withReview && selectedRating === 0) { alert('별점을 선택해 주세요.'); return; }
             const btnOnly   = document.getElementById('btnSettleOnly');
             const btnReview = document.getElementById('btnSettleReview');
@@ -844,7 +847,8 @@
             const chain = withReview
                 ? settlePromise.then(function() {
                     return fetch('/orders/' + orderId + '/feedback', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        method: (isReviewOnly && isReviewEdit) ? 'PATCH' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ orderId: orderId, rating: selectedRating, comment: comment || null })
                     }).then(function(r) { if (!r.ok) throw new Error('review'); });
                 })
@@ -997,6 +1001,27 @@
             const filename = card ? (card.querySelector('.file-name').textContent.trim()||'') : '';
             renderPatch(el, patch, filename);
         });
+
+        // query param으로 진입 시 후기 모달 자동 오픈
+        const openReviewOnlyModalOnLoad = /*[[${openReviewOnlyModal}]]*/ false;
+        if (openReviewOnlyModalOnLoad) {
+            try {
+                openReviewOnlyModal();
+                const hasReviewOnLoad = /*[[${workspace.hasReview}]]*/ false;
+                if (hasReviewOnLoad) {
+                    fetch('/orders/' + orderId + '/feedback', { method: 'GET', headers: { 'Accept': 'application/json' } })
+                        .then(function(r) { if (!r.ok) throw new Error('fetch'); return r.json(); })
+                        .then(function(data) {
+                            selectedRating = parseInt(data.rating || 0);
+                            updateStars(selectedRating);
+                            document.getElementById('commentInput').value = (data.comment || '');
+                            document.getElementById('confirmModal').setAttribute('data-review-edit', 'true');
+                            document.getElementById('btnSettleReview').textContent = '후기 수정하기';
+                        })
+                        .catch(function() { /* ignore */ });
+                }
+            } catch (e) {}
+        }
     </script>
 </th:block>
 

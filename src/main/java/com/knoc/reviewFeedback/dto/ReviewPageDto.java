@@ -23,6 +23,7 @@ public class ReviewPageDto {
         private final String timeAgo;
         private final byte rating;
         private final String content;
+        private final Long orderId;
     }
 
     @Getter

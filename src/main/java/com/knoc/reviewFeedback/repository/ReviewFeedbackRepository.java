@@ -26,4 +26,6 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     @Query("SELECT r.seniorProfile FROM ReviewFeedback r WHERE r.createdAt >= :startOfMonth GROUP BY r.seniorProfile ORDER BY COUNT(r) DESC")
     List<SeniorProfile> findTop3ActiveSeniorsThisMonth(@Param("startOfMonth") LocalDateTime startOfMonth, org.springframework.data.domain.Pageable pageable);
+
+    List<ReviewFeedback> findByJunior_IdOrderByCreatedAtDesc(Long juniorId);
 }

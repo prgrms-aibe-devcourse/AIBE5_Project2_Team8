@@ -57,4 +57,9 @@ public class ReviewFeedback {
         this.rating = rating;
         this.comment = comment;
     }
+
+    public void update(byte rating, String comment) {
+        this.rating = rating;
+        this.comment = comment;
+    }
 }

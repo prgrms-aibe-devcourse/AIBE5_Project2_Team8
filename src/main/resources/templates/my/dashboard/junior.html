@@ -211,6 +211,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
+            text-decoration: none;
         }
         .btn-action-outline {
             background-color: transparent;
@@ -434,7 +435,7 @@
                 <!-- 액션 -->
                 <div class="d-flex align-items-center gap-2">
                     <a th:if="${order.status.name() == 'SETTLED' and !order.hasReview}"
-                       th:href="@{|/reviews/orders/${order.orderId}/new|}"
+                       th:href="@{|/orders/${order.orderId}?reviewOnly=1|}"
                        class="btn-action btn-action-mint">✎ 후기 작성하기</a>
 
                     <span th:if="${order.status.name() == 'SETTLED' and order.hasReview}"

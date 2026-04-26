@@ -25,9 +25,13 @@ public class WorkspaceController {
 
     @Operation(summary = "워크스페이스 페이지 조회", description = "해당 주문(orderId)에 대한 워크스페이스 화면을 렌더링합니다.")
     @GetMapping("/orders/{orderId}")
-    public String workspace(@PathVariable Long orderId, Principal principal, Model model) {
+    public String workspace(@PathVariable Long orderId,
+                            @RequestParam(value = "reviewOnly", required = false) String reviewOnly,
+                            Principal principal,
+                            Model model) {
         WorkspaceDto dto = workspaceFacadeService.getWorkspaceData(orderId, principal.getName());
         model.addAttribute("workspace", dto);
+        model.addAttribute("openReviewOnlyModal", "1".equals(reviewOnly) || "true".equalsIgnoreCase(reviewOnly));
         return "workspace/workspace";
     }
 
@@ -71,6 +75,17 @@ public class WorkspaceController {
                                                @RequestBody ReviewFeedbackRequestDto dto,
                                                Principal principal) {
         workspaceFacadeService.submitFeedback(orderId, principal.getName(), dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "후기 수정", description = "주니어가 이미 작성한 후기를 수정합니다.")
+    @PatchMapping("/orders/{orderId}/feedback")
+    @ResponseBody
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Void> updateFeedback(@PathVariable Long orderId,
+                                               @RequestBody ReviewFeedbackRequestDto dto,
+                                               Principal principal) {
+        workspaceFacadeService.updateFeedback(orderId, principal.getName(), dto);
         return ResponseEntity.ok().build();
     }
 

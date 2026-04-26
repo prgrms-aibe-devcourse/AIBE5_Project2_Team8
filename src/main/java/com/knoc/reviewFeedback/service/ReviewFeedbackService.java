@@ -2,9 +2,12 @@ package com.knoc.reviewFeedback.service;
 
 import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
+import com.knoc.member.Member;
+import com.knoc.member.MemberRepository;
 import com.knoc.order.entity.Order;
 import com.knoc.order.entity.OrderStatus;
 import com.knoc.order.repository.OrderRepository;
+import com.knoc.reviewFeedback.dto.MyReviewPageResponse;
 import com.knoc.reviewFeedback.dto.ReviewPageDto;
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.senior.repository.SeniorProfileRepository;
@@ -29,6 +32,7 @@ public class ReviewFeedbackService {
     private final ReviewFeedbackRepository reviewFeedbackRepository;
     private final OrderRepository orderRepository;
     private final SeniorProfileRepository seniorProfileRepository;
+    private final MemberRepository memberRepository;
 
     @Transactional
     public void createReview(ReviewFeedbackRequestDto dto, Long juniorId) {
@@ -66,6 +70,19 @@ public class ReviewFeedbackService {
 
     }
 
+    @Transactional
+    public void updateReview(Long orderId, ReviewFeedbackRequestDto dto, Long juniorId) {
+        ReviewFeedback feedback = reviewFeedbackRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        if (!feedback.getJunior().getId().equals(juniorId)) {
+            throw new BusinessException(ErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
+        }
+
+        // rating/comment validation은 DTO(@Min/@Max) + 컨트롤러 @Valid에서 처리된다는 전제
+        feedback.update(dto.getRating(), dto.getComment());
+    }
+
     public ReviewPageDto getReviewPage() {
         List<ReviewFeedback> feedbacks = reviewFeedbackRepository.findAllByOrderByCreatedAtDesc();
 
@@ -90,6 +107,7 @@ public class ReviewFeedbackService {
                 .timeAgo(timeAgo(r.getCreatedAt()))
                 .rating(r.getRating())
                 .content(r.getComment())
+                .orderId(r.getOrder().getId())
                 .build()
         ).toList();
     }
@@ -112,4 +130,12 @@ public class ReviewFeedbackService {
         return (days / 30) + "개월 전";
     }
 
+    public MyReviewPageResponse getMyReviewCards(String email) {
+        Long juniorId = memberRepository.findByEmail(email)
+                .map(Member::getId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        List<ReviewFeedback> myFeedbacks = reviewFeedbackRepository.findByJunior_IdOrderByCreatedAtDesc(juniorId);
+        return new MyReviewPageResponse(mapToCards(myFeedbacks), myFeedbacks.size());
+    }
 }
