@@ -16,6 +16,7 @@ public record WorkspaceDto(
         String opponentNickname,
         String opponentAvatarUrl,
         List<ChatMessageResponse> initialMessages,
+        boolean hasReviewRequest,
         String githubPrUrl,
         String projectContext,
         String concernPoint,

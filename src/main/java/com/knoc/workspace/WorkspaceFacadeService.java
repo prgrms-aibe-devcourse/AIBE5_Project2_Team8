@@ -83,6 +83,7 @@ public class WorkspaceFacadeService {
                 chatMessageService.getPreviousMessages(chatRoomId, Long.MAX_VALUE, email);
 
         Optional<ReviewRequest> reviewRequestOpt = reviewRequestRepository.findByOrder(order);
+        boolean hasReviewRequest = reviewRequestOpt.isPresent();
         String githubPrUrl = reviewRequestOpt.map(ReviewRequest::getGithubPrUrl).orElse(null);
         String projectContext = reviewRequestOpt.map(ReviewRequest::getProjectContext).orElse(null);
         String concernPoint = reviewRequestOpt.map(ReviewRequest::getConcernPoint).orElse(null);
@@ -121,6 +122,7 @@ public class WorkspaceFacadeService {
                 .opponentNickname(opponent.getNickname())
                 .opponentAvatarUrl(opponent.getProfileImageUrl())
                 .initialMessages(initialMessages)
+                .hasReviewRequest(hasReviewRequest)
                 .githubPrUrl(githubPrUrl)
                 .projectContext(projectContext)
                 .concernPoint(concernPoint)
