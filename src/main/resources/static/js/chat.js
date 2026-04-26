@@ -80,7 +80,8 @@ function renderSystemMessage(data, options = {}) {
             // 리뷰 요청서 작성 버튼은 REVIEW_REQUESTED일 때만 노출 (주니어 전용)
             cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
             if (!IS_SENIOR) {
-                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}">📄 리뷰 요청서 작성</button>`;
+                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}" data-order-id="${escapeHTML(String(data.referenceId || ''))}">
+                    📄 리뷰 요청서 작성</button>`;
             }
             break;
         }
@@ -314,9 +315,13 @@ if (chatContainer) {
             }
         } else if (target.classList.contains('action-review')) {
             const roomId = target.getAttribute('data-room-id');
-            console.log(`[리뷰 폼 이동] 방 번호: ${roomId}`);
-            // REVIEW_REQUESTED 시스템 메시지 버튼 클릭 시: 화면 전환 없이 모달을 연다.
-            // NOTE: 제출 시 orderId가 필요하므로, 추후 data-order-id로 확장하는 것을 권장한다.
+            const orderId = target.getAttribute('data-order-id');
+            if (!orderId) return;
+
+            const hidden = document.getElementById('reviewRequestOrderId');
+            if (hidden) hidden.value = orderId || '';
+
+            console.log(`[리뷰 요청서 작성 폼 이동] 방 번호: ${roomId}`);
             openReviewRequestModal();
         } else if (target.classList.contains('action-confirm')) {
             const reportId = target.getAttribute('data-report-id');
@@ -484,6 +489,92 @@ function closeReviewRequestModal() {
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     setReviewRequestError('');
+}
+
+function isValidGithubPrUrl(url) {
+    // 허용 예시:
+    // - https://github.com/{owner}/{repo}/pull/{number}
+    // - https://github.com/{owner}/{repo}/pull/{number}/files
+    // - https://github.com/{owner}/{repo}/pull/{number}?something
+    const value = String(url || '').trim();
+    if (!value) return false;
+    return /^https?:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+(?:[/?#].*)?$/i.test(value);
+}
+
+function setReviewRequestSubmitLoading(loading) {
+    const btn = document.getElementById('reviewRequestSubmitBtn');
+    if (!btn) return;
+
+    btn.disabled = !!loading;
+
+    // 버튼 텍스트 토글 (초기 텍스트 보존)
+    if (!btn.dataset.originalText) {
+        btn.dataset.originalText = btn.textContent || '제출하고 워크스페이스 입장';
+    }
+    btn.textContent = loading ? '제출 중...' : btn.dataset.originalText;
+}
+
+async function submitReviewRequest() {
+    const orderIdEl = document.getElementById('reviewRequestOrderId');
+    const prEl = document.getElementById('reviewRequestGithubPrUrl');
+    const ctxEl = document.getElementById('reviewRequestProjectContext');
+    const conEl = document.getElementById('reviewRequestConcernPoint');
+
+    const orderIdStr = orderIdEl ? String(orderIdEl.value || '').trim() : '';
+    const orderId = Number(orderIdStr);
+
+    const githubPrUrl = prEl ? String(prEl.value || '').trim() : '';
+    const projectContext = ctxEl ? String(ctxEl.value || '').trim() : '';
+    const concernPoint = conEl ? String(conEl.value || '').trim() : '';
+
+    // 필수값 검증
+    if (!orderIdStr || !Number.isFinite(orderId) || orderId <= 0) {
+        return setReviewRequestError('주문 정보를 찾지 못했어요. 다시 시도해 주세요.');
+    }
+    if (!githubPrUrl) return setReviewRequestError('GitHub PR 링크를 입력해 주세요.');
+    if (!isValidGithubPrUrl(githubPrUrl)) return setReviewRequestError('GitHub PR 링크 형식이 올바르지 않아요.');
+    if (!projectContext) return setReviewRequestError('배경/비즈니스 로직을 입력해 주세요.');
+    if (!concernPoint) return setReviewRequestError('질문/고민 포인트를 입력해 주세요.');
+
+    // 최소 길이 (너무 짧은 텍스트 방어)
+    if (projectContext.length < 10) return setReviewRequestError('배경/비즈니스 로직은 10자 이상 입력해 주세요.');
+    if (concernPoint.length < 10) return setReviewRequestError('질문/고민 포인트는 10자 이상 입력해 주세요.');
+
+    setReviewRequestError('');
+    setReviewRequestSubmitLoading(true);
+
+    try {
+        const res = await fetch('/reviews/request', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                orderId: orderId,
+                githubPrUrl: githubPrUrl,
+                projectContext: projectContext,
+                concernPoint: concernPoint,
+            }),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            // 서버가 표준 에러 JSON을 내리는지 불명확하므로 텍스트 기반 fallback
+            throw new Error(text || `서버 응답 오류 (${res.status})`);
+        }
+
+        const data = await res.json().catch(() => ({}));
+        const nextOrderId = data && data.orderId ? String(data.orderId) : orderIdStr;
+
+        // 성공: 통합 리뷰 워크스페이스로 이동
+        window.location.href = `/orders/${nextOrderId}`;
+    } catch (e) {
+        console.error('[리뷰 요청서 제출 실패]', e);
+        setReviewRequestError('제출에 실패했어요. 잠시 후 다시 시도해 주세요.');
+        setReviewRequestSubmitLoading(false);
+    }
 }
 
 // prepare 실패 직전에 성공했던 주문 데이터가 화면에 남지 않도록
@@ -756,6 +847,9 @@ async function submitPaymentRequest() {
     modal.querySelectorAll('[data-review-close]').forEach(function (el) {
         el.addEventListener('click', closeReviewRequestModal);
     });
+
+    const submitBtn = document.getElementById('reviewRequestSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', submitReviewRequest);
 })();
 
 // ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)
