@@ -56,4 +56,7 @@ public class ChatRoom {
         this.status = ChatRoomStatus.CLOSED;
         this.closedAt = LocalDateTime.now();
     }
+    public void reopen() {
+        this.status = ChatRoomStatus.ACTIVE;
+    }
 }

@@ -169,4 +169,10 @@ public class SeniorProfileService {
         return seniorProfileRepository.save(profile).getId();
 
     }
+    // 컨트롤러 서비스 로직 분리
+    public int getPricePerReview(Long memberId) {
+        return seniorProfileRepository.findByMemberId(memberId)
+                .map(SeniorProfile::getPricePerReview)
+                .orElse(0);
+    }
 }
