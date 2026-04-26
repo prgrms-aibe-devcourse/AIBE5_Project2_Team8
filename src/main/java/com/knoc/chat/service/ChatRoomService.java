@@ -9,6 +9,7 @@ import com.knoc.global.exception.BusinessException;
 import com.knoc.global.exception.ErrorCode;
 import com.knoc.member.Member;
 import com.knoc.member.MemberRepository;
+import com.knoc.senior.repository.SeniorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true) // 데이터 변경이 없는 조회 메서드가 많으므로 기본값을 readOnly로 설정
@@ -26,6 +28,7 @@ public class ChatRoomService {
     private final ApplicationEventPublisher eventPublisher;
     private final MemberRepository memberRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final SeniorProfileRepository seniorProfileRepository;
 
     // 권한 검증 로직
     public void verifyParticipant(ChatRoom chatRoom, Member currentMember) {
@@ -37,20 +40,27 @@ public class ChatRoomService {
     // 최신 메시지 map 생성 로직
     // - 시니어 화면에서는 주니어 전용 시스템 메시지(REVIEW_REQUESTED)가 사이드바 미리보기에 노출되지 않도록 필터링한다.
     private Map<Long, ChatMessage> buildLatestMessages(List<ChatRoom> chatRooms, Member currentMember) {
-        Map<Long, ChatMessage> latestMessages = new HashMap<>();
+        // 1. 쿼리 1번으로 모든 방의 최신 메시지 조회 (N+1 해결)
+        List<Long> roomIds = chatRooms.stream()
+                .map(ChatRoom::getId)
+                .toList();
+
+        Map<Long, ChatMessage> latestMessages = chatMessageRepository
+                .findLatestMessagesForRooms(roomIds).stream()
+                .collect(Collectors.toMap(m -> m.getChatRoom().getId(), m -> m));
+
+        // 2. 시니어인 경우, REVIEW_REQUESTED가 최신인 방만 추가 조회
         for (ChatRoom chatRoom : chatRooms) {
-            ChatMessage latest = chatMessageRepository.findFirstByChatRoomOrderByCreatedAtDesc(chatRoom);
+            ChatMessage latest = latestMessages.get(chatRoom.getId());
             if (latest != null
                     && latest.getMessageType() == MessageType.REVIEW_REQUESTED
-                    && chatRoom.getSenior() != null
-                    && chatRoom.getSenior().getId() != null
                     && chatRoom.getSenior().getId().equals(currentMember.getId())) {
-                // 시니어에게는 REVIEW_REQUESTED를 숨김 (다음 최신 메시지로 대체)
-                latest = chatMessageRepository.findFirstByChatRoomAndMessageTypeNotOrderByCreatedAtDesc(
-                        chatRoom, MessageType.REVIEW_REQUESTED);
+                latestMessages.put(chatRoom.getId(),
+                        chatMessageRepository.findFirstByChatRoomAndMessageTypeNotOrderByCreatedAtDesc(
+                                chatRoom, MessageType.REVIEW_REQUESTED));
             }
-            latestMessages.put(chatRoom.getId(), latest);
         }
+
         return latestMessages;
     }
 
@@ -77,13 +87,21 @@ public class ChatRoomService {
         List<ChatRoom> chatRooms = chatRoomRepository.findByJuniorOrSenior(currentMember, currentMember);
         List<ChatMessage> messages = chatMessageRepository
                 .findByChatRoomAndIdLessThanOrderByIdDesc(chatRoom, Long.MAX_VALUE, PageRequest.of(0, 20));
+
+        messages = new ArrayList<>(messages);
         Collections.reverse(messages);
         Long firstMessageId = messages.isEmpty() ? Long.MAX_VALUE : messages.get(0).getId();
         Map<Long, ChatMessage> latestMessages = buildLatestMessages(chatRooms, currentMember);
 
+        // 이 채팅방 시니어의 등록 리뷰 단가 (결제 요청 모달 placeholder용)
+        // 프로필 미등록/미설정 시 0 → 프런트에서 기본값으로 처리
+        int seniorPricePerReview = seniorProfileRepository.findByMemberId(chatRoom.getSenior().getId())
+                .map(p -> p.getPricePerReview())
+                .orElse(0);
+
         return new ChatRoomDetailDto(
                 roomId, messages, currentMember.getNickname(),chatRooms,
-                chatRoom, firstMessageId, latestMessages, chatRoom.getStatus().name()
+                chatRoom, firstMessageId, latestMessages, chatRoom.getStatus().name(),  seniorPricePerReview
         );
 
     }
