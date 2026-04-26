@@ -141,7 +141,7 @@
                                  th:if="${msg.messageType.name() == 'REVIEW_REQUESTED' and !isSenior}">
                                 <button type="button"
                                         class="sys-action-btn btn-blue action-review"
-                                        th:attr="data-room-id=${selectedRoomId}">
+                                        th:attr="data-room-id=${selectedRoomId}, data-order-id=${msg.referenceId}">
                                     📄 리뷰 요청서 작성
                                 </button>
                             </div>

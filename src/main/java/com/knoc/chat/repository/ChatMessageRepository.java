@@ -4,7 +4,6 @@ import com.knoc.chat.entity.ChatMessage;
 import com.knoc.chat.entity.MessageType;
 import com.knoc.chat.entity.ChatRoom;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDateTime;
 
@@ -23,6 +22,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     // 가장 최근에 작성된 채팅 메시지 1건 조회
     ChatMessage findFirstByChatRoomOrderByCreatedAtDesc(ChatRoom chatRoom);
+
+    // 특정 타입을 제외한 가장 최근 메시지 1건 조회 (사이드바 preview 필터링용)
+    ChatMessage findFirstByChatRoomAndMessageTypeNotOrderByCreatedAtDesc(ChatRoom chatRoom, MessageType messageType);
 
     List<ChatMessage> findByChatRoomAndIdLessThanOrderByIdDesc(ChatRoom chatRoom, Long before, PageRequest of);
 }
