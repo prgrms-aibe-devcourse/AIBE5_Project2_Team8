@@ -70,6 +70,19 @@ public class ReviewFeedbackService {
 
     }
 
+    @Transactional
+    public void updateReview(Long orderId, ReviewFeedbackRequestDto dto, Long juniorId) {
+        ReviewFeedback feedback = reviewFeedbackRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        if (!feedback.getJunior().getId().equals(juniorId)) {
+            throw new BusinessException(ErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
+        }
+
+        // rating/comment validation은 DTO(@Min/@Max) + 컨트롤러 @Valid에서 처리된다는 전제
+        feedback.update(dto.getRating(), dto.getComment());
+    }
+
     public ReviewPageDto getReviewPage() {
         List<ReviewFeedback> feedbacks = reviewFeedbackRepository.findAllByOrderByCreatedAtDesc();
 

@@ -78,6 +78,17 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "후기 수정", description = "주니어가 이미 작성한 후기를 수정합니다.")
+    @PatchMapping("/orders/{orderId}/feedback")
+    @ResponseBody
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Void> updateFeedback(@PathVariable Long orderId,
+                                               @RequestBody ReviewFeedbackRequestDto dto,
+                                               Principal principal) {
+        workspaceFacadeService.updateFeedback(orderId, principal.getName(), dto);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "후기 조회", description = "제출된 후기(평점/코멘트) 정보를 조회합니다.")
     @GetMapping("/orders/{orderId}/feedback")
     @ResponseBody

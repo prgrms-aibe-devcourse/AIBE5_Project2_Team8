@@ -272,21 +272,21 @@
                                     <span th:class="${(i - 0.5) <= review.rating} ? 'star-filled' : 'star-empty'">★</span>
                                 </th:block>
                             </div>
-                            <!-- JS가 '내 후기'에만 표시하도록 토글 -->
-                            <a href="#"
-                               class="btn btn-sm btn-outline-secondary rounded-pill px-2 d-none edit-review-link"
-                               style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
-                               title="후기 수정"
-                               aria-label="후기 수정"
-                               th:attr="data-order-id=${review.orderId}">
-                                ✎
-                            </a>
                         </div>
                     </div>
                     <p class="review-body" th:text="${review.content}"></p>
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="d-flex align-items-center mt-3">
+                        <!-- JS가 '내 후기'에만 표시하도록 토글 -->
+                        <a th:href="@{|/orders/${review.orderId}?reviewOnly=1|}"
+                           class="btn btn-sm btn-outline-secondary rounded-pill px-2 d-none edit-review-link"
+                           style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
+                           title="후기 수정"
+                           aria-label="후기 수정"
+                           th:attr="data-order-id=${review.orderId}">
+                            ✎
+                        </a>
                         <a th:href="@{/senior/{id}(id=${review.seniorProfileId})}"
-                           class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                           class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto"
                            style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;">
                             멘토 프로필 보기 →
                         </a>
@@ -527,22 +527,22 @@
 
                             <div class="d-flex align-items-center gap-2">
                                 <div class="star-row mt-1">${starsHtml(review.rating)}</div>
-                                <a href="#"
-                                   class="btn btn-sm btn-outline-secondary rounded-pill px-2 edit-review-link"
-                                   style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
-                                   title="후기 수정"
-                                   aria-label="후기 수정"
-                                   data-order-id="${escapeHtml(String(orderId))}">
-                                    ✎
-                                </a>
                             </div>
                         </div>
 
                         <p class="review-body">${content}</p>
 
-                        <div class="d-flex justify-content-end mt-3">
+                        <div class="d-flex align-items-center mt-3">
+                            <a href="/orders/${encodeURIComponent(orderId)}?reviewOnly=1"
+                               class="btn btn-sm btn-outline-secondary rounded-pill px-2 edit-review-link"
+                               style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;"
+                               title="후기 수정"
+                               aria-label="후기 수정"
+                               data-order-id="${escapeHtml(String(orderId))}">
+                                ✎
+                            </a>
                             <a href="/senior/${seniorProfileId}"
-                               class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                               class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto"
                                style="font-size:0.78rem; color:#8b93a7; border-color:#2a2f40;">
                                 멘토 프로필 보기 →
                             </a>

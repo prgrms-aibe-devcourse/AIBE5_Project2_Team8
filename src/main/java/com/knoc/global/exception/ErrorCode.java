@@ -54,6 +54,8 @@ public enum ErrorCode {
     // 리뷰 관련 (Review)
     REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
     REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
+    REVIEW_NOT_FOUND(404, "해당 주문에 대한 후기가 존재하지 않습니다."),
+    REVIEW_UPDATE_NOT_ALLOWED(403, "후기를 수정할 권한이 없습니다."),
 
     // GitHub 관련 (Github)
     GITHUB_PR_NOT_FOUND(404, "존재하지 않는 PR이거나 접근 권한이 없습니다."),
