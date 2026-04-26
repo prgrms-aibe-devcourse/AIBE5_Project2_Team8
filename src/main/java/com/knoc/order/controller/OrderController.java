@@ -1,9 +1,5 @@
 package com.knoc.order.controller;
 
-import com.knoc.global.exception.BusinessException;
-import com.knoc.global.exception.ErrorCode;
-import com.knoc.member.Member;
-import com.knoc.member.MemberRepository;
 import com.knoc.order.dto.OrderRequest;
 import com.knoc.order.dto.OrderResponse;
 import com.knoc.order.service.OrderService;
@@ -22,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/orders")
 public class OrderController {
     private final OrderService orderService;
-    private final MemberRepository memberRepository;
 
     @Operation(summary = "멘토링 주문 요청", description = "시니어가 멘토링 주문을 생성합니다. 요청 중복을 방지하기 위한 Idempotency-Key가 필요합니다.")
     @PostMapping("/request")
@@ -31,12 +26,8 @@ public class OrderController {
                                                       @RequestBody OrderRequest dto,
                                                       @RequestHeader("Idempotency-Key") String idempotencyKey) {
         // 1. 현재 로그인한 시니어 ID를 가져온다.
-        Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        Long seniorId = member.getId();
-
         // 2. 서비스를 호출하여 주문을 생성하고 응답 DTO를 받는다.
-        OrderResponse orderResponse = orderService.createOrderRequest(dto, seniorId, idempotencyKey);
+        OrderResponse orderResponse = orderService.createOrderRequest(dto, userDetails.getUsername(), idempotencyKey);
 
         // 3. 생성된 주문 정보(JSON 데이터로 변환됨)와 함께 200 OK 응답을 브라우저로 보낸다.
         return ResponseEntity.ok(orderResponse);
@@ -47,10 +38,7 @@ public class OrderController {
     @PreAuthorize("hasRole('USER')")  // 주니어 결제 가능
     public ResponseEntity<OrderResponse> requestPay(@AuthenticationPrincipal UserDetails userDetails,
                                                     @PathVariable Long orderId) {
-        Member member = memberRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        Long juniorId = member.getId();
-        OrderResponse orderResponse = orderService.preparePayment(orderId, juniorId);
+        OrderResponse orderResponse = orderService.preparePayment(orderId, userDetails.getUsername());
         return ResponseEntity.ok(orderResponse);
     }
 }
