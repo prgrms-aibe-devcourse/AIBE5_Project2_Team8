@@ -7,6 +7,7 @@ import com.knoc.member.MemberRepository;
 import com.knoc.review.dto.ReviewRequestCreateRequest;
 import com.knoc.review.dto.ReviewRequestCreateResponse;
 import com.knoc.review.service.ReviewRequestService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ReviewRequestController {
     private final MemberRepository memberRepository;
     private final ReviewRequestService reviewRequestService;
 
+    @Operation(summary = "리뷰 요청서 생성", description = "주니어가 결제 완료된 주문에 대해 리뷰 요청서를 생성합니다.")
     @PostMapping(value = "/request")
     public ResponseEntity<ReviewRequestCreateResponse> request(@AuthenticationPrincipal UserDetails userDetails,
                                   @RequestBody @Valid ReviewRequestCreateRequest dto) {
