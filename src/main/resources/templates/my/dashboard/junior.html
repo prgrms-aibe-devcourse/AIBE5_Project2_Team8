@@ -420,7 +420,7 @@
 
                         <!-- 상태 배지 -->
                         <span th:if="${order.status.name() == 'PENDING'}"   class="status-pill status-pending">결제 대기</span>
-                        <span th:if="${order.status.name() == 'PAID'}"      class="status-pill status-paid">PAID</span>
+                        <span th:if="${order.status.name() == 'PAID'}"      class="status-pill status-paid">리뷰 진행중</span>
                         <span th:if="${order.status.name() == 'SETTLED'}"   class="status-pill status-settled">완료</span>
                         <span th:if="${order.status.name() == 'CANCELLED'}" class="status-pill status-cancelled">취소됨</span>
                     </div>
@@ -441,10 +441,7 @@
                     <span th:if="${order.status.name() == 'SETTLED' and order.hasReview}"
                           class="text-mint small fw-semibold">✓ 후기 작성됨</span>
 
-                    <span th:if="${order.status.name() == 'PAID'}"    class="text-secondary small">리뷰 진행중</span>
-                    <span th:if="${order.status.name() == 'PENDING'}" class="text-warning small">결제 대기</span>
-
-                    <a th:href="@{|/orders/${order.orderId}|}" class="btn-action btn-action-outline">상세 →</a>
+                    <a th:href="@{|/orders/${order.orderId}|}" class="btn-action btn-action-outline">워크스페이스 입장 →</a>
                 </div>
             </div>
         </div>
