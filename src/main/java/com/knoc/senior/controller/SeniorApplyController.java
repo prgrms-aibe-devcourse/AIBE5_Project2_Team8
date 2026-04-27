@@ -106,8 +106,7 @@ public class SeniorApplyController {
                                 RedirectAttributes redirectAttributes) {
         Long memberId = getMemberId(userDetails);
         seniorProfileService.updateProfile(memberId, dto);
-        redirectAttributes.addFlashAttribute("successMessage", "시니어 프로필이 수정되었습니다.");
-        return "redirect:/senior/profile-update";
+        return "redirect:/my/dashboard?seniorProfileUpdated=true";
     }
 
     @Operation(summary = "이메일 인증 번호 발송",description = "기업 이메일로 인증번호를 발송합니다.")
