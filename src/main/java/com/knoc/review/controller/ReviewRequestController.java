@@ -33,7 +33,6 @@ public class ReviewRequestController {
 
     @Operation(summary = "리뷰 요청서 수정", description = "주니어가 리포트 작성 전까지 리뷰 요청서(PR 링크/요청 정보)를 수정합니다.")
     @PatchMapping("/request")
-    @PreAuthorize("hasRole('JUNIOR')")
     public ResponseEntity<Map<String, Long>> update(@AuthenticationPrincipal UserDetails userDetails,
                                                     @RequestBody @Valid ReviewRequestUpdateRequest req) {
         Long orderId = reviewRequestService.updateReviewRequest(userDetails.getUsername(), req);
