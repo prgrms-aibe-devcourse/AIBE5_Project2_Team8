@@ -32,10 +32,10 @@ public class DashboardController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SENIOR"));
         if (!isSenior) {
             model.addAttribute("junior", dashboardService.getJuniorDashboard(email));
-            return "my/dashboard/junior";
+            return "dashboard/junior";
         } else {
             model.addAttribute("senior", dashboardService.getSeniorDashboard(email));
-            return "my/dashboard/senior";
+            return "dashboard/senior";
         }
     }
 
@@ -58,6 +58,6 @@ public class DashboardController {
                           @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int p,
                           Model model) {
         model.addAttribute("page", dashboardService.getSeniorReviews(userDetails.getUsername(), p));
-        return "my/dashboard/reviews";
+        return "dashboard/reviews";
     }
 }
