@@ -3,7 +3,6 @@ package com.knoc.order.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knoc.global.exception.BusinessException;
-import com.knoc.order.repository.OrderRepository;
 import com.knoc.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +31,6 @@ public class TossPaymentController {
 
     private final ObjectMapper objectMapper;
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
     private final RestClient tossRestClient;
 
     // 시크릿 키 설정 여부 가드용으로만 사용 (실제 인증 헤더는 tossRestClient에서 자동 주입)
@@ -132,11 +130,6 @@ public class TossPaymentController {
 
     // Toss 콜백 후 돌아갈 채팅방 URL 계산 (주문 조회 실패 시 "/"으로 폴백)
     private String redirectToChat(String tossOrderId) {
-        if (!StringUtils.hasText(tossOrderId)) {
-            return "/";
-        }
-        return orderRepository.findByOrderNumber(tossOrderId)
-                .map(o -> "/chat/" + o.getChatRoom().getId())
-                .orElse("/");
+        return orderService.getChatRoomUrlByOrderNumber(tossOrderId);
     }
 }

@@ -65,6 +65,7 @@ public class ChatEventListener {
                 .messageType(event.type())
                 .referenceId(event.referenceId())
                 .amount(amount)
+                .roomId(event.roomId())
                 .build();
 
         // 4. 1:1 Queue 방식으로 조건에 맞게 전송

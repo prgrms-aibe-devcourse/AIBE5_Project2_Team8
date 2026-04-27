@@ -15,5 +15,6 @@ public record ChatRoomDetailDto(
         ChatRoom selectedRoom,
         Long firstMessageId,
         Map<Long, ChatMessage> latestMessages,
-        String roomStatus
+        String roomStatus,
+        int seniorPricePerReview
 ) {}

@@ -67,6 +67,7 @@ class OrderServiceTest {
     @DisplayName("결제 요청 성공: 정상적인 데이터가 입력되면 주문이 PENDING 상태로 생성된다.")
     void createOrderRequest_Success() {
         // given
+        String seniorEmail = "senior@knoc.com";
         Long seniorId = 1L;
         Long juniorId = 2L;
         Long chatRoomId = 10L;
@@ -85,7 +86,7 @@ class OrderServiceTest {
         // Stubbing: Repository 조회 시나리오 설정 (DB 의존성 제거)
         given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
         given(memberRepository.findById(juniorId)).willReturn(Optional.of(junior));
-        given(memberRepository.findById(seniorId)).willReturn(Optional.of(senior));
+        given(memberRepository.findByEmail(seniorEmail)).willReturn(Optional.of(senior));
 
         // Stubbing: 데이터 저장 로직 모의 처리
         // willAnswer를 사용하여 저장 시도된 Order 객체를 ID값만 임의로 채워 반환 (referenceId 확인용)
@@ -96,7 +97,7 @@ class OrderServiceTest {
         });
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, seniorId, "idempotencyKey");
+        OrderResponse response = orderService.createOrderRequest(request, seniorEmail, "idempotencyKey");
 
         // then
         assertThat(response).isNotNull();
@@ -124,12 +125,13 @@ class OrderServiceTest {
     void createOrderRequest_Fail_NotSenior() {
         // given
         Long actualSeniorId = 1L;
-        Long hackerId = 99L; // 실제 방 주인(1L)과 다른 요청자 ID
+        String hackerEmail = "hacker@knoc.com"; // 실제 방 주인(1L)과 다른 요청자
         Long chatRoomId = 10L;
         OrderRequest request = new OrderRequest(chatRoomId, 2L, 50000);
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         Member actualSenior = mock(Member.class);
+        Member hackerMember = mock(Member.class);
 
         // Stubbing: 채팅방의 실제 소유주 설정
         given(actualSenior.getId()).willReturn(actualSeniorId);
@@ -137,10 +139,12 @@ class OrderServiceTest {
 
         // Stubbing: Repository 조회 시나리오 설정
         given(chatRoomRepository.findById(chatRoomId)).willReturn(Optional.of(chatRoom));
-        given(memberRepository.findById(anyLong())).willReturn(Optional.of(mock(Member.class)));
+        given(memberRepository.findById(anyLong())).willReturn(Optional.of(mock(Member.class))); // junior 조회용
+        given(hackerMember.getId()).willReturn(99L); // 방 주인(1L)과 다른 ID
+        given(memberRepository.findByEmail(hackerEmail)).willReturn(Optional.of(hackerMember));
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerId, "idempotencyKey"))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, hackerEmail, "idempotencyKey"))
                 .isInstanceOf(BusinessException.class) // BusinessException이 터져야 함
                 .hasMessage(ErrorCode.NOT_SENIOR_IN_ROOM.getMessage()); // 메시지도 일치해야 함
 
@@ -157,7 +161,7 @@ class OrderServiceTest {
         OrderRequest request = new OrderRequest(1L, 2L, 10000);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, "idempotencyKey"))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, "senior@test.com", "idempotencyKey"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.CHATROOM_NOT_FOUND.getMessage());
 
@@ -172,12 +176,14 @@ class OrderServiceTest {
         // given
         Long orderId = 100L;
         Long juniorId = 2L;
+        String juniorEmail = "junior@test.com";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         given(chatRoom.getId()).willReturn(10L);
 
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(juniorId);
+        given(memberRepository.findByEmail(juniorEmail)).willReturn(Optional.of(junior));
 
         Order order = Order.builder()
                 .orderNumber("ORD-TEST")
@@ -191,7 +197,7 @@ class OrderServiceTest {
         given(seniorProfileRepository.findByMemberId(any())).willReturn(Optional.empty());
 
         // when
-        OrderResponse response = orderService.preparePayment(orderId, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, juniorEmail);
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
@@ -208,10 +214,12 @@ class OrderServiceTest {
         // given
         Long orderId = 101L;
         Long juniorId = 2L;
+        String juniorEmail = "junior@test.com";
 
         ChatRoom chatRoom = mock(ChatRoom.class);
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(juniorId);
+        given(memberRepository.findByEmail(juniorEmail)).willReturn(Optional.of(junior));
 
         Order order = Order.builder()
                 .orderNumber("ORD-PAID")
@@ -225,7 +233,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when
-        OrderResponse response = orderService.preparePayment(orderId, juniorId);
+        OrderResponse response = orderService.preparePayment(orderId, juniorEmail);
 
         // then
         assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
@@ -288,10 +296,14 @@ class OrderServiceTest {
         // given
         Long orderId = 102L;
         Long actualJuniorId = 2L;
-        Long attackerJuniorId = 999L;
+        String attackerEmail = "attacker@test.com";
 
         Member junior = mock(Member.class);
         given(junior.getId()).willReturn(actualJuniorId);
+
+        Member attackerMember = mock(Member.class);
+        given(attackerMember.getId()).willReturn(999L); // 실제 주니어(2L)와 다른 ID
+        given(memberRepository.findByEmail(attackerEmail)).willReturn(Optional.of(attackerMember));
 
         Order order = Order.builder()
                 .orderNumber("ORD-NOT-JUNIOR")
@@ -304,7 +316,7 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // when & then
-        assertThatThrownBy(() -> orderService.preparePayment(orderId, attackerJuniorId))
+        assertThatThrownBy(() -> orderService.preparePayment(orderId, attackerEmail))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.NOT_JUNIOR_FOR_ORDER.getMessage());
 
@@ -320,7 +332,7 @@ class OrderServiceTest {
         OrderRequest request = new OrderRequest(1L, 2L, 50000);
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrderRequest(request, 1L, shortKey))
+        assertThatThrownBy(() -> orderService.createOrderRequest(request, "senior@test.com", shortKey))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.INVALID_IDEMPOTENCY_KEY.getMessage());
 
@@ -331,7 +343,7 @@ class OrderServiceTest {
     @DisplayName("결제 요청 멱등: 동시에 두 요청이 들어와 DB 충돌이 발생해도 기존 주문을 반환한다.")
     void createOrderRequest_Success_WhenConcurrencyConflict() {
         // given
-        Long seniorId = 1L;
+        String seniorEmail = "senior@knoc.com";
         Long juniorId = 2L;
         OrderRequest request = new OrderRequest(10L, juniorId, 50000);
         String idempotencyKey = "idempotency-789";
@@ -370,12 +382,12 @@ class OrderServiceTest {
         // 나머지 엔티티 조회 Stubbing (orElseGet 내부 진입 시 필요)
         given(chatRoomRepository.findById(anyLong())).willReturn(Optional.of(mockChatRoom));
         given(memberRepository.findById(juniorId)).willReturn(Optional.of(mockJunior));
-        given(memberRepository.findById(seniorId)).willReturn(Optional.of(mockSenior));
+        given(memberRepository.findByEmail(seniorEmail)).willReturn(Optional.of(mockSenior));
 
         given(mockChatRoom.getSenior()).willReturn(mockSenior);
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, seniorId, idempotencyKey);
+        OrderResponse response = orderService.createOrderRequest(request, seniorEmail, idempotencyKey);
 
         // then
         assertThat(response.getOrderNumber()).isEqualTo(orderNumber);

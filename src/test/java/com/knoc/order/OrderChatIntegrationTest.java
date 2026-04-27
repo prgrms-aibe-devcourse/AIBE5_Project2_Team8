@@ -78,7 +78,7 @@ public class OrderChatIntegrationTest {
         OrderRequest request = new OrderRequest(chatRoom.getId(), junior.getId(), 55000);
 
         // when
-        OrderResponse response = orderService.createOrderRequest(request, senior.getId(), "idempotencyKey");
+        OrderResponse response = orderService.createOrderRequest(request, senior.getEmail(), "idempotencyKey");
 
         // AFTER_COMMIT 리스너를 동작시키기 위해 트랜잭션을 여기서 수동으로 커밋
         TestTransaction.flagForCommit();
