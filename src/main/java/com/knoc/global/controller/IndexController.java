@@ -35,4 +35,13 @@ public class IndexController {
         model.addAttribute("tossClientKey", tossClientKey);
         return "index";
     }
+
+    @Operation(summary = "시니어 목록 fragment 조회", description = "검색 조건에 따른 시니어 목록을 HTML fragment으로 반환 / AJAX 필터링에 사용한다.")
+    @GetMapping("/seniors/fragment")
+    public String searchFragment(@ModelAttribute SeniorSearchCondition condition, Model model) {
+        model.addAttribute("seniors", seniorProfileService.searchProfiles(condition));
+        model.addAttribute("condition", condition);
+        model.addAttribute("popularSkills", POPULAR_SKILLS);
+        return "index :: seniorSection"; // 시니어 섹션 fragment만 반환
+    }
 }
