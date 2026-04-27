@@ -25,13 +25,6 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     org.springframework.data.domain.Page<ReviewFeedback> findBySeniorProfile_IdOrderByCreatedAtDesc(Long seniorProfileId, org.springframework.data.domain.Pageable pageable);
 
-    List<ReviewFeedback> findAllByOrderByCreatedAtDesc();
-
-    List<ReviewFeedback> findByJunior_IdOrderByCreatedAtDesc(Long juniorId);
-
-    @Query("SELECT r.seniorProfile FROM ReviewFeedback r WHERE r.createdAt >= :startOfMonth GROUP BY r.seniorProfile ORDER BY COUNT(r) DESC")
-    List<SeniorProfile> findTop3ActiveSeniorsThisMonth(@Param("startOfMonth") LocalDateTime startOfMonth, org.springframework.data.domain.Pageable pageable);
-
     @Query("SELECT r.order.id FROM ReviewFeedback r WHERE r.order.id IN :orderIds")
     Set<Long> findReviewedOrderIds(@Param("orderIds") List<Long> orderIds);
 
@@ -45,4 +38,12 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
     )
     Page<ReviewFeedback> findWithJuniorBySeniorProfileId(@Param("id") Long seniorProfileId, Pageable pageable);
 
+    @Query("SELECT r FROM ReviewFeedback r JOIN FETCH r.junior JOIN FETCH r.seniorProfile sp JOIN FETCH sp.member JOIN FETCH r.order ORDER BY r.createdAt DESC ")
+    List<ReviewFeedback> findAllWithRelationsOrderByCreatedAtDesc();
+
+    @Query("SELECT r FROM ReviewFeedback r JOIN FETCH r.junior JOIN FETCH r.seniorProfile sp JOIN FETCH sp.member JOIN FETCH r.order WHERE r.junior.id = :juniorId ORDER BY r.createdAt DESC")
+    List<ReviewFeedback> findByJuniorIdWithRelations(@Param("juniorId") Long juniorId);
+
+    @Query("SELECT sp FROM SeniorProfile sp JOIN FETCH sp.member " + "WHERE sp.id IN (" + "SELECT r.seniorProfile.id FROM ReviewFeedback r " + "WHERE r.createdAt >= :startOfMonth " + "GROUP BY r.seniorProfile.id " + "ORDER BY COUNT(r) DESC" + ")")
+    List<SeniorProfile> findTop3ActiveSeniorsThisMonthWithMember(@Param("startOfMonth") LocalDateTime startOfMonth, Pageable pageable);
 }
