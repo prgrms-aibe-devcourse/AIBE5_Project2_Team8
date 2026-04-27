@@ -575,9 +575,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <a th:if="${order.status.name() == 'PAID'}"
-                           th:href="@{|/orders/${order.orderId}|}"
-                           class="btn-action btn-action-mint">리뷰 시작하기 →</a>
 
                         <span th:if="${order.status.name() == 'SETTLED' and order.hasReview}"
                               class="text-mint small fw-semibold">✓ 후기 받음</span>
@@ -585,7 +582,7 @@
                               class="text-secondary small">완료</span>
 
                         <a th:href="@{|/orders/${order.orderId}|}"
-                           class="btn-action btn-action-outline">리포트 보기 →</a>
+                           class="btn-action btn-action-outline">워크스페이스 입장 →</a>
                     </div>
                 </div>
             </th:block>
