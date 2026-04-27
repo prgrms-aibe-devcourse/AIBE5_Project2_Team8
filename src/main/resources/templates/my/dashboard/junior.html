@@ -52,10 +52,9 @@
             font-weight: 700;
             line-height: 1;
         }
-        /* 이미지 기준 색상 */
-        .stat-pending  { color: #ffffff; }   /* 대기 중 - 흰색 */
-        .stat-inprogress { color: #00CFE8; } /* 진행 중 - 민트 */
-        .stat-completed  { color: #c084fc; } /* 완료 내역 - 보라 */
+        .stat-pending  { color: #ffffff; }
+        .stat-inprogress { color: #00CFE8; }
+        .stat-completed  { color: #c084fc; }
 
         /* ===== 추천 가이드 카드 ===== */
         .guide-card-v2 {
@@ -212,6 +211,7 @@
             align-items: center;
             gap: 0.3rem;
             text-decoration: none;
+            cursor: pointer;
         }
         .btn-action-outline {
             background-color: transparent;
@@ -235,8 +235,13 @@
         .section-header {
             display: flex;
             align-items: center;
-            gap: 0.55rem;
+            justify-content: space-between; /* 양쪽 끝으로 배치 */
             margin-bottom: 1.1rem;
+        }
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
         }
         .section-header-icon {
             width: 28px;
@@ -255,6 +260,21 @@
             margin: 0;
         }
 
+        /* 💡 추가된 전체보기 링크 스타일 */
+        .view-all-link {
+            font-size: 0.85rem;
+            color: #8b93a7;
+            text-decoration: none;
+            font-weight: 500;
+            background: none;
+            border: none;
+            padding: 0;
+            transition: color 0.2s ease;
+        }
+        .view-all-link:hover {
+            color: #d1d5db; /* 마우스 오버 시 조금 더 밝게 */
+        }
+
         /* ===== 빈 상태 ===== */
         .empty-state {
             text-align: center;
@@ -266,7 +286,6 @@
 
 <div layout:fragment="content" class="container py-5 mt-5" style="max-width: 1080px;">
 
-    <!-- 프로필 수정 결과 메시지 -->
     <div th:if="${param.profileUpdated}" class="alert mb-3"
          style="background-color: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.35); color: #4ade80; border-radius: 0.9rem; padding: 0.75rem 1.25rem;">
         프로필이 업데이트되었습니다.
@@ -276,7 +295,6 @@
         이미 사용 중인 닉네임입니다.
     </div>
 
-    <!-- ===== 상단: 인사 + 통계 ===== -->
     <div class="greeting-card mb-4">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-center gap-3">
@@ -314,26 +332,24 @@
         </div>
     </div>
 
-    <!-- ===== 추천 가이드 ===== -->
     <div class="mb-4">
         <div class="section-header">
-            <span class="section-header-icon">
-                <!-- 지도 아이콘 -->
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-                    <line x1="9" y1="3" x2="9" y2="18"/>
-                    <line x1="15" y1="6" x2="15" y2="21"/>
-                </svg>
-            </span>
-            <h5 class="section-title">다음 성장을 위한 추천 가이드</h5>
+            <div class="section-header-left">
+                <span class="section-header-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+                        <line x1="9" y1="3" x2="9" y2="18"/>
+                        <line x1="15" y1="6" x2="15" y2="21"/>
+                    </svg>
+                </span>
+                <h5 class="section-title">다음 성장을 위한 추천 가이드</h5>
+            </div>
         </div>
 
         <div class="row g-3">
-            <!-- 카드 1: 코드 리뷰 멘토링 가기 -->
             <div class="col-md-4">
                 <div class="guide-card-v2">
                     <div class="guide-icon-v2 guide-icon-blue">
-                        <!-- 모니터 아이콘 -->
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="2" y="3" width="20" height="14" rx="2"/>
                             <line x1="8" y1="21" x2="16" y2="21"/>
@@ -347,11 +363,9 @@
                 </div>
             </div>
 
-            <!-- 카드 2: 다른 사람들 후기 보러가기 -->
             <div class="col-md-4">
                 <div class="guide-card-v2">
                     <div class="guide-icon-v2 guide-icon-purple">
-                        <!-- 로켓 아이콘 -->
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
                             <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
@@ -366,11 +380,9 @@
                 </div>
             </div>
 
-            <!-- 카드 3: 시니어 지원하러 가기 -->
             <div class="col-md-4">
                 <div class="guide-card-v2">
                     <div class="guide-icon-v2 guide-icon-green">
-                        <!-- 악수 아이콘 -->
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/>
                             <path d="M12 5.36 8.87 8.5a2.13 2.13 0 0 0 0 3h0a2.13 2.13 0 0 0 3 0l2.26-2.21a2.13 2.13 0 0 1 3 0l2.96 2.96"/>
@@ -387,38 +399,44 @@
         </div>
     </div>
 
-    <!-- ===== 전체 멘토링 내역 ===== -->
     <div class="card-dark p-4">
         <div class="section-header">
-            <span class="section-header-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-            </span>
-            <h5 class="section-title">전체 멘토링 내역</h5>
+            <div class="section-header-left">
+                <span class="section-header-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </span>
+                <h5 class="section-title">전체 멘토링 내역</h5>
+            </div>
+
+            <button th:if="${junior.orders != null and junior.orders.size() > 5}"
+                    type="button"
+                    id="viewAllBtnContainer"
+                    class="view-all-link"
+                    onclick="showAllMentoringItems()">
+                전체 보기 →
+            </button>
         </div>
 
-        <!-- 주문 없을 때 -->
         <div th:if="${junior.orders == null or junior.orders.isEmpty()}" class="empty-state">
             <div class="fs-1 mb-3">📭</div>
             <p class="mb-3">아직 의뢰한 코드 리뷰가 없어요.</p>
             <a href="/" class="btn-action btn-action-mint">시니어 찾아보기</a>
         </div>
 
-        <!-- 주문 목록 -->
         <div th:unless="${junior.orders == null or junior.orders.isEmpty()}">
-            <div th:each="order : ${junior.orders}" class="mentoring-item">
-                <!-- 아바타 -->
+            <div th:each="order, stat : ${junior.orders}"
+                 class="mentoring-item"
+                 th:classappend="${stat.index >= 5} ? 'extra-item d-none' : ''">
                 <div class="mentor-avatar">
                     <span th:text="${#strings.substring(order.seniorNickname, 0, 1)}">김</span>
                 </div>
 
-                <!-- 시니어 정보 -->
                 <div class="mentor-info">
                     <div class="mentor-name-row">
                         <span class="mentor-name" th:text="${order.seniorNickname}">시니어닉네임</span>
 
-                        <!-- 상태 배지 -->
                         <span th:if="${order.status.name() == 'PENDING'}"   class="status-pill status-pending">결제 대기</span>
                         <span th:if="${order.status.name() == 'PAID'}"      class="status-pill status-paid">리뷰 진행중</span>
                         <span th:if="${order.status.name() == 'SETTLED'}"   class="status-pill status-settled">완료</span>
@@ -432,7 +450,6 @@
                     </div>
                 </div>
 
-                <!-- 액션 -->
                 <div class="d-flex align-items-center gap-2">
                     <a th:if="${order.status.name() == 'SETTLED' and !order.hasReview}"
                        th:href="@{|/orders/${order.orderId}?reviewOnly=1|}"
@@ -447,7 +464,6 @@
         </div>
     </div>
 
-    <!-- ===== 프로필 수정 모달 ===== -->
     <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="background-color: #161b27; border: 1px solid #2a2f40; border-radius: 1.25rem; color: #fff;">
@@ -458,7 +474,6 @@
                 <form th:action="@{/my/profile}" method="post" enctype="multipart/form-data">
                     <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem; padding: 1.5rem;">
 
-                        <!-- 프로필 이미지 미리보기 -->
                         <div style="text-align: center;">
                             <div id="profilePreview" style="
                                 width: 80px; height: 80px; border-radius: 1rem;
@@ -476,7 +491,6 @@
                             <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #8b93a7;">이미지를 클릭해 변경</div>
                         </div>
 
-                        <!-- 닉네임 -->
                         <div>
                             <label for="nicknameInput" class="form-label" style="color: #8b93a7; font-size: 0.82rem; margin-bottom: 0.4rem; display: block;">닉네임</label>
                             <input type="text" id="nicknameInput" name="nickname"
@@ -486,7 +500,6 @@
                                    style="background-color: #0f1320; border: 1px solid #2a2f40; color: #fff; border-radius: 0.75rem; padding: 0.65rem 1rem;">
                         </div>
 
-                        <!-- 프로필 이미지 파일 -->
                         <div>
                             <label for="profileImageInput" class="form-label" style="color: #8b93a7; font-size: 0.82rem; margin-bottom: 0.4rem; display: block;">프로필 이미지 <span style="font-size: 0.75rem;">(선택, 5MB 이하)</span></label>
                             <input type="file" id="profileImageInput" name="profileImage"
@@ -507,19 +520,32 @@
 </div>
 
 <th:block layout:fragment="script">
-<script>
-    document.getElementById('profileImageInput')?.addEventListener('change', function () {
-        const file = this.files[0];
-        const preview = document.getElementById('profilePreview');
+    <script>
+        document.getElementById('profileImageInput')?.addEventListener('change', function () {
+            const file = this.files[0];
+            const preview = document.getElementById('profilePreview');
 
-        if (!file) return;
+            if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            preview.innerHTML = '<img id="previewImg" src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;display:block;" alt="미리보기">';
-        };
-        reader.readAsDataURL(file);
-    });
-</script>
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.innerHTML = '<img id="previewImg" src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;display:block;" alt="미리보기">';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 전체 보기 펼치기
+        function showAllMentoringItems() {
+            const hiddenItems = document.querySelectorAll('.extra-item');
+            hiddenItems.forEach(item => {
+                item.classList.remove('d-none');
+            });
+
+            const btnContainer = document.getElementById('viewAllBtnContainer');
+            if(btnContainer) {
+                btnContainer.style.display = 'none';
+            }
+        }
+    </script>
 </th:block>
 </html>
