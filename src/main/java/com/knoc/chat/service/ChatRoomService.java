@@ -38,9 +38,9 @@ public class ChatRoomService {
     }
 
     // 최신 메시지 map 생성 로직
-    // - 시니어 화면에서는 주니어 전용 시스템 메시지(REVIEW_REQUESTED)가 사이드바 미리보기에 노출되지 않도록 필터링한다.
+    // - 쿼리 1번으로 모든 방의 최신 메시지 조회 (N+1 방지)
+    // - 시니어 화면에서는 REVIEW_REQUESTED가 최신인 방만 추가 조회하여 필터링
     private Map<Long, ChatMessage> buildLatestMessages(List<ChatRoom> chatRooms, Member currentMember) {
-        // 1. 쿼리 1번으로 모든 방의 최신 메시지 조회 (N+1 해결)
         List<Long> roomIds = chatRooms.stream()
                 .map(ChatRoom::getId)
                 .toList();
@@ -49,7 +49,7 @@ public class ChatRoomService {
                 .findLatestMessagesForRooms(roomIds).stream()
                 .collect(Collectors.toMap(m -> m.getChatRoom().getId(), m -> m));
 
-        // 2. 시니어인 경우, REVIEW_REQUESTED가 최신인 방만 추가 조회
+        // 시니어인 경우, REVIEW_REQUESTED가 최신인 방만 추가 조회
         for (ChatRoom chatRoom : chatRooms) {
             ChatMessage latest = latestMessages.get(chatRoom.getId());
             if (latest != null
