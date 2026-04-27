@@ -227,14 +227,6 @@
             careerSlider.addEventListener('change', loadSeniors);
             priceSlider.addEventListener('change',  loadSeniors);
 
-            // 필터가 적용된 상태면 패널 자동 열기
-            const hasFilter = parseInt(careerSlider.value) > 0
-                           || parseInt(priceSlider.value) < MAX_PRICE
-                           || currentSkill !== '';
-            if (hasFilter) {
-                new bootstrap.Collapse(document.getElementById('filterPanel'), { toggle: false }).show();
-                document.getElementById('filterToggleBtn').classList.add('active');
-            }
         });
     </script>
 </th:block>
