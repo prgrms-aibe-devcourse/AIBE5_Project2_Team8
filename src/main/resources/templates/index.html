@@ -20,7 +20,7 @@
         </p>
 
         <!-- 키워드 검색 -->
-        <form th:action="@{/}" method="get" id="searchForm">
+        <form id="searchForm" onsubmit="event.preventDefault(); loadSeniors();">
 
             <!-- ── 검색창 + 토글 + 검색버튼 ──────────────── -->
             <div class="row justify-content-center mb-3">
@@ -62,8 +62,8 @@
                             <!-- 헤더 -->
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <span class="fw-semibold text-white">상세 필터</span>
-                                <a th:href="@{/}" class="text-secondary text-decoration-none"
-                                   style="font-size:0.83rem;">초기화</a>
+                                <a href="#" class="text-secondary text-decoration-none"
+                                   style="font-size:0.83rem;" onclick="resetFilters()">초기화</a>
                             </div>
 
                             <div class="row g-4">
@@ -116,7 +116,7 @@
 
                             <!-- 적용 버튼 -->
                             <div class="d-flex justify-content-end mt-4">
-                                <button type="submit" class="btn btn-mint rounded-pill px-4 fw-bold">적용</button>
+                                <button type="button" class="btn btn-mint rounded-pill px-4 fw-bold" onclick="loadSeniors()">적용</button>
                             </div>
                         </div>
                     </div>
@@ -127,10 +127,13 @@
             <div class="d-flex justify-content-center gap-2 flex-wrap mt-2">
                 <span class="text-secondary me-1" style="font-size:0.9rem;">🔥 인기 기술스택</span>
                 <th:block th:each="s : ${popularSkills}">
-                    <a th:href="@{/(skill=${s}, careerYears=${condition.careerYears}, maxPrice=${condition.maxPrice}, keyword=${condition.keyword})}"
-                       class="badge rounded-pill py-2 px-3 text-decoration-none"
-                       th:classappend="${condition.skill == s} ? ' bg-mint text-dark' : ' badge-dark'"
-                       th:text="${s}"></a>
+                    <button type="button"
+                            class="badge rounded-pill py-2 px-3 border-0"
+                            th:classappend="${condition.skill == s} ? ' bg-mint text-dark' : ' badge-dark'"
+                            th:attr="data-skill=${s}"
+                            th:text="${s}"
+                            onclick="filterBySkill(this.dataset.skill)">
+                    </button>
                 </th:block>
             </div>
 
@@ -142,49 +145,94 @@
     <script th:inline="javascript">
         const MAX_PRICE = 200000;
 
+        // 페이지 로드 시 Thymeleaf에서 현재 선택된 skill 값을 초기화
+        let currentSkill = /*[[${condition.skill}]]*/ '';
+
+        // ── 슬라이더 표시 업데이트 ───────────────────────────
         function updateCareerDisplay(val) {
             const v = parseInt(val);
-            const display = document.getElementById('careerDisplay');
-            if (v === 0) {
-                display.textContent = '전체';
-                document.getElementById('careerSlider').name = '';
-            } else {
-                display.textContent = v + '년 이상';
-                document.getElementById('careerSlider').name = 'careerYears';
-            }
+            document.getElementById('careerDisplay').textContent = v === 0 ? '전체' : v + '년 이상';
         }
 
         function updatePriceDisplay(val) {
             const v = parseInt(val);
-            const display = document.getElementById('priceDisplay');
-            if (v >= MAX_PRICE) {
-                display.textContent = '제한 없음';
-                document.getElementById('priceSlider').name = '';
-            } else {
-                display.textContent = '₩' + v.toLocaleString('ko-KR') + ' 이하';
-                document.getElementById('priceSlider').name = 'maxPrice';
-            }
+            document.getElementById('priceDisplay').textContent =
+                v >= MAX_PRICE ? '제한 없음' : '₩' + v.toLocaleString('ko-KR') + ' 이하';
+        }
+
+        // ── 현재 필터 값을 쿼리 파라미터로 수집 ─────────────
+        function getFilterParams() {
+            const keyword = document.querySelector('input[name="keyword"]').value;
+            const career  = parseInt(document.getElementById('careerSlider').value);
+            const price   = parseInt(document.getElementById('priceSlider').value);
+
+            const params = new URLSearchParams();
+            if (keyword)         params.set('keyword', keyword);
+            if (career > 0)      params.set('careerYears', career);
+            if (price < MAX_PRICE) params.set('maxPrice', price);
+            if (currentSkill)    params.set('skill', currentSkill);
+            return params;
+        }
+
+        // ── AJAX로 시니어 목록만 교체 ────────────────────────
+        function loadSeniors() {
+            const params = getFilterParams();
+            history.pushState(null, '', '/?' + params.toString());
+
+            fetch('/seniors/fragment?' + params.toString())
+                .then(res => res.text())
+                .then(html => {
+                    document.getElementById('seniorSection').outerHTML = html;
+                })
+                .catch(err => console.error('시니어 목록 로딩 실패:', err));
+        }
+
+        // ── 기술스택 배지 토글 ───────────────────────────────
+        function filterBySkill(skill) {
+            currentSkill = (currentSkill === skill) ? '' : skill;
+
+            document.querySelectorAll('[data-skill]').forEach(btn => {
+                const isActive = btn.dataset.skill === currentSkill;
+                btn.classList.toggle('bg-mint',   isActive);
+                btn.classList.toggle('text-dark',  isActive);
+                btn.classList.toggle('badge-dark', !isActive);
+            });
+
+            loadSeniors();
+        }
+
+        // ── 필터 전체 초기화 ─────────────────────────────────
+        function resetFilters() {
+            document.querySelector('input[name="keyword"]').value = '';
+            document.getElementById('careerSlider').value = 0;
+            document.getElementById('priceSlider').value = MAX_PRICE;
+            updateCareerDisplay(0);
+            updatePriceDisplay(MAX_PRICE);
+            currentSkill = '';
+            document.querySelectorAll('[data-skill]').forEach(btn => {
+                btn.classList.remove('bg-mint', 'text-dark');
+                btn.classList.add('badge-dark');
+            });
+            loadSeniors();
         }
 
         document.addEventListener('DOMContentLoaded', function () {
             const careerSlider = document.getElementById('careerSlider');
-            updateCareerDisplay(careerSlider.value);
-            careerSlider.addEventListener('change', function () {
-                document.getElementById('searchForm').submit();
-            });
+            const priceSlider  = document.getElementById('priceSlider');
 
-            const priceSlider = document.getElementById('priceSlider');
+            updateCareerDisplay(careerSlider.value);
             updatePriceDisplay(priceSlider.value);
-            priceSlider.addEventListener('change', function () {
-                document.getElementById('searchForm').submit();
-            });
+
+            // 슬라이더 조작 완료 시 AJAX 조회
+            careerSlider.addEventListener('change', loadSeniors);
+            priceSlider.addEventListener('change',  loadSeniors);
 
             // 필터가 적용된 상태면 패널 자동 열기
             const hasFilter = parseInt(careerSlider.value) > 0
-                           || parseInt(priceSlider.value) < MAX_PRICE;
+                           || parseInt(priceSlider.value) < MAX_PRICE
+                           || currentSkill !== '';
             if (hasFilter) {
-                const panel = document.getElementById('filterPanel');
-                new bootstrap.Collapse(panel, { toggle: false }).show();
+                new bootstrap.Collapse(document.getElementById('filterPanel'), { toggle: false }).show();
                 document.getElementById('filterToggleBtn').classList.add('active');
             }
         });
@@ -192,7 +240,7 @@
 </th:block>
 
     <!-- ── 시니어 목록 섹션 ──────────────────────────────── -->
-    <section class="container py-5">
+    <section class="container py-5" id="seniorSection" th:fragment="seniorSection">
         <div class="d-flex justify-content-between align-items-end mb-4">
             <div>
                 <h3 class="fw-bold">당신에게 딱 맞는 시니어 멘토</h3>

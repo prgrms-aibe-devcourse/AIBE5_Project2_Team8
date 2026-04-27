@@ -53,8 +53,17 @@ public class OrderService {
     private static final long FAILURE_MESSAGE_COOLDOWN_SECONDS = 30L;
     private final SeniorProfileRepository seniorProfileRepository;
 
+    public String getChatRoomUrlByOrderNumber(String tossOrderId) {
+        if (!StringUtils.hasText(tossOrderId)) {
+            return "/";
+        }
+        return orderRepository.findByOrderNumber(tossOrderId)
+                .map(o -> "/chat/" + o.getChatRoom().getId())
+                .orElse("/");
+    }
+
     @Transactional
-    public OrderResponse createOrderRequest(OrderRequest dto, Long seniorId, String idempotencyKey) {
+    public OrderResponse createOrderRequest(OrderRequest dto, String email, String idempotencyKey) {
         // 0. 멱등키 검증 (비어있거나 너무 짧거나 너무 긴 경우에 대한 에러 처리)
         // Toss 제약: orderId 6~64자
         // idempotencyKey가 60자 초과면 orderNumber가 64자 초과이므로 에러.
@@ -76,11 +85,11 @@ public class OrderService {
                             .orElseThrow(() -> new BusinessException(ErrorCode.CHATROOM_NOT_FOUND));
                     Member junior = memberRepository.findById(dto.getJuniorId())
                             .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-                    Member senior = memberRepository.findById(seniorId) // 시큐리티에서 넘겨받은 현재 사용자
+                    Member senior = memberRepository.findByEmail(email) // 시큐리티에서 넘겨받은 현재 사용자
                             .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
                     // 요청한 사람이 실제 해당 채팅방의 시니어가 맞는지 검증
-                    if (!chatRoom.getSenior().getId().equals(seniorId)) {
+                    if (!chatRoom.getSenior().getId().equals(senior.getId())) {
                         throw new BusinessException(ErrorCode.NOT_SENIOR_IN_ROOM);
                     }
 
@@ -118,7 +127,10 @@ public class OrderService {
 
     // 결제창 호출 전 단계(사전 검증/조회)
     // 실제 결제 승인 후 처리는 confirmPayment(String, long) 메서드에서 수행
-    public OrderResponse preparePayment(Long orderId, Long juniorId) {
+    public OrderResponse preparePayment(Long orderId, String email) {
+        Member junior = memberRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        Long juniorId = junior.getId();
+
         // 입력 검증
         if (juniorId == null) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);

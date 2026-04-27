@@ -16,6 +16,10 @@ const SENIOR_PRICE_PER_REVIEW = window.SENIOR_PRICE_PER_REVIEW ?? 0;
 const chatContainer = document.getElementById('messageList');
 let stompClient = null;
 
+// 현재 방 마감 여부 (페이지 로드 시 초기값 + ROOM_CLOSE 이벤트 수신 시 true로 전환)
+// ROOM_STATUS 상수는 변경이 안 되므로 별도 변수로 관리
+let currentRoomClosed = ROOM_STATUS === 'CLOSED';
+
 // 결제 상세 모달에서 결제 진행 시 사용할 현재 주문 정보
 // (GET /orders/{orderId}/prepare 응답으로 채워짐)
 let paymentDetailOrderId = null;     // Toss orderId로 사용할 orderNumber(예: "ORD-...")
@@ -167,8 +171,8 @@ function renderUserMessage(msg, options = {}) {
 }
 
 // 사이드바 미리보기 실시간 업데이트
-function updateSidebarPreview(content) {
-    const roomItem = document.querySelector(`.room-item[data-room-id="${ROOM_ID}"]`);
+function updateSidebarPreview(content, roomId = ROOM_ID) {
+    const roomItem = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
     if (!roomItem) return;
     const preview = roomItem.querySelector('.room-preview');
     if (preview) preview.textContent = content;
@@ -178,6 +182,34 @@ function updateSidebarPreview(content) {
         timeEl.textContent = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0');
     }
 }
+
+// 읽지 않은 메시지 점 표시 관리 (localStorage로 새로고침 후에도 유지)
+function updateUnreadBadge(roomId) {
+    localStorage.setItem('unread_' + roomId, 'true');
+    showUnreadDot(roomId);
+}
+
+function showUnreadDot(roomId) {
+    const roomItem = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+    if (!roomItem) return;
+    const dot = roomItem.querySelector('.unread-badge');
+    if (dot) dot.style.display = 'block';
+}
+
+// 페이지 로드 시: 현재 방은 읽음 처리, 나머지는 localStorage에서 복원
+document.addEventListener('DOMContentLoaded', function () {
+    // 현재 보고 있는 방은 읽음 처리
+    if (ROOM_ID) localStorage.removeItem('unread_' + ROOM_ID);
+
+    // 다른 방들의 미확인 점 복원
+    document.querySelectorAll('.room-item').forEach(function (item) {
+        const roomId = item.getAttribute('data-room-id');
+        if (roomId && localStorage.getItem('unread_' + roomId)) {
+            const dot = item.querySelector('.unread-badge');
+            if (dot) dot.style.display = 'block';
+        }
+    });
+});
 
 // 사이드바 토글 (모바일 대응)
 function toggleSidebar() {
@@ -203,7 +235,8 @@ function disableChatUI() {
 // ==========================================
 // 5. STOMP 연결 및 구독 로직 (1:1 Queue)
 // ==========================================
-if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
+// CLOSED 방을 보고 있어도 다른 방의 메시지(배지/사이드바 업데이트)를 받기 위해 항상 연결한다.
+if (ROOM_ID) {
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
@@ -215,9 +248,14 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
     stompClient.connect(connectHeaders, function () {
         console.log('✅ STOMP 서버 연결 완료');
         const statusEl = document.getElementById('connectionStatus');
-        if(statusEl) {
-            statusEl.textContent = '연결됨';
-            statusEl.className = 'connection-status status-connected';
+        if (statusEl) {
+            if (currentRoomClosed) {
+                statusEl.textContent = '마감됨';
+                statusEl.className = 'connection-status status-disconnected';
+            } else {
+                statusEl.textContent = '연결됨';
+                statusEl.className = 'connection-status status-connected';
+            }
         }
 
         // 💡 1:1 큐 구독 방식으로 통신
@@ -225,18 +263,28 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
             const data = JSON.parse(message.body);
             const type = data.messageType || data.type;
 
+            // 다른 방 메시지: 사이드바 미리보기 + 배지만 업데이트하고 렌더링은 스킵
+            if (data.roomId && data.roomId !== ROOM_ID) {
+                if (type === 'USER') {
+                    updateSidebarPreview(data.content, data.roomId);
+                    updateUnreadBadge(data.roomId);
+                }
+                return;
+            }
+
+            // 현재 방이 마감 상태면 새 메시지 렌더링 스킵
+            if (currentRoomClosed) return;
+
             // 실시간 마감 이벤트 감지
             if (type === 'ROOM_CLOSE') {
+                currentRoomClosed = true; // 이후 이 방의 메시지는 렌더링하지 않음
                 renderSystemMessage(data);
                 disableChatUI();
-
-                stompClient.disconnect(function() {
-                    console.log("🔒 채팅방 마감: 소켓 연결이 안전하게 종료되었습니다.");
-                    if(statusEl) {
-                        statusEl.textContent = '마감됨';
-                        statusEl.className = 'connection-status status-disconnected';
-                    }
-                });
+                // WebSocket은 끊지 않음 → 다른 방 메시지(배지/사이드바)를 계속 받기 위해
+                if (statusEl) {
+                    statusEl.textContent = '마감됨';
+                    statusEl.className = 'connection-status status-disconnected';
+                }
                 return;
             }
 
@@ -266,9 +314,6 @@ if (ROOM_ID && ROOM_STATUS !== 'CLOSED') {
             statusEl.className = 'connection-status status-disconnected';
         }
     });
-} else if (ROOM_STATUS === 'CLOSED') {
-    console.warn("🔒 이미 마감된 채팅방입니다. 소켓 연결을 차단합니다.");
-    setTimeout(scrollToBottom, 100);
 }
 
 // ==========================================

@@ -36,6 +36,20 @@ public class ChatMessageService {
     private final ChatRoomService chatRoomService;
     private final OrderRepository orderRepository;
 
+    // 메시지 목록에서 PAYMENT_REQUESTED 타입만 골라 (orderId, amount) 맵을 구성한다.
+    // Thymeleaf 첫 렌더링과 페이지네이션 응답 양쪽에서 결제 버튼 금액 표시에 사용.
+    public Map<Long, Integer> buildOrderAmounts(List<ChatMessage> messages) {
+        List<Long> paymentOrderIds = messages.stream()
+                .filter(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED && m.getReferenceId() != null)
+                .map(ChatMessage::getReferenceId)
+                .toList();
+
+        if (paymentOrderIds.isEmpty()) return Collections.emptyMap();
+
+        return orderRepository.findAllById(paymentOrderIds).stream()
+                .collect(Collectors.toMap(Order::getId, Order::getAmount));
+    }
+
     @Transactional
     public void sendMessage(Long roomId, String email, String content) {
         // 1. 채팅방 조회
@@ -73,6 +87,7 @@ public class ChatMessageService {
                 .messageType(savedMessage.getMessageType())
                 .referenceId(savedMessage.getReferenceId()) // USER 메시지는 null
                 // amount는 생략 -> null (PAYMENT_REQUESTED에서만 의미 있음)
+                .roomId(roomId)
         .build();
 
         // 6. 수신자/발신자 양쪽에 1:1 queue 전송
@@ -110,15 +125,7 @@ public class ChatMessageService {
 
 
         // 이번 페이지에 포함된 PAYMENT_REQUESTED 메시지들의 orderId만 모아 한 번에 금액 조회
-        List<Long> orderIds = messages.stream()
-                .filter(m -> m.getMessageType() == MessageType.PAYMENT_REQUESTED && m.getReferenceId() != null)
-                .map(ChatMessage::getReferenceId)
-                .toList();
-
-        Map<Long, Integer> amountByOrderId = orderIds.isEmpty()
-                ? Collections.emptyMap()
-                : orderRepository.findAllById(orderIds).stream()
-                .collect(Collectors.toMap(Order::getId, Order::getAmount));
+        Map<Long, Integer> amountByOrderId = buildOrderAmounts(messages);
 
         return messages.stream()
                 .map(m -> ChatMessageResponse.builder()
