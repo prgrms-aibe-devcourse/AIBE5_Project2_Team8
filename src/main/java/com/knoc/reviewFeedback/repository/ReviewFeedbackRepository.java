@@ -2,12 +2,15 @@ package com.knoc.reviewFeedback.repository;
 
 import com.knoc.senior.entity.SeniorProfile;
 import com.knoc.reviewFeedback.entity.ReviewFeedback;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,Long> {
     boolean existsByOrderId(Long orderId);
@@ -24,8 +27,22 @@ public interface ReviewFeedbackRepository extends JpaRepository<ReviewFeedback,L
 
     List<ReviewFeedback> findAllByOrderByCreatedAtDesc();
 
+    List<ReviewFeedback> findByJunior_IdOrderByCreatedAtDesc(Long juniorId);
+
     @Query("SELECT r.seniorProfile FROM ReviewFeedback r WHERE r.createdAt >= :startOfMonth GROUP BY r.seniorProfile ORDER BY COUNT(r) DESC")
     List<SeniorProfile> findTop3ActiveSeniorsThisMonth(@Param("startOfMonth") LocalDateTime startOfMonth, org.springframework.data.domain.Pageable pageable);
 
-    List<ReviewFeedback> findByJunior_IdOrderByCreatedAtDesc(Long juniorId);
+    @Query("SELECT r.order.id FROM ReviewFeedback r WHERE r.order.id IN :orderIds")
+    Set<Long> findReviewedOrderIds(@Param("orderIds") List<Long> orderIds);
+
+    @Query("SELECT r FROM ReviewFeedback r JOIN FETCH r.junior WHERE r.seniorProfile.id = :id ORDER BY r.createdAt DESC")
+    List<ReviewFeedback> findTop3WithJuniorBySeniorProfileId(@Param("id") Long seniorProfileId, Pageable pageable);
+
+    // 페이지네이션 대체
+    @Query(
+            value = "SELECT r FROM ReviewFeedback r JOIN FETCH r.junior WHERE r.seniorProfile.id = :id ORDER BY r.createdAt DESC",
+            countQuery = "SELECT COUNT(r) FROM ReviewFeedback r WHERE r.seniorProfile.id = :id"
+    )
+    Page<ReviewFeedback> findWithJuniorBySeniorProfileId(@Param("id") Long seniorProfileId, Pageable pageable);
+
 }
