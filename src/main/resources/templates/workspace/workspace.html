@@ -11,6 +11,7 @@
 <th:block layout:fragment="head-extra">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" th:href="@{/css/review-request-modal.css}">
     <style>
         body { padding-top: 72px; }
 
@@ -270,6 +271,7 @@
             word-break: break-word; box-sizing: border-box;
             min-height: 80px;
         }
+
     </style>
 </th:block>
 
@@ -318,6 +320,17 @@
                              th:text="${workspace.hasReviewRequest ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></div>
                         <div class="waiting-desc"
                              th:text="${workspace.hasReviewRequest ? '잠시 후 다시 시도하거나 GitHub PR 링크를 확인해 주세요.' : '주니어가 리뷰 요청서를 제출하면 변경 파일을 확인할 수 있습니다.'}"></div>
+
+                        <!-- 주니어: PR 링크 오류 시 요청서 수정 CTA -->
+                        <div th:if="${workspace.hasReviewRequest and !workspace.isSenior and !workspace.hasReport}"
+                             style="margin-top: 1.25rem; display:flex; flex-direction:column; align-items:center; gap:0.6rem;">
+                            <button type="button" class="btn-review" style="padding:0.7rem 1.6rem;" onclick="openReviewRequestEditModal()">
+                                리뷰 요청서 수정
+                            </button>
+                            <div style="font-size:0.75rem; color:#666;">
+                                PR 링크를 수정하고 다시 제출하면 변경 파일을 불러올 수 있어요.
+                            </div>
+                        </div>
                     </div>
                     <th:block th:if="${workspace.prMetadata != null}">
                         <div th:if="${#lists.isEmpty(workspace.prMetadata.files())}" class="report-waiting">
@@ -579,6 +592,9 @@
             </div>
         </div>
     </div>
+
+    <!-- ── 리뷰 요청서 모달 (chat fragment 재사용) ── -->
+    <th:block th:replace="~{chat/fragments/review-request-modal :: reviewRequestModal(false)}"></th:block>
 </main>
 
 <th:block layout:fragment="script">
@@ -591,6 +607,9 @@
         const orderId         = [[${workspace.orderId}]];
         const currentNickname = [[${workspace.currentNickname}]];
         const chatRoomActive  = [[${workspace.chatRoomActive}]];
+        const initialGithubPrUrl = /*[[${workspace.githubPrUrl}]]*/ null;
+        const initialProjectContext = /*[[${workspace.projectContext}]]*/ null;
+        const initialConcernPoint = /*[[${workspace.concernPoint}]]*/ null;
 
         let cursor = null;
         const initMsgs = /*[[${workspace.initialMessages}]]*/ [];
@@ -1022,7 +1041,20 @@
                 }
             } catch (e) {}
         }
+
+        function openReviewRequestEditModal() {
+            if (!window.ReviewRequestModal) return;
+            window.ReviewRequestModal.open({
+                mode: 'edit',
+                method: 'PATCH',
+                orderId: orderId,
+                githubPrUrl: initialGithubPrUrl || '',
+                projectContext: initialProjectContext || '',
+                concernPoint: initialConcernPoint || ''
+            });
+        }
     </script>
+    <script src="/js/review-request-modal.js"></script>
 </th:block>
 
 </html>
