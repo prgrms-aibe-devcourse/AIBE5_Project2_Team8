@@ -102,7 +102,9 @@ public class ReviewFeedbackService {
         return feedbacks.stream().map(r -> ReviewPageDto.ReviewCardDto.builder()
                 .seniorProfileId(r.getSeniorProfile().getId())
                 .juniorName(r.getJunior().getNickname())
+                .juniorProfileImageUrl(r.getJunior().getProfileImageUrl())
                 .seniorName(r.getSeniorProfile().getMember().getNickname())
+                .seniorProfileImageUrl(r.getSeniorProfile().getMember().getProfileImageUrl())
                 .mentoringType(r.getSeniorProfile().getPosition())
                 .timeAgo(timeAgo(r.getCreatedAt()))
                 .rating(r.getRating())
@@ -116,6 +118,7 @@ public class ReviewFeedbackService {
         return seniors.stream().map(s -> ReviewPageDto.TopSeniorDto.builder()
                 .seniorProfileId(s.getId())
                 .name(s.getMember().getNickname())
+                .profileImageUrl(s.getMember().getProfileImageUrl())
                 .rating(s.getAvgRating())
                 .build()
         ).toList();

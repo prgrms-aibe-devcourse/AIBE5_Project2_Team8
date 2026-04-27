@@ -38,7 +38,11 @@
                        th:attr="data-room-id=${room.id}"
                        class="room-item">
 
-                        <div class="room-avatar" th:text="${#strings.substring(opponent.nickname, 0, 1)}"></div>
+                        <div class="room-avatar" th:with="avatarUrl=${opponent.profileImageUrl}">
+                            <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="프로필 이미지"/>
+                            <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}"
+                                  th:text="${#strings.substring(opponent.nickname, 0, 1)}"></span>
+                        </div>
 
                         <div class="room-info">
                             <div class="room-name" th:text="${opponent.nickname}"></div>
@@ -76,7 +80,11 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                         </svg>
                     </button>
-                    <div class="chat-header-avatar" th:text="${#strings.substring(opponent.nickname, 0, 1)}"></div>
+                    <div class="chat-header-avatar" th:with="avatarUrl=${opponent.profileImageUrl}">
+                        <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="프로필 이미지"/>
+                        <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}"
+                              th:text="${#strings.substring(opponent.nickname, 0, 1)}"></span>
+                    </div>
                     <div class="chat-header-name" th:text="${opponent.nickname}"></div>
                     <span id="connectionStatus" class="connection-status status-disconnected">종료됨</span>
 
