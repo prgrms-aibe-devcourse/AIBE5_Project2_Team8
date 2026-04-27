@@ -84,6 +84,13 @@
             font-size: 0.9rem;
             color: #fff;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+        .reviewer-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
         .av-blue   { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
         .av-green  { background: linear-gradient(135deg, #10b981, #059669); }
@@ -162,6 +169,13 @@
             color: #fff;
             flex-shrink: 0;
             border: 1px solid rgba(255,255,255,0.06);
+            overflow: hidden;
+        }
+        .senior-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
         .sa-0 { background: linear-gradient(135deg, #1a3350, #1a7a8a); }
         .sa-1 { background: linear-gradient(135deg, #2a1a50, #4a3080); }
@@ -254,7 +268,12 @@
                     <div class="d-flex align-items-start justify-content-between mb-3">
                         <div class="d-flex align-items-center gap-3">
                             <div class="reviewer-avatar"
-                                 th:text="${#strings.substring(review.juniorName, 0, 1)}">J</div>
+                                 th:with="avatarUrl=${review.juniorProfileImageUrl}">
+                                <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}"
+                                     th:src="${avatarUrl}" alt="프로필 이미지"/>
+                                <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}"
+                                      th:text="${#strings.substring(review.juniorName, 0, 1)}">J</span>
+                            </div>
                             <div>
                                 <div class="reviewer-name" th:text="${review.juniorName}">주OO 개발자</div>
                                 <div class="reviewer-meta">
@@ -399,7 +418,12 @@
                             <span class="senior-rank" th:text="${stat.index + 1}">1</span>
                             <div class="senior-avatar"
                                  th:classappend="'sa-' + ${stat.index % 3}"
-                                 th:text="${#strings.substring(senior.name, 0, 1)}">K</div>
+                                 th:with="avatarUrl=${senior.profileImageUrl}">
+                                <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}"
+                                     th:src="${avatarUrl}" alt="프로필 이미지"/>
+                                <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}"
+                                      th:text="${#strings.substring(senior.name, 0, 1)}">K</span>
+                            </div>
                             <div class="senior-info">
                                 <span class="senior-name" th:text="${senior.name}">김훈식 시니어</span>
                                 <div class="senior-rating">
@@ -501,6 +525,7 @@
 
             reviewList.innerHTML = myReviews.map(function (review) {
                 const juniorName = escapeHtml(review.juniorName || '');
+                const juniorProfileImageUrl = escapeHtml(review.juniorProfileImageUrl || '');
                 const seniorName = escapeHtml(review.seniorName || '');
                 const mentoringType = escapeHtml(review.mentoringType || '');
                 const timeAgo = escapeHtml(review.timeAgo || '');
@@ -512,7 +537,11 @@
                     <div class="review-card">
                         <div class="d-flex align-items-start justify-content-between mb-3">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="reviewer-avatar">${juniorName ? juniorName.substring(0, 1) : '나'}</div>
+                                <div class="reviewer-avatar">
+                                    ${juniorProfileImageUrl
+                                        ? `<img src="${juniorProfileImageUrl}" alt="프로필 이미지"/>`
+                                        : `<span>${juniorName ? juniorName.substring(0, 1) : '나'}</span>`}
+                                </div>
                                 <div>
                                     <div class="reviewer-name">${juniorName || '나의 후기'}</div>
                                     <div class="reviewer-meta">

@@ -57,6 +57,13 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+        .room-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .room-info {
@@ -134,8 +141,10 @@
 
                 <!-- 아바타: 상대방 닉네임 첫 글자 -->
                 <div class="room-avatar"
-                     th:with="opponent=${#authentication.name == room.junior.email ? room.senior : room.junior}"
-                     th:text="${#strings.substring(opponent.nickname, 0, 1)}">
+                     th:with="opponent=${#authentication.name == room.junior.email ? room.senior : room.junior}, avatarUrl=${opponent.profileImageUrl}">
+                    <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="프로필 이미지"/>
+                    <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}"
+                          th:text="${#strings.substring(opponent.nickname, 0, 1)}"></span>
                 </div>
 
                 <!-- 채팅방 정보 -->

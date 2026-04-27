@@ -18,7 +18,9 @@ public class ReviewPageDto {
     public static class ReviewCardDto {
         private final Long seniorProfileId;
         private final String juniorName;
+        private final String juniorProfileImageUrl;
         private final String seniorName;
+        private final String seniorProfileImageUrl;
         private final String mentoringType;
         private final String timeAgo;
         private final byte rating;
@@ -31,6 +33,7 @@ public class ReviewPageDto {
     public static class TopSeniorDto {
         private final Long seniorProfileId;
         private final String name;
+        private final String profileImageUrl;
         private final BigDecimal rating;
     }
 }

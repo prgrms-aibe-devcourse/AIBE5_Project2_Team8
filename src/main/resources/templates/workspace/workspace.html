@@ -466,7 +466,7 @@
         <div class="chat-pane">
             <div class="chat-header">
                 <div class="chat-header-avatar" th:with="avatarUrl=${workspace.opponentAvatarUrl}">
-                    <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="avatar"/>
+                    <img th:if="${avatarUrl != null and !#strings.isEmpty(avatarUrl)}" th:src="${avatarUrl}" alt="프로필 이미지"/>
                     <span th:if="${avatarUrl == null or #strings.isEmpty(avatarUrl)}" th:text="${#strings.substring(workspace.opponentNickname, 0, 1)}"></span>
                 </div>
                 <div class="chat-header-name" th:text="${workspace.opponentNickname}"></div>
