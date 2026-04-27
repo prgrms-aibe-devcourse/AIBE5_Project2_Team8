@@ -510,129 +510,20 @@ function closePaymentDetailModal() {
     setPaymentDetailError('');
 }
 
-// --- 주니어: 리뷰 요청서 모달 open / close ---
-
-function setReviewRequestError(msg) {
-    const errEl = document.getElementById('reviewRequestError');
-    if (!errEl) return;
-    if (msg) {
-        errEl.textContent = msg;
-        errEl.style.display = 'block';
-    } else {
-        errEl.textContent = '';
-        errEl.style.display = 'none';
-    }
-}
+// --- 주니어: 리뷰 요청서 모달 (공용 모달 컨트롤러 사용) ---
 
 function openReviewRequestModal() {
-    const modal = document.getElementById('reviewRequestModal');
-    if (!modal) return;
-
-    setReviewRequestError('');
-
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-
-    const firstInput = document.getElementById('reviewRequestGithubPrUrl');
-    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
-    setTimeout(() => { if (firstInput) firstInput.focus(); }, 50);
-}
-
-function closeReviewRequestModal() {
-    const modal = document.getElementById('reviewRequestModal');
-    if (!modal) return;
-
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-    setReviewRequestError('');
-}
-
-function isValidGithubPrUrl(url) {
-    // 허용 예시:
-    // - https://github.com/{owner}/{repo}/pull/{number}
-    // - https://github.com/{owner}/{repo}/pull/{number}/files
-    // - https://github.com/{owner}/{repo}/pull/{number}?something
-    const value = String(url || '').trim();
-    if (!value) return false;
-    return /^https?:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+(?:[/?#].*)?$/i.test(value);
-}
-
-function setReviewRequestSubmitLoading(loading) {
-    const btn = document.getElementById('reviewRequestSubmitBtn');
-    if (!btn) return;
-
-    btn.disabled = !!loading;
-
-    // 버튼 텍스트 토글 (초기 텍스트 보존)
-    if (!btn.dataset.originalText) {
-        btn.dataset.originalText = btn.textContent || '제출하고 워크스페이스 입장';
-    }
-    btn.textContent = loading ? '제출 중...' : btn.dataset.originalText;
-}
-
-async function submitReviewRequest() {
-    const orderIdEl = document.getElementById('reviewRequestOrderId');
-    const prEl = document.getElementById('reviewRequestGithubPrUrl');
-    const ctxEl = document.getElementById('reviewRequestProjectContext');
-    const conEl = document.getElementById('reviewRequestConcernPoint');
-
-    const orderIdStr = orderIdEl ? String(orderIdEl.value || '').trim() : '';
-    const orderId = Number(orderIdStr);
-
-    const githubPrUrl = prEl ? String(prEl.value || '').trim() : '';
-    const projectContext = ctxEl ? String(ctxEl.value || '').trim() : '';
-    const concernPoint = conEl ? String(conEl.value || '').trim() : '';
-
-    // 필수값 검증
-    if (!orderIdStr || !Number.isFinite(orderId) || orderId <= 0) {
-        return setReviewRequestError('주문 정보를 찾지 못했어요. 다시 시도해 주세요.');
-    }
-    if (!githubPrUrl) return setReviewRequestError('GitHub PR 링크를 입력해 주세요.');
-    if (!isValidGithubPrUrl(githubPrUrl)) return setReviewRequestError('GitHub PR 링크 형식이 올바르지 않아요.');
-    if (!projectContext) return setReviewRequestError('배경/비즈니스 로직을 입력해 주세요.');
-    if (!concernPoint) return setReviewRequestError('질문/고민 포인트를 입력해 주세요.');
-
-    // 최소 길이 (너무 짧은 텍스트 방어)
-    if (projectContext.length < 10) return setReviewRequestError('배경/비즈니스 로직은 10자 이상 입력해 주세요.');
-    if (concernPoint.length < 10) return setReviewRequestError('질문/고민 포인트는 10자 이상 입력해 주세요.');
-
-    setReviewRequestError('');
-    setReviewRequestSubmitLoading(true);
-
-    try {
-        const res = await fetch('/reviews/request', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                orderId: orderId,
-                githubPrUrl: githubPrUrl,
-                projectContext: projectContext,
-                concernPoint: concernPoint,
-            }),
-        });
-
-        if (!res.ok) {
-            const text = await res.text().catch(() => '');
-            // 서버가 표준 에러 JSON을 내리는지 불명확하므로 텍스트 기반 fallback
-            throw new Error(text || `서버 응답 오류 (${res.status})`);
-        }
-
-        const data = await res.json().catch(() => ({}));
-        const nextOrderId = data && data.orderId ? String(data.orderId) : orderIdStr;
-
-        // 성공: 통합 리뷰 워크스페이스로 이동
-        window.location.href = `/orders/${nextOrderId}`;
-    } catch (e) {
-        console.error('[리뷰 요청서 제출 실패]', e);
-        setReviewRequestError('제출에 실패했어요. 잠시 후 다시 시도해 주세요.');
-        setReviewRequestSubmitLoading(false);
-    }
+    if (!window.ReviewRequestModal) return;
+    // orderId는 시스템 메시지 버튼(.action-review) 클릭 시 chat.js가 hidden input에 채워둔다.
+    const orderId = document.getElementById('reviewRequestOrderId')?.value || '';
+    window.ReviewRequestModal.open({
+        mode: 'create',
+        method: 'POST',
+        orderId: orderId,
+        githubPrUrl: '',
+        projectContext: '',
+        concernPoint: ''
+    });
 }
 
 // prepare 실패 직전에 성공했던 주문 데이터가 화면에 남지 않도록
@@ -898,17 +789,7 @@ async function submitPaymentRequest() {
 // --- 주니어: 리뷰 요청서 모달 이벤트 바인딩 (IIFE로 스코프 격리) ---
 // 닫기 트리거: [data-review-close] (백드롭 + 취소 버튼). 열기/닫기, 스크롤 락, ESC 는
 // openReviewRequestModal, closeReviewRequestModal, bindModalEscape 에서 처리.
-(function bindReviewRequestModalEvents() {
-    const modal = document.getElementById('reviewRequestModal');
-    if (!modal) return; // 시니어 화면 등 모달이 없는 경우
-
-    modal.querySelectorAll('[data-review-close]').forEach(function (el) {
-        el.addEventListener('click', closeReviewRequestModal);
-    });
-
-    const submitBtn = document.getElementById('reviewRequestSubmitBtn');
-    if (submitBtn) submitBtn.addEventListener('click', submitReviewRequest);
-})();
+// close/submit/ESC 바인딩은 review-request-modal.js에서 처리
 
 // ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)
 (function bindModalEscape() {
@@ -918,7 +799,13 @@ async function submitPaymentRequest() {
         const review = document.getElementById('reviewRequestModal');
         if (review && review.classList.contains('is-open')) {
             e.preventDefault();
-            closeReviewRequestModal();
+            if (window.ReviewRequestModal && typeof window.ReviewRequestModal.close === 'function') {
+                window.ReviewRequestModal.close();
+            } else {
+                review.classList.remove('is-open');
+                review.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
             return;
         }
 

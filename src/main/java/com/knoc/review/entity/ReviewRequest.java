@@ -62,4 +62,10 @@ public class ReviewRequest {
         this.additions = additions;
         this.deletions = deletions;
     }
+
+    public void update(String githubPrUrl, String projectContext, String concernPoint) {
+        this.githubPrUrl = githubPrUrl;
+        this.projectContext = projectContext;
+        this.concernPoint = concernPoint;
+    }
 }
