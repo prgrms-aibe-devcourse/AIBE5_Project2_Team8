@@ -317,9 +317,13 @@
                     <div th:if="${workspace.prMetadata == null}" class="report-waiting">
                         <div class="waiting-icon">📂</div>
                         <div class="waiting-title"
-                             th:text="${workspace.hasReviewRequest ? 'PR 파일 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></div>
+                             th:text="${workspace.hasReviewRequest ? 'PR 정보를 불러오지 못했습니다.' : '아직 제출된 리뷰 요청이 없습니다.'}"></div>
                         <div class="waiting-desc"
-                             th:text="${workspace.hasReviewRequest ? '잠시 후 다시 시도하거나 GitHub PR 링크를 확인해 주세요.' : '주니어가 리뷰 요청서를 제출하면 변경 파일을 확인할 수 있습니다.'}"></div>
+                             th:text="${
+                                workspace.hasReviewRequest
+                                  ? (workspace.isSenior ? 'PR 링크가 정상화되면 변경 파일을 확인할 수 있습니다.' : 'PR 링크를 확인한 뒤 다시 제출해 주세요.')
+                                  : '주니어가 리뷰 요청서를 제출하면 변경 파일을 확인할 수 있습니다.'
+                             }"></div>
 
                         <!-- 주니어: PR 링크 오류 시 요청서 수정 CTA -->
                         <div th:if="${workspace.hasReviewRequest and !workspace.isSenior and !workspace.hasReport}"
@@ -327,9 +331,6 @@
                             <button type="button" class="btn-review" style="padding:0.7rem 1.6rem;" onclick="openReviewRequestEditModal()">
                                 리뷰 요청서 수정
                             </button>
-                            <div style="font-size:0.75rem; color:#666;">
-                                PR 링크를 수정하고 다시 제출하면 변경 파일을 불러올 수 있어요.
-                            </div>
                         </div>
                     </div>
                     <th:block th:if="${workspace.prMetadata != null}">
