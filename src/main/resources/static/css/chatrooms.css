@@ -119,9 +119,25 @@
     text-overflow: ellipsis;
 }
 
+.room-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
 .room-time {
     font-size: 0.7rem;
     color: #555;
+}
+
+.unread-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #00CFE8;
+    display: none;
     flex-shrink: 0;
 }
 

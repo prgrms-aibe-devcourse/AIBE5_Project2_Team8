@@ -29,7 +29,10 @@ public class ChatMessageResponse {
     // PAYMENT_REQUESTED 같은 금액 기반 시스템 메시지에서 결제 버튼 렌더링에 사용. 그 외엔 null
     private Integer amount;
 
-    public ChatMessageResponse(Long id, String senderNickname, String content, LocalDateTime createdAt, MessageType messageType, Long referenceId, Integer amount) {
+    // roomId를 통해 프론트에서 어느 방 메시지인지 구분에 사용
+    private Long roomId;
+
+    public ChatMessageResponse(Long id, String senderNickname, String content, LocalDateTime createdAt, MessageType messageType, Long referenceId, Integer amount, Long roomId) {
         this.id = id;
         this.senderNickname = senderNickname;
         this.content = content;
@@ -37,5 +40,6 @@ public class ChatMessageResponse {
         this.messageType = messageType;
         this.referenceId = referenceId;
         this.amount = amount;
+        this.roomId = roomId;
     }
 }

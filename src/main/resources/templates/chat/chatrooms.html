@@ -47,9 +47,12 @@
                             </div>
                         </div>
 
-                        <div class="room-time"
-                             th:if="${latestMessages[room.id] != null}"
-                             th:text="${#temporals.format(latestMessages[room.id].createdAt, 'MM/dd')}">
+                        <div class="room-meta">
+                            <div class="room-time"
+                                 th:if="${latestMessages[room.id] != null}"
+                                 th:text="${#temporals.format(latestMessages[room.id].createdAt, 'MM/dd')}">
+                            </div>
+                            <span class="unread-badge" style="display:none;"></span>
                         </div>
 
                     </a>

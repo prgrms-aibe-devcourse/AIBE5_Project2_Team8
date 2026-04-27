@@ -87,6 +87,7 @@ public class ChatMessageService {
                 .messageType(savedMessage.getMessageType())
                 .referenceId(savedMessage.getReferenceId()) // USER 메시지는 null
                 // amount는 생략 -> null (PAYMENT_REQUESTED에서만 의미 있음)
+                .roomId(roomId)
         .build();
 
         // 6. 수신자/발신자 양쪽에 1:1 queue 전송
