@@ -6,14 +6,14 @@
         .header-auth-group {
             display: flex;
             align-items: center;
-            gap: 1.1rem; /* 요소 간 간격 */
+            gap: 1.1rem;
         }
         .btn-chat-pill {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
             padding: 0.4rem 1.1rem;
-            border: 1px solid #3a4256;
+            border: 1px solid transparent;
             border-radius: 999px;
             color: #e5e7eb;
             text-decoration: none;
@@ -21,7 +21,8 @@
             font-weight: 500;
             transition: all 0.2s ease;
         }
-        .btn-chat-pill:hover {
+        .btn-chat-pill:hover,
+        .btn-chat-pill.active {
             background-color: #1e2433;
             border-color: #4b5563;
             color: #fff;
@@ -58,12 +59,12 @@
         .role-badge-junior {
             border: 1px solid rgba(59, 130, 246, 0.4);
             background-color: rgba(59, 130, 246, 0.08);
-            color: #60a5fa; /* 파란색 톤 */
+            color: #60a5fa;
         }
         .role-badge-senior {
             border: 1px solid rgba(0, 207, 232, 0.4);
             background-color: rgba(0, 207, 232, 0.08);
-            color: #00CFE8; 
+            color: #00CFE8;
         }
         .status-dot {
             width: 5px;
@@ -120,7 +121,7 @@
 
                 <div class="header-auth-group" sec:authorize="isAuthenticated()">
 
-                    <a th:href="@{/chat/rooms}" class="btn-chat-pill">
+                    <a th:href="@{/chat/rooms}" class="btn-chat-pill" id="nav-chat-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                         </svg>
@@ -154,5 +155,16 @@
             </div>
         </div>
     </nav>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (window.location.pathname.startsWith('/chat')) {
+                const chatBtn = document.getElementById('nav-chat-btn');
+                if (chatBtn) {
+                    chatBtn.classList.add('active');
+                }
+            }
+        });
+    </script>
 </header>
 </html>
