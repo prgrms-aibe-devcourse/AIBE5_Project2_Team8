@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,18 +38,21 @@ public class DashboardService {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        List<Order> orders = orderRepository.findByJunior_IdOrderByCreatedAtDesc(member.getId());
+        List<Order> orders = orderRepository.findByJuniorIdWithSenior(member.getId());
 
         long pendingCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();
         long inProgressCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.PAID).count();
         long completedCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.SETTLED).count();
+
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        Set<Long> reviewedOrderIds = reviewFeedbackRepository.findReviewedOrderIds(orderIds);
 
         List<JuniorDashboardDto.OrderSummaryDto> orderSummaryDtos = orders.stream()
                 .map(o -> JuniorDashboardDto.OrderSummaryDto.builder()
                         .orderId(o.getId())
                         .seniorNickname(o.getSenior().getNickname())
                         .status(o.getStatus())
-                        .hasReview(reviewFeedbackRepository.existsByOrderId(o.getId()))
+                        .hasReview(reviewedOrderIds.contains(o.getId()))
                         .build())
                 .toList();
 
@@ -70,18 +74,21 @@ public class DashboardService {
         SeniorProfile seniorProfile = seniorProfileRepository.findByMemberId(member.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
 
-        List<Order> orders = orderRepository.findBySenior_IdOrderByCreatedAtDesc(member.getId());
+        List<Order> orders = orderRepository.findBySeniorIdWithJunior(member.getId());
 
         long pendingCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();
         long inProgressCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.PAID).count();
         long completedCount = orders.stream().filter(o -> o.getStatus() == OrderStatus.SETTLED).count();
+
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        Set<Long> reviewedOrderIds = reviewFeedbackRepository.findReviewedOrderIds(orderIds);
 
         List<SeniorDashBoardDto.OrderSummaryDto> orderSummaryDtos = orders.stream()
                 .map(o -> SeniorDashBoardDto.OrderSummaryDto.builder()
                         .orderId(o.getId())
                         .juniorNickname(o.getJunior().getNickname())
                         .status(o.getStatus())
-                        .hasReview(reviewFeedbackRepository.existsByOrderId(o.getId()))
+                        .hasReview(reviewedOrderIds.contains(o.getId()))
                         .build())
                 .toList();
 
@@ -93,7 +100,7 @@ public class DashboardService {
 
         // 최근 후기 3개
         List<SeniorDashBoardDto.ReviewSummeryDto> reviewSummeryDtos =
-                reviewFeedbackRepository.findTop3BySeniorProfile_IdOrderByCreatedAtDesc(seniorProfile.getId())
+                reviewFeedbackRepository.findTop3WithJuniorBySeniorProfileId(seniorProfile.getId(), PageRequest.of(0, 3))
                         .stream()
                         .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()
                                 .reviewId(r.getId())
@@ -135,9 +142,7 @@ public class DashboardService {
         SeniorProfile profile = seniorProfileRepository.findByMemberId(member.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SENIOR_PROFILE_NOT_FOUND));
 
-        Page<ReviewFeedback> reviewPage = reviewFeedbackRepository
-                .findBySeniorProfile_IdOrderByCreatedAtDesc(
-                        profile.getId(), PageRequest.of(pageNumber, 10));
+        Page<ReviewFeedback> reviewPage = reviewFeedbackRepository.findWithJuniorBySeniorProfileId(profile.getId(), PageRequest.of(pageNumber, 10));
 
         List<SeniorDashBoardDto.ReviewSummeryDto> reviews = reviewPage.getContent().stream()
                 .map(r -> SeniorDashBoardDto.ReviewSummeryDto.builder()

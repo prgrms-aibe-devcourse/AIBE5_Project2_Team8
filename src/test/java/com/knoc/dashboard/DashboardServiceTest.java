@@ -29,9 +29,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -92,11 +94,10 @@ class DashboardServiceTest {
         settledOrder.updateStatus(OrderStatus.SETTLED);
         ReflectionTestUtils.setField(settledOrder, "id", 3L);
 
-        given(orderRepository.findByJunior_IdOrderByCreatedAtDesc(1L))
+        given(orderRepository.findByJuniorIdWithSenior(1L))
                 .willReturn(List.of(settledOrder, paidOrder, pendingOrder));
-        given(reviewFeedbackRepository.existsByOrderId(1L)).willReturn(false);
-        given(reviewFeedbackRepository.existsByOrderId(2L)).willReturn(false);
-        given(reviewFeedbackRepository.existsByOrderId(3L)).willReturn(true);
+        given(reviewFeedbackRepository.findReviewedOrderIds(anyList()))
+                .willReturn(Set.of(3L));
 
         // when
         JuniorDashboardDto result = dashboardService.getJuniorDashboard(email);
@@ -127,7 +128,7 @@ class DashboardServiceTest {
         given(junior.getId()).willReturn(1L);
         given(junior.getNickname()).willReturn("코딩초보");
         given(memberRepository.findByEmail(email)).willReturn(Optional.of(junior));
-        given(orderRepository.findByJunior_IdOrderByCreatedAtDesc(1L)).willReturn(List.of());
+        given(orderRepository.findByJuniorIdWithSenior(1L)).willReturn(List.of());
 
         // when
         JuniorDashboardDto result = dashboardService.getJuniorDashboard(email);
@@ -203,10 +204,10 @@ class DashboardServiceTest {
         paidOrder.updateStatus(OrderStatus.PAID);
         ReflectionTestUtils.setField(paidOrder, "id", 2L);
 
-        given(orderRepository.findBySenior_IdOrderByCreatedAtDesc(2L))
+        given(orderRepository.findBySeniorIdWithJunior(2L))
                 .willReturn(List.of(settledOrder, paidOrder));
-        given(reviewFeedbackRepository.existsByOrderId(1L)).willReturn(true);
-        given(reviewFeedbackRepository.existsByOrderId(2L)).willReturn(false);
+        given(reviewFeedbackRepository.findReviewedOrderIds(anyList()))
+                .willReturn(Set.of(1L));
 
         // 별점 분포용 전체 후기
         ReviewFeedback review5 = mock(ReviewFeedback.class);
@@ -227,7 +228,7 @@ class DashboardServiceTest {
         given(top3Review.getComment()).willReturn("정말 도움이 됐어요!");
         given(top3Review.getCreatedAt()).willReturn(LocalDateTime.of(2025, 4, 1, 12, 0));
 
-        given(reviewFeedbackRepository.findTop3BySeniorProfile_IdOrderByCreatedAtDesc(10L))
+        given(reviewFeedbackRepository.findTop3WithJuniorBySeniorProfileId(10L, PageRequest.of(0, 3)))
                 .willReturn(List.of(top3Review));
 
         // when
@@ -279,9 +280,9 @@ class DashboardServiceTest {
         given(profile.getSkills()).willReturn(List.of());
         given(seniorProfileRepository.findByMemberId(2L)).willReturn(Optional.of(profile));
 
-        given(orderRepository.findBySenior_IdOrderByCreatedAtDesc(2L)).willReturn(List.of());
+        given(orderRepository.findBySeniorIdWithJunior(2L)).willReturn(List.of());
         given(reviewFeedbackRepository.findBySeniorProfile_Id(10L)).willReturn(List.of());
-        given(reviewFeedbackRepository.findTop3BySeniorProfile_IdOrderByCreatedAtDesc(10L)).willReturn(List.of());
+        given(reviewFeedbackRepository.findTop3WithJuniorBySeniorProfileId(10L, PageRequest.of(0, 3))).willReturn(List.of());
 
         // when
         SeniorDashBoardDto result = dashboardService.getSeniorDashboard(email);
@@ -362,7 +363,7 @@ class DashboardServiceTest {
 
         PageRequest pageable = PageRequest.of(0, 10);
         Page<ReviewFeedback> reviewPage = new PageImpl<>(List.of(review1, review2), pageable, 2);
-        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L, pageable))
+        given(reviewFeedbackRepository.findWithJuniorBySeniorProfileId(10L, pageable))
                 .willReturn(reviewPage);
 
         // when
@@ -405,7 +406,7 @@ class DashboardServiceTest {
 
         PageRequest pageable = PageRequest.of(0, 10);
         Page<ReviewFeedback> emptyPage = new PageImpl<>(List.of(), pageable, 0);
-        given(reviewFeedbackRepository.findBySeniorProfile_IdOrderByCreatedAtDesc(10L, pageable))
+        given(reviewFeedbackRepository.findWithJuniorBySeniorProfileId(10L, pageable))
                 .willReturn(emptyPage);
 
         // when

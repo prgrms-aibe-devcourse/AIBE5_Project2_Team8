@@ -84,12 +84,12 @@ public class ReviewFeedbackService {
     }
 
     public ReviewPageDto getReviewPage() {
-        List<ReviewFeedback> feedbacks = reviewFeedbackRepository.findAllByOrderByCreatedAtDesc();
+        List<ReviewFeedback> feedbacks = reviewFeedbackRepository.findAllWithRelationsOrderByCreatedAtDesc();
 
         List<ReviewPageDto.ReviewCardDto> reviewCards = mapToCards(feedbacks);
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         List<ReviewPageDto.TopSeniorDto> topSeniors = mapToTopSeniors(
-                reviewFeedbackRepository.findTop3ActiveSeniorsThisMonth(startOfMonth, PageRequest.of(0, 3)));
+                reviewFeedbackRepository.findTop3ActiveSeniorsThisMonthWithMember(startOfMonth, PageRequest.of(0, 3)));
 
         return ReviewPageDto.builder()
                 .reviews(reviewCards)
@@ -138,7 +138,7 @@ public class ReviewFeedbackService {
                 .map(Member::getId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        List<ReviewFeedback> myFeedbacks = reviewFeedbackRepository.findByJunior_IdOrderByCreatedAtDesc(juniorId);
+        List<ReviewFeedback> myFeedbacks = reviewFeedbackRepository.findByJuniorIdWithRelations(juniorId);
         return new MyReviewPageResponse(mapToCards(myFeedbacks), myFeedbacks.size());
     }
 }
