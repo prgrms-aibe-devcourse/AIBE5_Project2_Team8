@@ -149,9 +149,29 @@ src/main/resources/
 </ul>
 
 <h2 align="center"> 🫶 "Team IST-8" </h2>
-
-|                            정환철                            |                            김세희                            |                            형성빈                            |                            홍가현                            |                            
-| :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
-| ![정환철](https://avatars.githubusercontent.com/u/233332353?v=4) | ![김세희](https://avatars.githubusercontent.com/u/80444956?v=4) | ![형성빈](https://avatars.githubusercontent.com/u/74960635?v=4) | ![홍가현](https://avatars.githubusercontent.com/u/71168366?v=4)  
-|            [@jhwan1205-sys](https://github.com/jhwan1205-sys)            |          [@kimsehee-8135](https://github.com/kimsehee-8135)          |        [@hsb4225](https://github.com/hsb4225)        |           [@warcat12](https://github.com/devken65)           |         [@devken65]
-|                   🧠 <br />팀장 <br />QueryDSL동적 검색 <br/> GitHub api연동 <br/> 백엔드 로직 및<br/>UI/UX 화면 구현                    |                      💳 <br />팀원<br/>결제 로직 담당<br/>토스페이먼츠 결제API<br/>백엔드 로직 및 <br/>UI/UX 화면 구현                      |                      🔐 <br />팀원<br/>로그인/회원가입 JWT인증<br/>백엔드 로직 및 UI/UX 화면 구현                  |                     💬 <br />팀원<br/>WebSocket 1:1채팅방<br/>백엔드 로직 및<br/>UI/UX 화면 구현
+<table>
+  <tr>
+    <td align="center"><b>정환철</b></td>
+    <td align="center"><b>김세희</b></td>
+    <td align="center"><b>형성빈</b></td>
+    <td align="center"><b>홍가현</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://avatars.githubusercontent.com/u/233332353?v=4" width="100"/></td>
+    <td align="center"><img src="https://avatars.githubusercontent.com/u/80444956?v=4" width="100"/></td>
+    <td align="center"><img src="https://avatars.githubusercontent.com/u/74960635?v=4" width="100"/></td>
+    <td align="center"><img src="https://avatars.githubusercontent.com/u/71168366?v=4" width="100"/></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/jhwan1205-sys">@jhwan1205-sys</a></td>
+    <td align="center"><a href="https://github.com/kimsehee-8135">@kimsehee-8135</a></td>
+    <td align="center"><a href="https://github.com/hsb4225">@hsb4225</a></td>
+    <td align="center"><a href="https://github.com/devken65">@devken65</a></td>
+  </tr>
+  <tr>
+    <td align="center">🧠 <br/> 팀장 <br/> QueryDSL 동적 검색 <br/> GitHub API 연동 <br/> 백엔드 로직 및 <br/> UI/UX 화면 구현</td>
+    <td align="center">💳 <br/> 팀원 <br/> 결제 로직 담당 <br/> 토스페이먼츠 결제 API <br/> 백엔드 로직 및 <br/> UI/UX 화면 구현</td>
+    <td align="center">🔐 <br/> 팀원 <br/> 로그인/회원가입 JWT 인증 <br/> 백엔드 로직 및 <br/> UI/UX 화면 구현</td>
+    <td align="center">💬 <br/> 팀원 <br/> WebSocket 1:1 채팅방 <br/> 백엔드 로직 및 <br/> UI/UX 화면 구현</td>
+  </tr>
+</table>
