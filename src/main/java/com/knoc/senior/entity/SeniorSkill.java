@@ -28,4 +28,9 @@ public class SeniorSkill {
         this.seniorProfile = seniorProfile;
         this.skillName = skillName;
     }
+
+    //==연관관계 편의 매서드
+    protected void assignSeniorProfile(SeniorProfile seniorProfile) {
+        this.seniorProfile = seniorProfile;
+    }
 }

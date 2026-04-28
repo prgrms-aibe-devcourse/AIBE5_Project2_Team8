@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+// 서비스 제공(주문)이 완료된 후, 서비스 제공자(Senior)에게 대금을 지급하기 위한 정보를 관리한다.
+// 핵심 역할: 어떤 주문(Order)에 대해 어느 시니어(Member senior)에게 얼마(amount)를 정산해줘야 하는지를 기록.
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity

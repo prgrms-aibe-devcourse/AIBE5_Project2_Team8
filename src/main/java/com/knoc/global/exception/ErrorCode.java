@@ -1,0 +1,75 @@
+package com.knoc.global.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+@Getter
+// 에러 정보를 모아둔 열거형
+public enum ErrorCode {
+    // 공통
+    INVALID_INPUT_VALUE(400, "잘못된 요청 파라미터입니다."),
+    ACCESS_DENIED(403, "해당 페이지에 접근할 권한이 없습니다."),
+    ENTITY_NOT_FOUND(404, "찾을 수 없는 페이지입니다."),
+    INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
+
+    //시니어 프로필 관련(Senior)
+    SENIOR_PROFILE_NOT_FOUND(404,"시니어 프로필이 존재하지 않습니다"),
+
+    // 회원 관련 (Member)
+    MEMBER_NOT_FOUND(404, "존재하지 않는 회원입니다."),
+    NICKNAME_ALREADY_EXISTS(409, "이미 사용중인 닉네임입니다."),
+    EMAIL_ALREADY_EXISTS(409, "이미 사용중인 이메일입니다."),
+
+    // 파일 관련 (File)
+    FILE_UPLOAD_ERROR(500, "파일 업로드 중 서버 오류가 발생했습니다."),
+
+    // 채팅 관련 (Chat)
+    CHATROOM_NOT_FOUND(404, "존재하지 않는 채팅방입니다."),
+    CHATROOM_ALREADY_EXISTS(400, "이미 존재하는 채팅방입니다."),
+    CHATROOM_ALREADY_CLOSED(400, "마감된 채팅방에는 메시지를 보낼 수 없습니다."),
+
+
+    // 주문 관련 (Order)
+    ORDER_NOT_FOUND(404, "존재하지 않는 주문입니다."),
+    NOT_SENIOR_IN_ROOM(403, "해당 채팅방의 시니어가 아닙니다."), // 권한 검증용
+    NOT_JUNIOR_FOR_ORDER(403, "해당 주문의 주니어가 아닙니다."), // 권한 검증용
+    ORDER_CANNOT_BE_PAID(400, "현재 주문 상태에서는 결제를 진행할 수 없습니다."),
+    ORDER_PAYMENT_CONFLICT(409, "동시에 결제가 시도되어 처리에 실패했습니다. 다시 시도해주세요."),
+    ORDER_PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 주문 금액과 일치하지 않습니다."),
+    INVALID_IDEMPOTENCY_KEY(400, "유효하지 않은 멱등성 키입니다."),
+    ORDER_INVALID_AMOUNT(400, "유효하지 않은 결제 금액입니다."),
+    ORDER_INVALID_ORDER_NUMBER(400, "유효하지 않은 주문번호입니다."),
+    ORDER_CANNOT_BE_SETTLED(400, "현재 주문 상태에서는 정산을 진행할 수 없습니다."),
+
+    // 리뷰 요청서 관련 (Review Request)
+    REVIEW_REQUEST_ALREADY_EXISTS(409, "이미 해당 주문에 대한 리뷰 요청서가 존재합니다."),
+    REVIEW_REQUEST_NOT_ALLOWED(403, "결제 완료된 주문만 리뷰 요청서를 작성할 수 있습니다."),
+    REVIEW_REQUEST_NOT_FOUND(404, "리뷰 요청서가 존재하지 않습니다."),
+
+    // 리뷰 리포트 관련 (Review Report)
+    REVIEW_REQUEST_REQUIRED_FOR_REPORT(400, "리뷰 요청서가 제출된 경우에만 리포트를 작성할 수 있습니다."),
+    REVIEW_REPORT_ALREADY_EXISTS(409, "이미 해당 리뷰 요청서에 대한 리포트가 존재합니다."),
+    REVIEW_REPORT_NOT_FOUND(404, "리뷰 리포트가 존재하지 않습니다."),
+
+    // 리뷰 관련 (Review)
+    REVIEW_ALREADY_EXISTS(409, "이미 해당 주문에 대한 후기가 존재합니다."),
+    REVIEW_NOT_ALLOWED(403, "결제 완료된 주문만 후기를 작성할 수 있습니다."),
+    REVIEW_NOT_FOUND(404, "해당 주문에 대한 후기가 존재하지 않습니다."),
+    REVIEW_UPDATE_NOT_ALLOWED(403, "후기를 수정할 권한이 없습니다."),
+
+    // GitHub 관련 (Github)
+    GITHUB_PR_NOT_FOUND(404, "존재하지 않는 PR이거나 접근 권한이 없습니다."),
+    EXTERNAL_API_ERROR(502, "외부 API 서버 오류가 발생했습니다."),
+    GITHUB_INVALID_PR_URL(400, "올바른 GitHub PR URL 형식이 아닙니다."),
+
+    // 이메일 관련 (Auth)
+    ALREADY_VERIFIED(400, "이미 완료된 인증입니다."),
+    EXPIRED_VERIFICATION_CODE(400, "인증번호 유효기간이 지났습니다."),
+    INVALID_VERIFICATION_CODE(400, "인증번호가 일치하지 않습니다."),
+    INVALID_EMAIL_DOMAIN(400, "기업 이메일만 인증 가능합니다."),
+    EMAIL_VERIFICATION_NOT_FOUND(404, "인증 요청 내역이 없습니다.");
+
+    private final int status;
+    private final String message;
+}

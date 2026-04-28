@@ -52,4 +52,11 @@ public class ChatRoom {
         this.senior = senior;
         this.status = ChatRoomStatus.ACTIVE;
     }
+    public void close() {
+        this.status = ChatRoomStatus.CLOSED;
+        this.closedAt = LocalDateTime.now();
+    }
+    public void reopen() {
+        this.status = ChatRoomStatus.ACTIVE;
+    }
 }

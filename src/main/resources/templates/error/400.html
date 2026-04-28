@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+    <title>400 - 잘못된 요청</title>
+    <th:block layout:fragment="head-extra">
+        <th:block th:replace="~{fragments/error_page_head :: errorPageHead}"></th:block>
+    </th:block>
+</head>
+<div layout:fragment="content">
+    <section class="container py-5 my-lg-4">
+        <div class="error-shell px-3">
+            <div class="card card-dark rounded-4 border-secondary text-center p-4 p-md-5">
+                <div class="error-icon-wrap error-icon-wrap--amber">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="error-code-label text-warning mb-2">Error 400</p>
+                <h1 class="h3 fw-bold text-white mb-3">잘못된 요청이에요</h1>
+                <p class="text-secondary mb-0">
+                    서버가 요청을 이해하지 못했어요.<br>
+                    입력하신 내용을 다시 한번 확인해 주세요.
+                </p>
+                <div class="alert alert-dark border border-secondary border-start border-warning border-3 text-start small mt-4 mb-0"
+                     th:if="${message != null and !#strings.isEmpty(message)}">
+                    <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size: 0.7rem; letter-spacing: 0.08em;">상세 메시지</div>
+                    <span class="text-secondary" th:text="${message}"></span>
+                </div>
+                <hr class="border-secondary my-4">
+                <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                    <a class="btn btn-mint rounded-3 px-4" th:href="@{/}">
+                        <i class="bi bi-house-fill me-1" aria-hidden="true"></i>메인으로 돌아가기
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary error-ghost-btn rounded-3 px-4" onclick="history.back()">
+                        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>이전 페이지로
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+</html>

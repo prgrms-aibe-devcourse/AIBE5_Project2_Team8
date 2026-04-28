@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="errorPageHead">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .error-shell {
+            max-width: 36rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .error-icon-wrap {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.25rem;
+        }
+
+        .error-icon-wrap--amber {
+            background: rgba(232, 168, 56, 0.12);
+            border: 1px solid rgba(232, 168, 56, 0.35);
+            color: #e8a838;
+        }
+
+        .error-icon-wrap--danger {
+            background: rgba(224, 92, 92, 0.12);
+            border: 1px solid rgba(224, 92, 92, 0.35);
+            color: #e05c5c;
+        }
+
+        .error-icon-wrap--mint {
+            background: rgba(0, 207, 232, 0.12);
+            border: 1px solid rgba(0, 207, 232, 0.35);
+            color: #00CFE8;
+        }
+
+        .error-icon-wrap--violet {
+            background: rgba(157, 122, 232, 0.12);
+            border: 1px solid rgba(157, 122, 232, 0.35);
+            color: #9d7ae8;
+        }
+
+        .error-code-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-ghost-btn {
+            color: #adb5bd;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .error-ghost-btn:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .error-number-404 {
+            font-size: clamp(3.5rem, 12vw, 5.5rem);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.06em;
+            color: #00CFE8;
+        }
+    </style>
+</th:block>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+    <title>500 - 서버 오류</title>
+    <th:block layout:fragment="head-extra">
+        <th:block th:replace="~{fragments/error_page_head :: errorPageHead}"></th:block>
+    </th:block>
+</head>
+<div layout:fragment="content">
+    <section class="container py-5 my-lg-4">
+        <div class="error-shell px-3">
+            <div class="card card-dark rounded-4 border-secondary text-center p-4 p-md-5">
+                <div class="error-icon-wrap error-icon-wrap--violet">
+                    <i class="bi bi-gear" aria-hidden="true"></i>
+                </div>
+                <p class="error-code-label mb-2" style="color: #9d7ae8;">Error 500</p>
+                <h1 class="h3 fw-bold text-white mb-3">안정적인 서비스 제공을 위해 점검 중입니다</h1>
+                <p class="text-secondary mb-0">
+                    현재 시스템 최적화 및 서버 안정화 작업을 진행하고 있습니다.<br>
+                    더욱 쾌적한 Knoc를 만들기 위한 과정이오니 잠시만 기다려 주세요.
+                </p>
+                <div class="text-start bg-dark bg-opacity-50 border border-secondary rounded-3 p-3 mt-4">
+                    <div class="text-uppercase text-muted fw-semibold mb-2" style="font-size: 0.7rem; letter-spacing: 0.08em;">서비스 상태</div>
+                    <div class="d-flex align-items-center gap-2 py-2 border-bottom border-secondary border-opacity-50 small text-secondary">
+                        <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: #3fb950;"></span>
+                        DB 연결 상태 : 원활
+                    </div>
+                    <div class="d-flex align-items-center gap-2 py-2 border-bottom border-secondary border-opacity-50 small text-secondary">
+                        <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: #e8a838;"></span>
+                        시스템 업데이트 : 진행 중
+                    </div>
+                    <div class="d-flex align-items-center gap-2 pt-2 small text-secondary">
+                        <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: #3fb950;"></span>
+                        정적 리소스 : 원활
+                    </div>
+                </div>
+                <div class="d-flex align-items-start gap-2 text-start small text-secondary border rounded-3 p-3 mt-3"
+                     style="background: rgba(157, 122, 232, 0.08); border-color: rgba(157, 122, 232, 0.35) !important;">
+                    <i class="bi bi-arrow-clockwise flex-shrink-0" style="color: #9d7ae8;" aria-hidden="true"></i>
+                    <span>작업이 완료되면 자동으로 서비스가 재개됩니다.</span>
+                </div>
+                <div class="alert alert-dark border border-secondary border-start border-3 text-start small mt-3 mb-0"
+                     style="border-left-color: #9d7ae8 !important;"
+                     th:if="${message != null and !#strings.isEmpty(message)}">
+                    <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size: 0.7rem; letter-spacing: 0.08em;">상세 메시지</div>
+                    <span class="text-secondary" th:text="${message}"></span>
+                </div>
+                <hr class="border-secondary my-4">
+                <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                    <a class="btn btn-mint rounded-3 px-4" th:href="@{/}">
+                        <i class="bi bi-house-fill me-1" aria-hidden="true"></i>메인으로 돌아가기
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary error-ghost-btn rounded-3 px-4" onclick="history.back()">
+                        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>이전 페이지로
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+</html>

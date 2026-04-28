@@ -43,4 +43,9 @@ public class SeniorCareer {
         this.startDate = startDate;
         this.endDate = endDate;
     }
+
+    //==연관관계 편의 매서드
+    protected void assignSeniorProfile(SeniorProfile seniorProfile) {
+        this.seniorProfile = seniorProfile;
+    }
 }

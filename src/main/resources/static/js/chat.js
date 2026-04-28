@@ -1,0 +1,825 @@
+// ==========================================
+// 1. 초기 세팅 및 변수 준비 (HTML에서 주입받음)
+// ==========================================
+const ROOM_ID = window.ROOM_ID ?? null;
+const CURRENT_NICKNAME = window.CURRENT_NICKNAME ?? null;
+const ROOM_STATUS = window.ROOM_STATUS ?? 'ACTIVE';
+// 현재 사용자가 이 채팅방의 시니어인지 (PAYMENT_REQUESTED 결제 버튼 노출 분기용)
+const IS_SENIOR = window.IS_SENIOR === true;
+// 주니어 ID (시니어 전용 '결제 요청하기' 모달에서 /orders/request 호출 시 사용)
+const JUNIOR_ID = window.JUNIOR_ID ?? null;
+// 초기 로딩 메시지들의 가장 오래된 id (위로 스크롤해 과거 메시지를 불러올 때 커서로 사용)
+const FIRST_MESSAGE_ID = window.FIRST_MESSAGE_ID ?? null;
+// 해당 채팅방 시니어의 등록 리뷰 단가. 결제 요청 모달 placeholder 기본값으로 사용.
+const SENIOR_PRICE_PER_REVIEW = window.SENIOR_PRICE_PER_REVIEW ?? 0;
+
+const chatContainer = document.getElementById('messageList');
+let stompClient = null;
+
+// 현재 방 마감 여부 (페이지 로드 시 초기값 + ROOM_CLOSE 이벤트 수신 시 true로 전환)
+// ROOM_STATUS 상수는 변경이 안 되므로 별도 변수로 관리
+let currentRoomClosed = ROOM_STATUS === 'CLOSED';
+
+// 결제 상세 모달에서 결제 진행 시 사용할 현재 주문 정보
+// (GET /orders/{orderId}/prepare 응답으로 채워짐)
+let paymentDetailOrderId = null;     // Toss orderId로 사용할 orderNumber(예: "ORD-...")
+let paymentDetailAmount = 0;         // number
+
+// XSS 방어 함수
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// 스크롤 맨 아래로 이동
+function scrollToBottom() {
+    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// 시간 포맷 (HH:mm)
+function formatTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+
+// ==========================================
+// 2. DOM 렌더링: 시스템 메시지 카드
+// ==========================================
+function renderSystemMessage(data, options = {}) {
+    if (!chatContainer) return;
+
+    const systemWrap = document.createElement('div');
+    systemWrap.className = 'message-row system';
+
+    // 시스템 메시지는 텍스트로 출력하고, CSS(pre-line)로 줄바꿈을 처리한다.
+    // (서버가 "\\n"로 보낸 케이스도 실제 개행으로 통일)
+    const safeContent = escapeHTML(data.content || data.customContent);
+    const formattedText = safeContent.replace(/\\n/g, '\n');
+
+    let cardClass = ''; let headerColorClass = ''; let headerIcon = ''; let buttonHtml = '';
+
+    // String()으로 감싸 IDE의 type narrowing을 차단한다.
+    // (호출부의 `type !== 'USER'` 같은 조건으로 인해 WebStorm이 일부 case를 도달 불가로 오판하는 것을 방지)
+    const msgType = String(data.messageType || data.type || '');
+
+    switch (msgType) {
+        case 'PAYMENT_REQUESTED': {
+            cardClass = 'type-payment'; headerColorClass = 'text-yellow'; headerIcon = '!';
+            // 결제 버튼은 주니어에게만 노출 (결제 행위자는 주니어)
+            if (!IS_SENIOR && data.referenceId) {
+                const amount = data.amount ? data.amount.toLocaleString() : '0';
+                buttonHtml = `<button class="sys-action-btn btn-yellow action-pay" data-order-id="${escapeHTML(String(data.referenceId))}">🛡️ 에스크로 안전 결제 ₩${amount}</button>`;
+            }
+            break;
+        }
+        case 'PAYMENT_COMPLETED': {
+            // 결제 완료 메시지: 시니어/주니어 모두 "안내 카드"만 노출 (버튼 없음)
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
+            break;
+        }
+        case 'REVIEW_REQUESTED': {
+            // 리뷰 요청서 작성 버튼은 REVIEW_REQUESTED일 때만 노출 (주니어 전용)
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '📄';
+            if (!IS_SENIOR) {
+                buttonHtml = `<button class="sys-action-btn btn-blue action-review" data-room-id="${escapeHTML(String(ROOM_ID))}" data-order-id="${escapeHTML(String(data.referenceId || ''))}">
+                    📄 리뷰 요청서 작성</button>`;
+            }
+            break;
+        }
+        case 'REVIEW_SUBMITTED': {
+            // 리뷰 요청서 접수 완료: 시니어에게 워크스페이스 입장 버튼 노출
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
+            if (IS_SENIOR && data.referenceId) {
+                buttonHtml = `<button class="sys-action-btn btn-blue action-workspace" data-order-id="${escapeHTML(String(data.referenceId))}">
+                    워크스페이스 입장</button>`;
+            }
+            break;
+        }
+        case 'WORKSPACE_READY': {
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '🔔';
+            break;
+        }
+        case 'REPORT_COMPLETED': {
+            cardClass = 'type-review'; headerColorClass = 'text-blue'; headerIcon = '✅';
+            buttonHtml = `<button class="sys-action-btn btn-cyan action-confirm" data-report-id="${escapeHTML(String(data.referenceId))}">✔️ 멘토링 종료 및 리뷰 남기기</button>`;
+            break;
+        }
+        case 'ROOM_CLOSE': {
+            cardClass = 'type-default'; headerColorClass = 'text-gray'; headerIcon = '🔒';
+            break;
+        }
+        default: {
+            cardClass = 'type-default'; headerColorClass = 'text-gray'; headerIcon = '🔔';
+            break;
+        }
+    }
+
+    systemWrap.innerHTML = `
+        <div class="system-message-card ${cardClass}">
+            <div class="sys-header ${headerColorClass}">
+                <span style="margin-right: 6px;">${headerIcon}</span> 시스템 알림
+            </div>
+            <div class="sys-body">${formattedText}</div>
+            ${buttonHtml ? `<div class="sys-footer">${buttonHtml}</div>` : ''}
+        </div>
+    `;
+
+    if (options.prepend) {
+        chatContainer.prepend(systemWrap);
+    } else {
+        chatContainer.appendChild(systemWrap);
+        scrollToBottom();
+    }
+}
+
+// ==========================================
+// 3. DOM 렌더링: 일반 유저 메시지
+// ==========================================
+function renderUserMessage(msg, options = {}) {
+    if (!chatContainer) return;
+
+    const wrapper = document.createElement('div');
+    const isMine = msg.senderNickname === CURRENT_NICKNAME;
+    wrapper.className = isMine ? 'msg-right' : 'msg-left';
+
+    const sender = document.createElement('div');
+    sender.className = 'msg-sender';
+    sender.textContent = msg.senderNickname;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = msg.content;
+
+    const time = document.createElement('div');
+    time.className = 'msg-time';
+    time.textContent = formatTime(msg.createdAt);
+
+    wrapper.appendChild(sender);
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(time);
+
+    if (options.prepend) {
+        chatContainer.prepend(wrapper);
+    } else {
+        chatContainer.appendChild(wrapper);
+        updateSidebarPreview(msg.content);
+        scrollToBottom();
+    }
+}
+
+// 사이드바 미리보기 실시간 업데이트
+function updateSidebarPreview(content, roomId = ROOM_ID) {
+    const roomItem = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+    if (!roomItem) return;
+    const preview = roomItem.querySelector('.room-preview');
+    if (preview) preview.textContent = content;
+    const timeEl = roomItem.querySelector('.room-time');
+    if (timeEl) {
+        const now = new Date();
+        timeEl.textContent = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0');
+    }
+}
+
+// 읽지 않은 메시지 점 표시 관리 (localStorage로 새로고침 후에도 유지)
+function updateUnreadBadge(roomId) {
+    localStorage.setItem('unread_' + roomId, 'true');
+    showUnreadDot(roomId);
+}
+
+function showUnreadDot(roomId) {
+    const roomItem = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+    if (!roomItem) return;
+    const dot = roomItem.querySelector('.unread-badge');
+    if (dot) dot.style.display = 'block';
+}
+
+// 페이지 로드 시: 현재 방은 읽음 처리, 나머지는 localStorage에서 복원
+document.addEventListener('DOMContentLoaded', function () {
+    // 현재 보고 있는 방은 읽음 처리
+    if (ROOM_ID) localStorage.removeItem('unread_' + ROOM_ID);
+
+    // 다른 방들의 미확인 점 복원
+    document.querySelectorAll('.room-item').forEach(function (item) {
+        const roomId = item.getAttribute('data-room-id');
+        if (roomId && localStorage.getItem('unread_' + roomId)) {
+            const dot = item.querySelector('.unread-badge');
+            if (dot) dot.style.display = 'block';
+        }
+    });
+});
+
+// 사이드바 토글 (모바일 대응)
+function toggleSidebar() {
+    const sidebar = document.getElementById('chatSidebar');
+    const openBtn = document.getElementById('sidebarOpenBtn');
+    if(sidebar) sidebar.classList.toggle('collapsed');
+    if (openBtn) openBtn.classList.toggle('visible');
+}
+
+// ==========================================
+// 4. UI 제어: 채팅방 마감 (Read-Only) 전환
+// ==========================================
+function disableChatUI() {
+    const inputArea = document.getElementById('inputArea');
+    const readonlyBanner = document.getElementById('readonlyBanner');
+
+    if (inputArea && readonlyBanner) {
+        inputArea.style.display = 'none';
+        readonlyBanner.style.display = 'flex';
+    }
+}
+
+// ==========================================
+// 5. STOMP 연결 및 구독 로직 (1:1 Queue)
+// ==========================================
+// CLOSED 방을 보고 있어도 다른 방의 메시지(배지/사이드바 업데이트)를 받기 위해 항상 연결한다.
+if (ROOM_ID) {
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    // 인증은 Spring Security 세션 쿠키 기반이므로 별도 헤더가 필요 없다.
+    // 향후 JWT 도입 시 여기서 Authorization 헤더를 주입한다.
+    const connectHeaders = {};
+
+    stompClient.connect(connectHeaders, function () {
+        console.log('✅ STOMP 서버 연결 완료');
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            if (currentRoomClosed) {
+                statusEl.textContent = '마감됨';
+                statusEl.className = 'connection-status status-disconnected';
+            } else {
+                statusEl.textContent = '연결됨';
+                statusEl.className = 'connection-status status-connected';
+            }
+        }
+
+        // 💡 1:1 큐 구독 방식으로 통신
+        stompClient.subscribe('/user/queue/chat', function (message) {
+            const data = JSON.parse(message.body);
+            const type = data.messageType || data.type;
+
+            // 다른 방 메시지: 사이드바 미리보기 + 배지만 업데이트하고 렌더링은 스킵
+            if (data.roomId && data.roomId !== ROOM_ID) {
+                if (type === 'USER') {
+                    updateSidebarPreview(data.content, data.roomId);
+                    updateUnreadBadge(data.roomId);
+                }
+                return;
+            }
+
+            // 현재 방이 마감 상태면 새 메시지 렌더링 스킵
+            if (currentRoomClosed) return;
+
+            // 실시간 마감 이벤트 감지
+            if (type === 'ROOM_CLOSE') {
+                currentRoomClosed = true; // 이후 이 방의 메시지는 렌더링하지 않음
+                renderSystemMessage(data);
+                disableChatUI();
+                // WebSocket은 끊지 않음 → 다른 방 메시지(배지/사이드바)를 계속 받기 위해
+                if (statusEl) {
+                    statusEl.textContent = '마감됨';
+                    statusEl.className = 'connection-status status-disconnected';
+                }
+                return;
+            }
+
+            // 결제 요청이 발행되면(이벤트 수신) 헤더의 '결제 요청하기' 버튼을 즉시 숨긴다.
+            // - 시니어 본인: 자신이 방금 요청한 결과로 버튼이 사라짐
+            // - 주니어: 헤더에 버튼 자체가 렌더되지 않지만 방어적으로 동일 처리
+            if (type === 'PAYMENT_REQUESTED') {
+                hideRequestPaymentButton();
+            }
+
+            // 메시지 타입 분기 (유저 vs 시스템)
+            if (type === 'USER') {
+                renderUserMessage(data);
+            } else {
+                renderSystemMessage(data);
+            }
+        });
+
+        // 페이지 진입 시 스크롤 하단 고정
+        setTimeout(scrollToBottom, 100);
+
+    }, function (error) {
+        console.error('❌ STOMP 연결 실패:', error);
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.textContent = '연결 끊김';
+            statusEl.className = 'connection-status status-disconnected';
+        }
+    });
+}
+
+// ==========================================
+// 6. 메시지 전송 및 버튼 액션 이벤트
+// ==========================================
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input ? input.value.trim() : '';
+    if (!content || !stompClient) return;
+
+    stompClient.send('/app/' + ROOM_ID + '/send', {}, JSON.stringify({ content: content }));
+    input.value = '';
+}
+
+// 엔터키 전송 처리
+const messageInput = document.getElementById('messageInput');
+if (messageInput) {
+    messageInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.isComposing) sendMessage();
+    });
+}
+
+// 시스템 알림 버튼 클릭 이벤트 (이벤트 위임)
+if (chatContainer) {
+    chatContainer.addEventListener('click', async function(e) {
+        const target = e.target.closest('.sys-action-btn');
+        if (!target) return;
+
+        if (target.classList.contains('action-pay')) {
+            const orderId = target.getAttribute('data-order-id');
+            if (!orderId) return;
+
+            // GET /orders/{orderId}/prepare
+            // - 성공: OrderResponse로 모달을 채운 뒤 연다.
+            // - 실패: EMPTY_PAYMENT_DETAIL로 덮어쓰고, 에러 문구를 모달 안에 보이게 하기 위해 연다.
+            try {
+                const res = await fetch(`/orders/${orderId}/prepare`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {'Accept': 'application/json'}
+                })
+                if (!res.ok) throw new Error(await res.text().catch(() => ''));
+                const data = await res.json();
+                console.log(`prepare data`, data);
+                setPaymentDetailError('');
+                fillPaymentDetailModal(data);
+                openPaymentDetailModal();
+            } catch (err) {
+                console.error(`[prepare 실패]`, err);
+                fillPaymentDetailModal(EMPTY_PAYMENT_DETAIL);
+                setPaymentDetailError('결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+                openPaymentDetailModal();
+            }
+        } else if (target.classList.contains('action-review')) {
+            const roomId = target.getAttribute('data-room-id');
+            const orderId = target.getAttribute('data-order-id');
+            if (!orderId) return;
+
+            const hidden = document.getElementById('reviewRequestOrderId');
+            if (hidden) hidden.value = orderId || '';
+
+            console.log(`[리뷰 요청서 작성 폼 이동] 방 번호: ${roomId}`);
+            openReviewRequestModal();
+        } else if (target.classList.contains('action-workspace')) {
+            const orderId = target.getAttribute('data-order-id');
+            if (!orderId) return;
+            window.location.href = `/orders/${orderId}`;
+        } else if (target.classList.contains('action-confirm')) {
+            const reportId = target.getAttribute('data-report-id');
+            if (confirm("구매를 확정하시겠습니까?\n구매 확정 시 에스크로 대금이 시니어에게 정산됩니다.")) {
+                console.log(`[구매 확정 API 호출] 리포트 ID: ${reportId}`);
+                // TODO: 서버로 구매 확정 API 호출
+            }
+        }
+    });
+}
+
+// ==========================================
+// 7. 페이지네이션: 스크롤 업 시 과거 메시지 로딩
+// ==========================================
+let paginationCursor = FIRST_MESSAGE_ID;
+let isLoadingOlder = false;
+
+if (chatContainer && ROOM_ID) {
+    chatContainer.addEventListener('scroll', function () {
+        if (chatContainer.scrollTop !== 0 || isLoadingOlder || !paginationCursor) return;
+
+        isLoadingOlder = true;
+        fetch(`/chat/${ROOM_ID}/messages?before=${paginationCursor}`)
+            .then(res => res.json())
+            .then(messages => {
+                if (!messages || messages.length === 0) {
+                    paginationCursor = null;
+                    return;
+                }
+
+                const prevHeight = chatContainer.scrollHeight;
+
+                // API는 오래된 → 최신 순으로 반환한다.
+                // prepend를 반복하면 나중에 prepend한 것이 위로 가므로,
+                // 최신 → 오래된 순(역순)으로 prepend 해야 DOM상 오래된 메시지가 가장 위에 온다.
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    const type = msg.messageType || msg.type;
+                    if (type === 'USER') {
+                        renderUserMessage(msg, { prepend: true });
+                    } else {
+                        renderSystemMessage(msg, { prepend: true });
+                    }
+                }
+
+                // 스크롤 위치 복원 (사용자가 보던 메시지가 계속 같은 위치에 있도록)
+                chatContainer.scrollTop = chatContainer.scrollHeight - prevHeight;
+
+                // 다음 페이지네이션 커서: 이번 배치의 가장 오래된 메시지 id
+                paginationCursor = messages[0].id;
+                if (messages.length < 20) paginationCursor = null;
+            })
+            .catch(err => console.error('과거 메시지 로딩 실패:', err))
+            .finally(() => { isLoadingOlder = false; });
+    });
+}
+
+// ==========================================
+// 8. 시니어 '결제 요청하기' 버튼 / 모달 제어
+// ==========================================
+
+// 금액 하한/상한 (천원 ~ 백만원)
+const MIN_PAYMENT_AMOUNT = 1000;
+const MAX_PAYMENT_AMOUNT = 1_000_000;
+
+// 헤더의 '결제 요청하기' 버튼 숨기기.
+// PAYMENT_REQUESTED 이벤트 수신 또는 API 응답 성공 시 호출되어, 한 채팅방당 한 번만 결제 요청하도록 강제.
+function hideRequestPaymentButton() {
+    const btn = document.getElementById('requestPaymentBtn');
+    if (btn) btn.style.display = 'none';
+}
+
+// --- 시니어: 결제 요청 모달 open / close ---
+
+function openPaymentRequestModal() {
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return;
+
+    const input = document.getElementById('paymentAmountInput');
+    if (input) {
+        input.value = '';
+        // 시니어가 프로필에 등록한 리뷰 단가를 placeholder로 제시 (0이면 '0')
+        input.placeholder = SENIOR_PRICE_PER_REVIEW > 0
+            ? formatAmountWithComma(SENIOR_PRICE_PER_REVIEW)
+            : '0';
+    }
+    setPaymentModalError('');
+    setPaymentSubmitLoading(false);
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
+    setTimeout(() => { if (input) input.focus(); }, 50);
+}
+
+function closePaymentRequestModal() {
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+// --- 주니어: 결제 상세 모달 open / close ---
+
+function openPaymentDetailModal() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return;
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    const cta = document.getElementById('paymentDetailSubmitBtn');
+    // 모달 애니메이션 직후 포커스 (즉시 포커스하면 iOS/Safari에서 스크롤 튐)
+    setTimeout(() => { if (cta) cta.focus(); }, 50);
+}
+
+function closePaymentDetailModal() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return;
+
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    setPaymentDetailError('');
+}
+
+// --- 주니어: 리뷰 요청서 모달 (공용 모달 컨트롤러 사용) ---
+
+function openReviewRequestModal() {
+    if (!window.ReviewRequestModal) return;
+    // orderId는 시스템 메시지 버튼(.action-review) 클릭 시 chat.js가 hidden input에 채워둔다.
+    const orderId = document.getElementById('reviewRequestOrderId')?.value || '';
+    window.ReviewRequestModal.open({
+        mode: 'create',
+        method: 'POST',
+        orderId: orderId,
+        githubPrUrl: '',
+        projectContext: '',
+        concernPoint: ''
+    });
+}
+
+// prepare 실패 직전에 성공했던 주문 데이터가 화면에 남지 않도록
+// fillPaymentDetailModal()에 넘기는 빈 응답.
+const EMPTY_PAYMENT_DETAIL = {
+    amount: 0,
+    seniorNickname: null,
+    seniorPosition: null,
+    seniorProfileImageUrl: null,
+};
+
+// --- 금액 유틸 ---
+
+// 사용자 입력 문자열 → 숫자. 콤마/공백/기타 문자 제거. 빈값이면 null.
+function parseAmountInput(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '');
+    if (!digits) return null;
+    return parseInt(digits, 10);
+}
+
+function formatAmountWithComma(num) {
+    if (num == null || isNaN(num)) return '';
+    return Number(num).toLocaleString();
+}
+
+// 결제 상세 모달: ₩ + 천단위 콤마 (총액/CTA에 동일하게 사용)
+function formatKrw(amount) {
+    const formatted = formatAmountWithComma(amount);
+    return formatted ? `₩${formatted}` : '₩0';
+}
+
+function setPaymentDetailError(msg) {
+    const errEl = document.getElementById('paymentDetailError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+// GET /orders/{id}/prepare 응답(OrderResponse) → 결제 상세 모달에 반영
+function fillPaymentDetailModal(data) {
+    if (!data) return;
+
+    paymentDetailOrderId = data.orderNumber || null;
+    paymentDetailAmount = Number(data.amount || 0);
+
+    const nameEl = document.getElementById('paymentDetailSeniorName');
+    const posEl = document.getElementById('paymentDetailSeniorPosition');
+    const wrapEl = document.getElementById('paymentDetailSeniorAvatarWrap');
+    const imgEl = document.getElementById('paymentDetailSeniorAvatar');
+    const phEl = document.getElementById('paymentDetailSeniorAvatarPlaceholder');
+
+    if (nameEl) nameEl.textContent = data.seniorNickname || '-';
+    if (posEl) posEl.textContent = data.seniorPosition || '-';
+
+    const url = data.seniorProfileImageUrl && String(data.seniorProfileImageUrl).trim();
+    if (wrapEl && imgEl) {
+        if (phEl) phEl.setAttribute('aria-hidden', url ? 'true' : 'false');
+        if (url) {
+            wrapEl.classList.add('has-photo');
+            imgEl.alt = (data.seniorNickname ? `${data.seniorNickname} 프로필` : '시니어 프로필');
+            imgEl.onerror = function onAvatarError() {
+                imgEl.onerror = null;
+                imgEl.removeAttribute('src');
+                wrapEl.classList.remove('has-photo');
+                if (phEl) phEl.setAttribute('aria-hidden', 'false');
+            };
+            imgEl.src = url;
+        } else {
+            imgEl.onerror = null;
+            imgEl.removeAttribute('src');
+            imgEl.alt = '';
+            wrapEl.classList.remove('has-photo');
+        }
+    }
+
+    const krw = formatKrw(data.amount);
+    const line = document.getElementById('paymentDetailLineAmount');
+    const total = document.getElementById('paymentDetailTotal');
+    const cta = document.getElementById('paymentDetailCtaAmount');
+    if (line) line.textContent = krw;
+    if (total) total.textContent = krw;
+    if (cta) cta.textContent = krw;
+}
+
+// --- 결제 상세 모달: 토스 결제 진행 ---
+
+async function startPaymentFromDetailModal() {
+    const btn = document.getElementById('paymentDetailSubmitBtn');
+    if (!btn) return;
+    if (btn.disabled) return;
+
+    // prepare에서 채워진 값이 없으면 방어
+    if (!paymentDetailOrderId || !paymentDetailAmount || paymentDetailAmount <= 0) {
+        setPaymentDetailError('결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+    }
+    if (typeof window.startTossPayment !== 'function') {
+        setPaymentDetailError('결제 모듈을 불러오지 못했어요. 페이지를 새로고침해 주세요.');
+        return;
+    }
+
+    // 연타 방지: 결제창 호출 직전에 비활성화 (이후에는 Toss가 리다이렉트하므로 보통 복구 불필요)
+    btn.disabled = true;
+
+    try {
+        await window.startTossPayment({
+            amount: paymentDetailAmount,
+            orderId: paymentDetailOrderId,
+            orderName: '1:1 맞춤 코드 리뷰 (에스크로)',
+            customerName: CURRENT_NICKNAME || '주니어',
+        });
+    } catch (e) {
+        console.error('[토스 결제창 호출 실패]', e);
+        btn.disabled = false;
+        setPaymentDetailError('결제 요청 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+    }
+}
+
+// --- 에러/로딩 상태 ---
+
+function setPaymentModalError(msg) {
+    const errEl = document.getElementById('paymentModalError');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+function setPaymentSubmitLoading(loading) {
+    const submitBtn = document.getElementById('paymentSubmitBtn');
+    const cancelBtn = document.getElementById('paymentCancelBtn');
+    if (submitBtn) {
+        submitBtn.disabled = !!loading;
+        submitBtn.textContent = loading ? '요청 중...' : '결제 요청 보내기';
+    }
+    if (cancelBtn) cancelBtn.disabled = !!loading;
+}
+
+// --- Idempotency-Key 생성 ---
+// crypto.randomUUID는 최신 브라우저(2021~)에서 지원. HTTPS/localhost에서만 사용 가능.
+// 그 외 환경을 위한 RFC4122 v4 UUID fallback 제공.
+function generateIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+// --- API 호출: POST /orders/request ---
+
+async function submitPaymentRequest() {
+    const input = document.getElementById('paymentAmountInput');
+    const amount = parseAmountInput(input && input.value);
+
+    // 1차 유효성 검증
+    if (amount == null) return setPaymentModalError('금액을 입력해 주세요.');
+    if (amount < MIN_PAYMENT_AMOUNT) {
+        return setPaymentModalError(`최소 ${formatAmountWithComma(MIN_PAYMENT_AMOUNT)}원부터 요청할 수 있어요.`);
+    }
+    if (amount > MAX_PAYMENT_AMOUNT) {
+        return setPaymentModalError(`최대 ${formatAmountWithComma(MAX_PAYMENT_AMOUNT)}원까지 요청할 수 있어요.`);
+    }
+    if (!ROOM_ID || !JUNIOR_ID) {
+        return setPaymentModalError('채팅방 정보가 없어요. 페이지를 새로고침해 주세요.');
+    }
+
+    setPaymentModalError('');
+    setPaymentSubmitLoading(true);
+
+    try {
+        const res = await fetch('/orders/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': generateIdempotencyKey(),
+            },
+            credentials: 'same-origin', // JWT 쿠키(accessToken) 자동 포함
+            body: JSON.stringify({
+                chatRoomId: ROOM_ID,
+                juniorId: JUNIOR_ID,
+                amount: amount,
+            }),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(text || `서버 응답 오류 (${res.status})`);
+        }
+
+        // 낙관적 처리: PAYMENT_REQUESTED WebSocket 이벤트 도착 전에 버튼/모달 선제 정리.
+        // 시스템 메시지 렌더링은 구독 핸들러가 담당하므로 여기서는 건드리지 않는다.
+        hideRequestPaymentButton();
+        closePaymentRequestModal();
+    } catch (err) {
+        console.error('[결제 요청 실패]', err);
+        setPaymentModalError('결제 요청에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+        setPaymentSubmitLoading(false);
+    }
+}
+
+// --- 이벤트 바인딩 (IIFE로 스코프 격리) ---
+
+(function bindPaymentModalEvents() {
+    const modal = document.getElementById('paymentRequestModal');
+    if (!modal) return; // 주니어 화면 등 모달이 없는 경우
+
+    // 닫기 트리거: [data-pmt-close] (백드롭 + X 버튼)
+    modal.querySelectorAll('[data-pmt-close]').forEach((el) => {
+        el.addEventListener('click', closePaymentRequestModal);
+    });
+
+    const cancelBtn = document.getElementById('paymentCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', closePaymentRequestModal);
+
+    const submitBtn = document.getElementById('paymentSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', submitPaymentRequest);
+
+    // 금액 입력: 실시간 콤마 포맷 + Enter 제출 (IME 조합 중 제외)
+    const input = document.getElementById('paymentAmountInput');
+    if (input) {
+        input.addEventListener('input', function () {
+            const num = parseAmountInput(input.value);
+            input.value = num == null ? '' : formatAmountWithComma(num);
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.isComposing) {
+                e.preventDefault();
+                submitPaymentRequest();
+            }
+        });
+    }
+})();
+
+// --- 주니어: 결제 상세 모달 이벤트 바인딩 (IIFE로 스코프 격리) ---
+// 닫기 트리거: [data-pmt-detail-close] (백드롭). 열기/닫기, 스크롤 락, ESC 는
+// openPaymentDetailModal, closePaymentDetailModal, bindModalEscape 에서 처리.
+(function bindPaymentDetailModalEvents() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (!modal) return; // 시니어 화면 등 모달이 없는 경우
+
+    modal.querySelectorAll('[data-pmt-detail-close]').forEach(function (el) {
+        el.addEventListener('click', closePaymentDetailModal);
+    });
+
+    const submitBtn = document.getElementById('paymentDetailSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', startPaymentFromDetailModal);
+})();
+
+// --- 주니어: 리뷰 요청서 모달 이벤트 바인딩 (IIFE로 스코프 격리) ---
+// 닫기 트리거: [data-review-close] (백드롭 + 취소 버튼). 열기/닫기, 스크롤 락, ESC 는
+// openReviewRequestModal, closeReviewRequestModal, bindModalEscape 에서 처리.
+// close/submit/ESC 바인딩은 review-request-modal.js에서 처리
+
+// ESC로 열린 모달 닫기 (같은 페이지에 시니어/주니어용 모달 DOM은 둘 다 없고, 둘 중 하나만 존재)
+(function bindModalEscape() {
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+
+        const review = document.getElementById('reviewRequestModal');
+        if (review && review.classList.contains('is-open')) {
+            e.preventDefault();
+            if (window.ReviewRequestModal && typeof window.ReviewRequestModal.close === 'function') {
+                window.ReviewRequestModal.close();
+            } else {
+                review.classList.remove('is-open');
+                review.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+            return;
+        }
+
+        const detail = document.getElementById('paymentDetailModal');
+        if (detail && detail.classList.contains('is-open')) {
+            e.preventDefault();
+            closePaymentDetailModal();
+            return;
+        }
+
+        const request = document.getElementById('paymentRequestModal');
+        if (request && request.classList.contains('is-open')) {
+            e.preventDefault();
+            closePaymentRequestModal();
+        }
+    });
+})();

@@ -1,0 +1,63 @@
+<th:block xmlns:th="http://www.thymeleaf.org"
+          th:fragment="paymentRequestModal(isSenior)">
+    <!--
+        시니어 전용 '결제 요청' 모달.
+        - 헤더의 '결제 요청하기' 버튼 클릭 시 openPaymentRequestModal()이 .is-open 클래스 부여
+        - 금액 입력 후 POST /orders/request (Idempotency-Key 헤더 포함) 호출
+        - 성공 시 서버가 양쪽 유저에게 PAYMENT_REQUESTED WebSocket 메시지를 브로드캐스트
+    -->
+    <div id="paymentRequestModal"
+         class="pmt-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="paymentModalTitle"
+         aria-hidden="true"
+         th:if="${isSenior}">
+        <div class="pmt-modal-backdrop" data-pmt-close></div>
+        <div class="pmt-modal-card" role="document">
+
+            <!-- 헤더: 아이콘 박스 + 타이틀/서브타이틀 -->
+            <div class="pmt-modal-header">
+                <div class="pmt-modal-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                         viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                </div>
+                <div class="pmt-modal-titles">
+                    <h3 id="paymentModalTitle" class="pmt-modal-title">결제 금액 설정</h3>
+                    <p class="pmt-modal-subtitle">주니어와 합의된 최종 결제 금액을 입력해주세요.</p>
+                </div>
+            </div>
+
+            <!-- 바디: 금액 입력 -->
+            <div class="pmt-modal-body">
+                <label class="pmt-label" for="paymentAmountInput">요청 금액 (원)</label>
+                <div class="pmt-amount-wrap">
+                    <input id="paymentAmountInput"
+                           type="text"
+                           inputmode="numeric"
+                           class="pmt-amount-input"
+                           placeholder="0"
+                           autocomplete="off"
+                           maxlength="15" />
+                    <span class="pmt-currency-suffix">원</span>
+                </div>
+                <p id="paymentModalError" class="pmt-error" role="alert" style="display: none;"></p>
+            </div>
+
+            <!-- 디바이더 + 푸터 -->
+            <div class="pmt-divider"></div>
+            <div class="pmt-modal-footer">
+                <button type="button" class="pmt-btn pmt-btn-text" id="paymentCancelBtn" data-pmt-close>취소</button>
+                <button type="button" class="pmt-btn pmt-btn-primary" id="paymentSubmitBtn">
+                    <span>결제 요청 보내기</span>
+                    <span class="pmt-btn-arrow" aria-hidden="true">›</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</th:block>

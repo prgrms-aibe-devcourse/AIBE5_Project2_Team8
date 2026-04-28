@@ -1,0 +1,102 @@
+package com.knoc.review.service;
+
+import com.knoc.chat.entity.ChatSystemEvent;
+import com.knoc.chat.entity.MessageType;
+import com.knoc.global.exception.BusinessException;
+import com.knoc.global.exception.ErrorCode;
+import com.knoc.member.Member;
+import com.knoc.member.MemberRepository;
+import com.knoc.order.entity.Order;
+import com.knoc.order.entity.OrderStatus;
+import com.knoc.order.repository.OrderRepository;
+import com.knoc.review.dto.ReviewRequestCreateRequest;
+import com.knoc.review.dto.ReviewRequestCreateResponse;
+import com.knoc.review.dto.ReviewRequestUpdateRequest;
+import com.knoc.review.entity.ReviewRequest;
+import com.knoc.review.repository.ReviewReportRepository;
+import com.knoc.review.repository.ReviewRequestRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class ReviewRequestService {
+    private final OrderRepository orderRepository;
+    private final ReviewRequestRepository reviewRequestRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final MemberRepository memberRepository;
+    private final ReviewReportRepository reviewReportRepository;
+
+    public ReviewRequestCreateResponse createReviewRequest(ReviewRequestCreateRequest dto, String email) {
+       Order order = juniorAndOrderValidation(email, dto.getOrderId());
+
+        // 중복 검증
+        if (reviewRequestRepository.existsByOrderId(order.getId())) {
+            throw new BusinessException(ErrorCode.REVIEW_REQUEST_ALREADY_EXISTS);
+        }
+
+        // 리뷰 요청서 저장
+        ReviewRequest reviewRequest = ReviewRequest.builder()
+                .order(order)
+                .githubPrUrl(dto.getGithubPrUrl())
+                .projectContext(dto.getProjectContext())
+                .concernPoint(dto.getConcernPoint())
+                .build();
+
+        try {
+            reviewRequestRepository.saveAndFlush(reviewRequest);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.REVIEW_REQUEST_ALREADY_EXISTS);
+        }
+
+
+        // 시스템 이벤트 발행
+        eventPublisher.publishEvent(new ChatSystemEvent(
+                order.getChatRoom().getId(),
+                MessageType.REVIEW_SUBMITTED,
+                null,
+                order.getId()
+        ));
+
+        // 6. 저장된 주문을 클라이언트에게 보여줄 전용 응답 객체(DTO)로 변환
+        return ReviewRequestCreateResponse.from(reviewRequest);
+    }
+
+    @Transactional
+    public Long updateReviewRequest(String email, ReviewRequestUpdateRequest req) {
+        Order order = juniorAndOrderValidation(email, req.orderId());
+        if (reviewReportRepository.existsByReviewRequest_Order_Id(order.getId())) {
+            throw new BusinessException(ErrorCode.REVIEW_REPORT_ALREADY_EXISTS);
+        }
+        ReviewRequest rr = reviewRequestRepository.findByOrder(order)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REQUEST_NOT_FOUND));
+        rr.update(req.githubPrUrl(), req.projectContext(), req.concernPoint());
+        return order.getId();
+    }
+
+    private Order juniorAndOrderValidation(String email, Long orderId) {
+        // juniorId 가져오기
+        Long juniorId = memberRepository.findByEmail(email)
+                .map(Member::getId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 해당 주문 가져오기
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 주니어 소유 검증
+        if (!order.getJunior().getId().equals(juniorId)) {
+            throw new BusinessException(ErrorCode.NOT_JUNIOR_FOR_ORDER);
+        }
+
+        // 상태 검증
+        if (order.getStatus() != OrderStatus.PAID) {
+            throw new BusinessException(ErrorCode.REVIEW_REQUEST_NOT_ALLOWED);
+        }
+        return order;
+    }
+}
