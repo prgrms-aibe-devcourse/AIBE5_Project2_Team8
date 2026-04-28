@@ -149,7 +149,7 @@ src/main/resources/
 </ul>
 
 <h2 align="center"> 🫶 "Team IST-8" </h2>
-<table>
+<table width="100%">
   <tr>
     <td align="center"><b>정환철</b></td>
     <td align="center"><b>김세희</b></td>
